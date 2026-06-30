@@ -1,0 +1,151 @@
+# ============================================================================
+# Set 1 perception config - white 3D-printed polyhedra in a 4x4 m arena.
+# Every tunable for the Isaac Sim data generation lives here so the sim files
+# stay generic. Edit values to match the real robot / competition arena.
+# ============================================================================
+
+set: set1
+
+classes:
+  shapes: [cube, octahedron, dodecahedron, icosahedron]   # classifier shape classes
+  detector: [polyhedron]                                   # detector: single class
+  unknown: unknown                                         # classifier reject class
+
+# Geometry assets (already normalized to 0.2 m by isaac/convert_stl_to_usd.py).
+assets:
+  usd_dir: isaac/assets/usd
+  usd_by_class:
+    cube: cube.usd
+    octahedron: octahedron.usd
+    dodecahedron: dodecahedron.usd
+    icosahedron: icosahedron.usd
+
+# --------------------------------------------------------------------------- arena
+arena:
+  size_x: 4.0           # m
+  size_y: 4.0           # m
+  wall_height: 0.5      # m
+  wall_thickness: 0.05  # m
+  floor_color: [0.45, 0.30, 0.17]   # wood-ish brown (UsdPreviewSurface diffuse)
+  floor_color_jitter: 0.08
+  floor_roughness: [0.5, 0.9]
+  wall_color: [0.92, 0.92, 0.92]    # white walls
+  wall_color_jitter: 0.06
+  wall_roughness: [0.4, 0.8]
+  spawn_margin: 0.35    # keep objects/robot this far from walls (m)
+
+# --------------------------------------------------------------------------- camera (NUROUM V11)
+camera:
+  width: 1280
+  height: 720
+  hfov_deg: 90.0
+  focal_length: 10.4775       # mm  (HFOV 90 with horizontal_aperture below)
+  horizontal_aperture: 20.955 # mm
+  # Intrinsics (for reference / metadata): fx=fy=640, cx=640, cy=360
+  fx: 640.0
+  fy: 640.0
+  cx: 640.0
+  cy: 360.0
+
+# --------------------------------------------------------------------------- robot sensor rig
+# Camera mounts are defined relative to base_link. Two side cameras aimed
+# forward-outward. Per-frame mount jitter simulates real mounting error.
+robot:
+  base_height: 0.0            # base_link z on the floor
+  cam_height: 0.20            # m  (RGB cameras)
+  cam_forward_offset: 0.10    # m  (+x, ahead of base_link)
+  cam_lateral_offset: 0.15    # m  (|y| to each side)
+  cam_pitch_deg: -20.0        # downward
+  cam_yaw_outward_deg: 30.0   # left=+30, right=-30 (forward-outward)
+  lidar_height: 0.30          # m  (metadata only; not used for shape)
+  occlusion_proxy: false      # robot-body occluders (disabled for now)
+  # Mount-error randomization (added per frame):
+  jitter:
+    height: [-0.01, 0.01]     # m
+    pitch_deg: [-7.0, 7.0]    # -> effective pitch -13..-27 deg
+    yaw_deg: [-3.0, 3.0]
+    roll_deg: [-2.0, 2.0]
+
+# --------------------------------------------------------------------------- objects / placement
+objects:
+  max_per_class: 1            # pool = max_per_class * 4 shapes
+  # Real printed sizes (longest side, metres) from the STL extents. Each shape is rendered
+  # at its TRUE size so apparent sizes match the real robot view (octahedron is ~1.7x a cube).
+  real_size_m:
+    cube: 0.080
+    octahedron: 0.136
+    dodecahedron: 0.098
+    icosahedron: 0.098
+  render_calib_m: 64.9        # empirical: rep scale 1.0 renders the (0.2-unit) USD at ~64.9 m
+  scale_range: [0.85, 1.15]   # then multiplied by this (per-frame size variation)
+  # Placement is anywhere on the arena floor within spawn_margin of the walls.
+  z_on_floor: 0.0
+  # White 3D-printed plastic material (UsdPreviewSurface).
+  material:
+    base_color: [0.88, 0.88, 0.88]
+    color_jitter: 0.06        # slight off-white variation per frame
+    roughness: [0.35, 0.7]
+    metallic: 0.0
+
+# --------------------------------------------------------------------------- lighting / domain randomization
+lighting:
+  sun_intensity: [2000, 9000]
+  sun_pitch_deg: [-70, -20]
+  sun_yaw_deg: [-180, 180]
+  dome_intensity: [600, 2500]
+  color_temp: [4000, 8000]    # K
+
+postprocess:
+  # Applied as label-preserving augmentation at TRAIN time (not in sim) unless noted.
+  motion_blur: true
+  gaussian_noise: true
+  exposure_jitter: true
+
+# --------------------------------------------------------------------------- dataset output
+dataset:
+  root: datasets/set1
+  detector_subdir: detector       # images/{train,val} + labels/{train,val}
+  classifier_subdir: classifier   # {train,val}/<class>/*.png
+  metadata_subdir: metadata       # per-frame json
+  val_ratio: 0.15
+  min_frame_brightness: 12        # drop render-glitch (near-black) frames
+
+# Rules that turn a detected object into a classifier sample vs `unknown`.
+labeling:
+  # A crop becomes its true shape label only if ALL hold; else -> unknown.
+  min_box_px: 32                  # min(w,h) in pixels for a valid shape crop
+  min_visible_frac: 0.55          # 1 - occlusionRatio
+  max_truncation_px: 2            # box edge this close to image border = truncated
+  # Detector keeps boxes down to this size (high recall, incl. tiny/distant):
+  detector_min_box_px: 8
+  # Classifier crop augmentation (simulate detector imperfection):
+  crop_margin_frac: [-0.08, 0.20] # negative=tight, positive=loose
+  crop_shift_frac: 0.10           # random center shift
+  crops_per_object: 2
+  # Fraction of frames that also emit a background 'unknown' crop:
+  background_unknown_frac: 0.3
+
+render:
+  rt_subframes: 32
+
+# --------------------------------------------------------------------------- runtime (Jetson)
+runtime:
+  detector_conf: 0.25           # low -> high recall; classifier rejects junk
+  detector_imgsz: 640
+  # Only classify a crop when the object is close/large enough to be reliable:
+  min_bbox_px: 40               # min(w,h) in pixels
+  min_bbox_area_ratio: 0.004    # bbox area / image area
+  reject_truncation_px: 3       # skip detections this close to image border
+  classifier_imgsz: 128
+  # Conservative shape acceptance:
+  conf_threshold: 0.60          # calibrated softmax prob for top-1
+  margin_threshold: 0.20        # top1 - top2 probability
+  # Tracking + voting:
+  track_iou: 0.3
+  track_max_age: 10             # frames a track survives unseen
+  vote_window: 7                # recent classifications considered
+  min_confirmations: 3          # target votes needed for TARGET_CONFIRMED
+  max_reobserve: 6              # approach/re-observe attempts before giving up
+  # PICKUP_READY gating:
+  pickup_min_bbox_px: 90        # object must be close (large) to pick
+  reconfirm_within: 3           # must be re-seen as target within N recent frames

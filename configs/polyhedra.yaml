@@ -1,0 +1,21 @@
+# YOLO detection dataset config for the 3D-printed polyhedra.
+# Generated images + labels live under datasets/polyhedra/ (see isaac/generate_replicator.py).
+#
+# Layout (Ultralytics YOLO format):
+#   datasets/polyhedra/
+#     images/train/*.png   labels/train/*.txt
+#     images/val/*.png     labels/val/*.txt
+#
+# `path` is resolved relative to the Ultralytics `datasets_dir` setting, OR you can
+# make it absolute. We use an absolute path so it works regardless of CWD.
+
+path: /home/user/joon/datasets/polyhedra
+train: images/train
+val: images/val
+
+# Class ids must match configs/classes.py (ordered by face count).
+names:
+  0: cube
+  1: octahedron
+  2: dodecahedron
+  3: icosahedron

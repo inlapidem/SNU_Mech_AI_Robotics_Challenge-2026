@@ -1,0 +1,9 @@
+# YOLO detector dataset for Set 2 - single class 'cube_candidate', high recall.
+# Produced by sim/generate_set2_data.py. The detector localizes cube-like
+# objects regardless of whether the fruit texture is visible; the conservative
+# crop classifier decides apple/orange/banana/pineapple/unknown.
+path: /home/user/joon/datasets/set2/detector
+train: images/train
+val: images/val
+names:
+  0: cube_candidate

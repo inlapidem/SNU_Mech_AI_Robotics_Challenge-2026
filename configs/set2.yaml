@@ -1,0 +1,182 @@
+# ============================================================================
+# Set 2 perception config - white cubes with fruit images on 3 of 6 faces, in
+# the same 4x4 m arena. SEPARATE from Set 1 (own dataset, models, thresholds,
+# runtime policy). Every tunable for the Isaac Sim data generation lives here so
+# the sim files stay generic. Edit values to match the real cubes / arena.
+# ============================================================================
+
+set: set2
+
+classes:
+  fruits: [apple, orange, banana, pineapple]   # classifier fruit classes
+  detector: [cube_candidate]                   # detector: single class
+  unknown: unknown                             # classifier reject class
+
+# --------------------------------------------------------------------------- assets
+# Fruit images used as randomized printed/sticker labels. Drop multiple real
+# photos per class into these folders (png/jpg). sim/make_fruit_textures.py can
+# generate distinguishable PLACEHOLDERS so the pipeline runs before real images
+# arrive - replace them with real fruit photos for sim->real quality.
+assets:
+  fruit_texture_dir: assets/fruit_textures   # <dir>/<fruit>/*.png|jpg
+  # Optional: a cube body USD (e.g. converted from a real cube STL). If null/missing
+  # the generator builds a clean procedural box (preferred for per-face texturing).
+  cube_usd: null
+
+# --------------------------------------------------------------------------- arena (shared shape with set1)
+arena:
+  size_x: 4.0
+  size_y: 4.0
+  wall_height: 0.5
+  wall_thickness: 0.05
+  floor_color: [0.45, 0.30, 0.17]
+  floor_color_jitter: 0.08
+  floor_roughness: [0.5, 0.9]
+  wall_color: [0.92, 0.92, 0.92]
+  wall_color_jitter: 0.06
+  wall_roughness: [0.4, 0.8]
+  spawn_margin: 0.35
+
+# --------------------------------------------------------------------------- camera (NUROUM V11) - identical rig to set1
+camera:
+  width: 1280
+  height: 720
+  hfov_deg: 90.0
+  focal_length: 10.4775
+  horizontal_aperture: 20.955
+  fx: 640.0
+  fy: 640.0
+  cx: 640.0
+  cy: 360.0
+
+# --------------------------------------------------------------------------- robot sensor rig (identical to set1)
+robot:
+  base_height: 0.0
+  cam_height: 0.20
+  cam_forward_offset: 0.10
+  cam_lateral_offset: 0.15
+  cam_pitch_deg: -20.0
+  cam_yaw_outward_deg: 30.0
+  lidar_height: 0.30
+  occlusion_proxy: false
+  jitter:
+    height: [-0.01, 0.01]
+    pitch_deg: [-7.0, 7.0]     # -> effective pitch -13..-27 deg
+    yaw_deg: [-3.0, 3.0]
+    roll_deg: [-2.0, 2.0]
+
+# --------------------------------------------------------------------------- cubes / placement
+cubes:
+  size_m: 0.08                 # real cube edge length (8 cm)
+  size_jitter_m: 0.005         # per-frame edge variation
+  count_range: [1, 4]          # cubes present per frame
+  n_plain: 0                   # plain (no-fruit) white cubes; 0 = only fruit cubes in the arena
+                               # (white-face 'unknown' crops still come from fruit cubes' 3 plain faces)
+  z_on_floor: true
+  fixed_face_layout: false     # true -> fruit always on the same 3 faces (real object);
+                               # false -> randomize which 3 faces per cube (robustness)
+  fruit_faces: 3               # exactly 3 of 6 faces carry fruit
+  # White 3D-printed plastic body (UsdPreviewSurface).
+  body_material:
+    base_color: [0.88, 0.88, 0.88]
+    color_jitter: 0.06
+    roughness: [0.35, 0.7]
+    metallic: 0.0
+  # Set 2 arena contains ONLY fruit cubes. Non-cube polyhedra (Set 1 shapes) are NOT
+  # present during the Set 2 mission, so they are disabled as scene negatives by default.
+  use_noncube_negatives: false        # true -> add octa/dodeca/icosa as hard negatives
+  set1_usd_dir: isaac/assets/usd      # where those USDs live (only used if the flag is true)
+  neg_size_m: 0.08                    # rendered size of non-cube negatives (if enabled)
+  neg_calib_m: 64.9                   # set1 render_calib quirk: rep scale 1.0 renders USD at ~64.9 m
+
+# --------------------------------------------------------------------------- fruit label (printed/sticker) realism
+# A fruit image is rendered as a thin textured decal sitting flush on a face,
+# simulating a printed/sticker label rather than a clean digital texture.
+fruit_label:
+  scale_frac: [0.55, 0.92]     # label size as fraction of the face edge
+  offset_frac: 0.12            # random center offset on the face (+-frac of edge)
+  rotation_deg: [-8, 8]        # in-plane misalignment
+  border_frac: [0.0, 0.10]     # paper/sticker white border (fraction of label)
+  raise_eps_m: 0.0008          # lift above the face to avoid z-fighting
+  # Printed-look colour/exposure jitter applied via the texture scale/bias inputs:
+  brightness: [0.8, 1.15]
+  contrast: [0.85, 1.15]
+  saturation: [0.8, 1.15]
+  glare_prob: 0.25             # chance of a brighter specular label material
+  roughness: [0.3, 0.7]
+
+# --------------------------------------------------------------------------- lighting / DR (shared with set1)
+lighting:
+  sun_intensity: [2000, 9000]
+  sun_pitch_deg: [-70, -20]
+  sun_yaw_deg: [-180, 180]
+  dome_intensity: [600, 2500]
+  color_temp: [4000, 8000]
+
+postprocess:
+  motion_blur: true
+  gaussian_noise: true
+  exposure_jitter: true
+
+# --------------------------------------------------------------------------- dataset output
+dataset:
+  root: datasets/set2
+  detector_subdir: detector
+  classifier_subdir: classifier
+  metadata_subdir: metadata
+  val_ratio: 0.15
+  min_frame_brightness: 12
+
+# Rules that turn a detected cube into a classifier sample vs `unknown`. The label
+# is based on VISIBLE FRUIT EVIDENCE (analytic face-facing + projected fruit area),
+# never on the cube's hidden physical identity.
+labeling:
+  detector_min_box_px: 8          # detector keeps boxes down to here (high recall)
+  min_box_px: 36                  # min(w,h) px for a crop to be eligible for a fruit label
+  min_visible_frac: 0.55          # 1 - occlusionRatio of the cube box
+  max_truncation_px: 2            # cube box this close to the image border = truncated
+  # Fruit-evidence gates (ALL must hold for a fruit-class label, else -> unknown):
+  min_fruit_face_facing: 0.30     # max over fruit faces of (-normal . view_dir), 0..1
+  min_fruit_area_ratio: 0.10      # visible fruit pixel area / cube box pixel area
+  min_fruit_box_px: 14            # min(w,h) px of the visible fruit region
+  # Classifier crop augmentation (simulate detector imperfection):
+  crop_margin_frac: [-0.08, 0.20]
+  crop_shift_frac: 0.10
+  crops_per_object: 2
+  # Hard-but-identifiable share: keep some borderline-but-clear fruit views as the
+  # fruit class (not unknown) so the classifier still recognizes harder real views.
+  hard_positive_keep: 0.5
+  # Extra explicit unknown sources:
+  background_unknown_frac: 0.3    # frames that also emit a background crop
+  whiteface_unknown_boost: true   # white-face-only cube views -> unknown (the core case)
+
+render:
+  rt_subframes: 32
+
+# --------------------------------------------------------------------------- runtime (Jetson) - conservative, false-positive averse
+runtime:
+  detector_conf: 0.25
+  detector_imgsz: 640
+  # Only classify when the cube is close/large enough for reliable fruit reading:
+  min_bbox_px: 48               # min(w,h) px (larger than set1: fruit detail needs resolution)
+  min_bbox_area_ratio: 0.006
+  reject_truncation_px: 3
+  classifier_imgsz: 128
+  # Conservative fruit acceptance (wrong pickup = -40, miss = 0). Tuned from a val sweep:
+  # at conf 0.90 the per-frame unknown-leak is ~2% (vs 8.6% at 0.75) and, combined with the
+  # 3-frame confirmation + conflict-reject below, the effective false-pickup rate ~ 0.
+  # margin barely binds (softmax is peaky) so it's just a cheap flat-distribution guard.
+  conf_threshold: 0.90          # calibrated softmax prob for top-1 fruit
+  margin_threshold: 0.10        # top1 - top2 probability
+  unknown_conf_relax: 0.60      # below this top-1 conf, treat as unknown regardless of class
+  # Tracking + voting:
+  track_iou: 0.3
+  track_max_age: 12
+  vote_window: 9
+  min_confirmations: 3          # target-fruit votes needed for TARGET_CONFIRMED
+  max_reobserve: 3              # active viewpoint changes for an unknown/uncertain cube
+  unknown_patience: 4           # consecutive unknowns before requesting a viewpoint change
+  # PICKUP_READY gating:
+  pickup_min_bbox_px: 110       # cube must be close (large) to pick
+  reconfirm_within: 3           # re-seen as target within N recent frames
+  conflict_reject: 2            # >=N strong non-target-fruit votes -> REJECT (never pick)

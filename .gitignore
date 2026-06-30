@@ -1,0 +1,22 @@
+# === 대용량 데이터/가중치 — git이 아닌 별도 채널로 옮김 ===
+/yolo/
+/datasets/
+/runs/
+*.pt
+*.onnx
+*.onnx.data
+*.engine
+*.pth
+*.trt
+
+# === Python 캐시/가상환경 ===
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# === OS/에디터 잡파일 ===
+.DS_Store
+Thumbs.db

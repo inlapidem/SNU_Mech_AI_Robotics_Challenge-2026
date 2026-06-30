@@ -1,0 +1,7 @@
+# YOLO detector dataset for Set 1 - single class, high recall.
+# Produced by sim/generate_set1_data.py.
+path: /home/user/joon/datasets/set1/detector
+train: images/train
+val: images/val
+names:
+  0: polyhedron
