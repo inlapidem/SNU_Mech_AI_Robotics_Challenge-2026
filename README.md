@@ -1,3 +1,8 @@
+# SNU-mech-AI-robotics-challenge
+서울대학교 학부생 AI 로봇 챌린지
+
+---
+
 # Polyhedra detection (cube · octahedron · dodecahedron · icosahedron)
 
 A lightweight YOLO11n detector for 4 types of 3D-printed solids, trained entirely on
