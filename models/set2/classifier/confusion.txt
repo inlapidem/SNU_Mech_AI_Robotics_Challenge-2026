@@ -1,16 +1,16 @@
 confusion matrix (rows=true, cols=pred)
 	apple	banana	orange	pineapple	unknown
-apple	367	4	7	7	71
-banana	3	318	15	15	75
-orange	4	9	320	10	77
-pineapple	1	16	8	369	44
-unknown	158	132	114	181	2508
-apple      precision=0.689 recall=0.805
-banana     precision=0.664 recall=0.746
-orange     precision=0.690 recall=0.762
-pineapple  precision=0.634 recall=0.842
-unknown    precision=0.904 recall=0.811
---- at runtime gate conf>=0.75 margin>=0.15 ---
-unknown_leak_rate (junk accepted as fruit) = 267/3093 = 0.0863   <-- drives -40 penalties, push toward 0
-fruit_confusion_rate (wrong fruit accepted) = 12/1129 = 0.0106
-identifiable_fruit_recall = 0.6420
+apple	353	0	0	0	1
+banana	0	329	0	0	1
+orange	0	0	328	0	4
+pineapple	0	2	0	353	1
+unknown	13	20	26	21	584
+apple      precision=0.964 recall=0.997
+banana     precision=0.937 recall=0.997
+orange     precision=0.927 recall=0.988
+pineapple  precision=0.944 recall=0.992
+unknown    precision=0.988 recall=0.880
+--- at runtime gate conf>=0.9 margin>=0.1 ---
+unknown_leak_rate (junk accepted as fruit) = 40/664 = 0.0602   <-- drives -40 penalties, push toward 0
+fruit_confusion_rate (wrong fruit accepted) = 1/1299 = 0.0008
+identifiable_fruit_recall = 0.9461

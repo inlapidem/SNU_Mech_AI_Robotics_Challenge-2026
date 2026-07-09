@@ -30,8 +30,11 @@ def export_classifier():
     model.eval()
     dummy = torch.zeros(1, 3, imgsz, imgsz)
     out = os.path.join(cdir, "best.onnx")
+    # opset 17 + legacy exporter: TensorRT-parseable (JetPack 5.x/6.x) and MobileNetV3's
+    # HardSwish needs >=14. The new torch.export exporter falls back to opset 18 (which older
+    # trtexec can reject), so force the TorchScript path with dynamo=False.
     torch.onnx.export(model, dummy, out, input_names=["input"], output_names=["logits"],
-                      opset_version=12, dynamic_axes=None)
+                      opset_version=17, dynamic_axes=None, dynamo=False)
 
     # torch 2.x may externalize weights to best.onnx.data; consolidate into a single
     # self-contained file so trtexec / TensorRT can parse it directly.

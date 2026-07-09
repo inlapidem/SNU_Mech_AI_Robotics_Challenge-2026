@@ -89,3 +89,31 @@ the device. FP16 (`--half`) is the recommended speed/accuracy trade-off on Orin 
 - Validate on real photos before trusting deployment metrics; synthetic-only val mAP
   is optimistic.
 ```
+
+## 팀 셋업 가이드 (Ubuntu / WSL 공통)
+
+이 repo에는 **코드·설정·README·Claude 채팅 기록**만 들어 있습니다.
+대용량 파일은 git에서 제외되어 있으므로(`.gitignore` 참고) 별도 채널(구글 드라이브/USB 등)로 받아야 합니다:
+
+| 폴더 | 내용 | 용량 |
+|---|---|---|
+| `datasets/` | 학습 데이터셋 | ~34G |
+| `yolo/` | 파이썬 venv (각자 새로 만들 것) | — |
+| `runs/` | 학습 결과 | ~143M |
+| `capture/` | 실촬영 영상/프레임 | ~830M |
+| `models/**/*.pt`, `*.onnx` | 학습된 가중치 | 개당 6~11M |
+
+### 새 컴퓨터에서 시작하기
+
+```bash
+git clone <팀-레포-URL> joon
+cd joon
+bash scripts/localize_paths.sh   # configs의 데이터셋 절대경로를 내 경로로 자동 치환
+# 이후 datasets/, models/ 가중치 등을 별도 채널로 받아 같은 위치에 배치
+```
+
+- venv(`yolo/`)는 커밋되지 않으므로 각자 생성: `python3 -m venv yolo && yolo/bin/pip install ultralytics`
+- WSL 사용자 주의: 프로젝트를 반드시 **리눅스 파일시스템**(`~/joon`)에 두세요.
+  `/mnt/c/...`(윈도우 드라이브)에 두면 학습 I/O가 매우 느리고 권한 문제가 생깁니다.
+- 줄바꿈은 `.gitattributes`로 LF로 강제되어 있어 WSL/Ubuntu 간 diff 오염이 없습니다.
+- Claude Code 채팅 기록 복원 방법은 [`_claude_history/README.md`](_claude_history/README.md) 참고.

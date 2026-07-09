@@ -2,12 +2,14 @@
 /yolo/
 /datasets/
 /runs/
+/capture/
 *.pt
 *.onnx
 *.onnx.data
 *.engine
 *.pth
 *.trt
+*.stale
 
 # === Python 캐시/가상환경 ===
 __pycache__/

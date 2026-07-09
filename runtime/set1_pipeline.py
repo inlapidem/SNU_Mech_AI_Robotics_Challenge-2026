@@ -77,7 +77,14 @@ class Set1Pipeline:
         rt = cfg["runtime"]
         self.rt = rt
         self.target = target_shape
-        self.detector = YOLO(os.path.join(ROOT, "models", "set1", "detector", "best.pt"))
+        # Prefer the TensorRT engine, then ONNX, then the PyTorch checkpoint.
+        det_dir = os.path.join(ROOT, "models", "set1", "detector")
+        det = next((os.path.join(det_dir, f"best.{e}") for e in ("engine", "onnx", "pt")
+                    if os.path.isfile(os.path.join(det_dir, f"best.{e}"))), None)
+        if det is None:
+            raise SystemExit(f"no detector weights in {det_dir} (best.engine/onnx/pt)")
+        print(f"[set1] detector backend: {os.path.basename(det)}")
+        self.detector = YOLO(det)
         self.clf = ShapeClassifier(os.path.join(ROOT, "models", "set1", "classifier"))
         self.tracker = Tracker(rt["track_iou"], rt["track_max_age"], rt["vote_window"])
         self.policy = DecisionPolicy(rt, target_shape)

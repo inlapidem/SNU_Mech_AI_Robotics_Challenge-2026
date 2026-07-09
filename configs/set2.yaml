@@ -105,6 +105,20 @@ fruit_label:
   glare_prob: 0.25             # chance of a brighter specular label material
   roughness: [0.3, 0.7]
 
+# --------------------------------------------------------------------------- real-capture ArUco compositing
+# Markers printed on the real cubes' 3 "fruit" faces for the sim->real pipeline:
+# detect quad -> solvePnP facing -> composite a fruit texture over it -> auto-label
+# with the same labeling gates as the synthetic generator (see `labeling:` below).
+aruco:
+  dictionary: DICT_4X4_50      # low bit count -> readable at small pixel sizes
+  marker_size_m: 0.050         # printed marker edge, outer black border (62.5% of face)
+  face_size_m: 0.080           # cut square = full cube face (6C1.STL: 80 mm, 1 mm chamfers)
+  n_cubes: 4                   # cube k carries ids [3k, 3k+1, 3k+2]
+  faces_per_cube: 3
+  # Composite label size range (fraction of face edge). Lower bound must keep the
+  # pasted label able to fully cover the 62.5% marker: offset <= (scale - 0.625)/2.
+  composite_scale_frac: [0.68, 0.92]
+
 # --------------------------------------------------------------------------- lighting / DR (shared with set1)
 lighting:
   sun_intensity: [2000, 9000]

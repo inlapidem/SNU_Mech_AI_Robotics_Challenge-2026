@@ -1,0 +1,13 @@
+# Detector fine-tuning data = synthetic arena + human-verified real webcam frames
+# (datasets/set1_autolabel, labeled via label_server.py). Real deployment-domain frames
+# with unlabeled clutter (casters/chairs) teach the detector NOT to fire on lab clutter and
+# to actually FIND the white polyhedron it currently misses. Single class 'polyhedron'.
+# val = real only, so the metric reflects the deployment domain.
+path: /home/user/joon/datasets
+train:
+  - set1/detector/images/train
+  - set1_autolabel/detector/images/train
+val:
+  - set1_autolabel/detector/images/val
+names:
+  0: polyhedron

@@ -1,13 +1,13 @@
 confusion matrix (rows=true, cols=pred)
 	cube	dodecahedron	icosahedron	octahedron	unknown
-cube	2326	1	0	12	35
-dodecahedron	1	2394	3	0	20
-icosahedron	1	2	2491	4	28
-octahedron	6	2	4	2267	27
-unknown	234	128	135	177	3420
-cube           precision=0.906 recall=0.980
-dodecahedron   precision=0.947 recall=0.990
-icosahedron    precision=0.946 recall=0.986
-octahedron     precision=0.922 recall=0.983
-unknown        precision=0.969 recall=0.835
-dodeca<->icosa confusion rate = 5/4944 = 0.001
+cube	27	0	0	0	0
+dodecahedron	0	12	0	0	0
+icosahedron	0	0	27	0	0
+octahedron	0	0	0	20	0
+unknown	0	0	0	0	10
+cube           precision=1.000 recall=1.000
+dodecahedron   precision=1.000 recall=1.000
+icosahedron    precision=1.000 recall=1.000
+octahedron     precision=1.000 recall=1.000
+unknown        precision=1.000 recall=1.000
+dodeca<->icosa confusion rate = 0/39 = 0.000

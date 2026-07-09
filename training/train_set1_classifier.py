@@ -27,10 +27,59 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HARD_PAIR = {"dodecahedron", "icosahedron"}            # extra loss weight on these
 
 
+class RobotCamSim:
+    """Simulate a low-res robot-camera crop: sharp high-res (phone) crops are randomly
+    downscaled then upscaled (soft/blocky like a ~40-110 px detector crop upsampled to
+    the classifier size). Closes the phone->NUROUM resolution gap. Operates on a PIL image.
+
+    Class-aware floor: the dodeca<->icosa tell is the internal facet edges, which die below
+    ~60-80 px. Training on sub-resolution crops of that pair (where the two are physically
+    indistinguishable) teaches confident-WRONG calls, so the hard pair keeps a higher
+    resolution floor (`hard_min_px`) while other classes keep the aggressive floor for
+    robustness. Downscale uses BOX (area-average, like a real sensor) instead of BILINEAR,
+    which aliases/over-sharpens on large downscales."""
+
+    def __init__(self, min_px=56, hard_min_px=84, max_px=112, p=0.75):
+        self.min_px, self.hard_min_px, self.max_px, self.p = min_px, hard_min_px, max_px, p
+
+    def __call__(self, img, is_hard=False):
+        import random
+        from PIL import Image
+        if random.random() > self.p:
+            return img
+        floor = min(self.hard_min_px if is_hard else self.min_px, self.max_px)
+        w, h = img.size
+        s = random.randint(floor, self.max_px)
+        small = img.resize((max(1, s), max(1, int(s * h / w))), Image.BOX)
+        return small.resize((w, h), Image.BILINEAR)
+
+
+class ClassAwareAugFolder(datasets.ImageFolder):
+    """ImageFolder that threads the sample's class into RobotCamSim so the hard pair gets a
+    higher resolution floor. Geometric/photometric transforms are split around RobotCamSim
+    (pre = RandomResizedCrop; post = blur/jitter/rotation/tensor) to preserve the original
+    augmentation order while making the resolution step label-dependent."""
+
+    def __init__(self, root, pre_tf, camsim, post_tf, hard_names):
+        super().__init__(root)
+        self.pre_tf, self.camsim, self.post_tf = pre_tf, camsim, post_tf
+        self.hard_idx = {self.class_to_idx[c] for c in hard_names if c in self.class_to_idx}
+
+    def __getitem__(self, i):
+        path, target = self.samples[i]
+        img = self.loader(path)
+        img = self.pre_tf(img)
+        img = self.camsim(img, target in self.hard_idx)
+        img = self.post_tf(img)
+        return img, target
+
+
 def build_loaders(data_root, imgsz, batch):
-    # Augmentation simulates detector crop imperfection + sim->real gap.
-    train_tf = transforms.Compose([
-        transforms.RandomResizedCrop(imgsz, scale=(0.7, 1.0), ratio=(0.8, 1.25)),
+    # Augmentation simulates detector crop imperfection + sim->real gap (incl. the
+    # phone->robot-camera resolution drop via RobotCamSim, applied class-aware).
+    pre_tf = transforms.RandomResizedCrop(imgsz, scale=(0.7, 1.0), ratio=(0.8, 1.25))
+    camsim = RobotCamSim()
+    post_tf = transforms.Compose([
         transforms.RandomApply([transforms.GaussianBlur(3, (0.1, 2.0))], p=0.3),
         transforms.ColorJitter(0.3, 0.3, 0.3, 0.05),
         transforms.RandomRotation(12),
@@ -43,7 +92,7 @@ def build_loaders(data_root, imgsz, batch):
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
     ])
-    train = datasets.ImageFolder(os.path.join(data_root, "train"), train_tf)
+    train = ClassAwareAugFolder(os.path.join(data_root, "train"), pre_tf, camsim, post_tf, HARD_PAIR)
     val = datasets.ImageFolder(os.path.join(data_root, "val"), val_tf)
 
     # Class balancing via a weighted sampler (datasets are imbalanced: unknown is large).
@@ -119,14 +168,20 @@ def main():
     ap.add_argument("--batch", type=int, default=128)
     ap.add_argument("--imgsz", type=int, default=128)
     ap.add_argument("--lr", type=float, default=3e-4)
+    ap.add_argument("--init", default=None,
+                    help="checkpoint to fine-tune FROM (e.g. the synthetic best.pt)")
     args = ap.parse_args()
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     train_loader, val_loader, classes, counts = build_loaders(args.data, args.imgsz, args.batch)
     print("classes:", dict(zip(classes, counts.tolist())))
 
-    model = models.mobilenet_v3_small(weights=models.MobileNet_V3_Small_Weights.DEFAULT)
+    weights = None if args.init else models.MobileNet_V3_Small_Weights.DEFAULT
+    model = models.mobilenet_v3_small(weights=weights)
     model.classifier[3] = nn.Linear(model.classifier[3].in_features, len(classes))
+    if args.init:                                   # fine-tune from a prior (synthetic) model
+        model.load_state_dict(torch.load(args.init, map_location="cpu"))
+        print(f"initialized from {args.init}")
     model = model.to(device)
 
     crit = nn.CrossEntropyLoss(weight=class_weights(classes, counts).to(device), label_smoothing=0.05)

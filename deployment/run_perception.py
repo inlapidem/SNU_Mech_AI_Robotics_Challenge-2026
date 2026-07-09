@@ -41,6 +41,16 @@ def run_set1(cfg, args):
 
     src = int(args.source) if str(args.source).isdigit() else args.source
     cap = cv2.VideoCapture(src)
+    # Models assume the NUROUM V11 at 1280x720; force it (webcams default to 640x480,
+    # which breaks the pixel-based gates min_bbox_px / pickup_min_bbox_px). MJPG keeps
+    # USB bandwidth sane; BUFFERSIZE=1 avoids latency build-up.
+    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+    print(f"[set1] capture {int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))}x"
+          f"{int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))} "
+          f"(requested 1280x720 MJPG)")
     while cap.isOpened():
         ok, frame = cap.read()
         if not ok:
