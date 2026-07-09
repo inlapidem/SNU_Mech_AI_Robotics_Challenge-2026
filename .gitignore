@@ -1,4 +1,4 @@
-# === 대용량 데이터/가중치 — git이 아닌 별도 채널로 옮김 ===
+# === 대용량 데이터 — git이 아닌 별도 채널로 옮김 ===
 /yolo/
 /datasets/
 /runs/
@@ -10,6 +10,13 @@
 *.pth
 *.trt
 *.stale
+
+# 학습된 모델 가중치는 포함 (팀원이 clone 후 바로 추론 가능)
+# 단 .engine/.trt는 Jetson 기기에서 직접 빌드해야 하므로 제외 유지
+!models/**/*.pt
+!models/**/*.onnx
+!models/**/*.onnx.data
+!models/**/*.pth
 
 # === Python 캐시/가상환경 ===
 __pycache__/

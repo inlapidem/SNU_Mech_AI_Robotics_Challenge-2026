@@ -92,8 +92,9 @@ the device. FP16 (`--half`) is the recommended speed/accuracy trade-off on Orin 
 
 ## 팀 셋업 가이드 (Ubuntu / WSL 공통)
 
-이 repo에는 **코드·설정·README·Claude 채팅 기록**만 들어 있습니다.
-대용량 파일은 git에서 제외되어 있으므로(`.gitignore` 참고) 별도 채널(구글 드라이브/USB 등)로 받아야 합니다:
+이 repo에는 **코드·설정·학습된 모델 가중치(`models/`)·README·Claude 채팅 기록**이 들어 있어
+clone 후 바로 추론을 돌려볼 수 있습니다.
+대용량 데이터는 git에서 제외되어 있으므로(`.gitignore` 참고) 별도 채널(구글 드라이브/USB 등)로 받아야 합니다:
 
 | 폴더 | 내용 | 용량 |
 |---|---|---|
@@ -101,7 +102,8 @@ the device. FP16 (`--half`) is the recommended speed/accuracy trade-off on Orin 
 | `yolo/` | 파이썬 venv (각자 새로 만들 것) | — |
 | `runs/` | 학습 결과 | ~143M |
 | `capture/` | 실촬영 영상/프레임 | ~830M |
-| `models/**/*.pt`, `*.onnx` | 학습된 가중치 | 개당 6~11M |
+
+TensorRT `.engine`은 기기(GPU/TensorRT 버전) 종속이라 커밋하지 않습니다 — Jetson에서 직접 빌드하세요.
 
 ### 새 컴퓨터에서 시작하기
 
@@ -109,7 +111,7 @@ the device. FP16 (`--half`) is the recommended speed/accuracy trade-off on Orin 
 git clone <팀-레포-URL> joon
 cd joon
 bash scripts/localize_paths.sh   # configs의 데이터셋 절대경로를 내 경로로 자동 치환
-# 이후 datasets/, models/ 가중치 등을 별도 채널로 받아 같은 위치에 배치
+# 학습/데이터 작업이 필요하면 datasets/ 등을 별도 채널로 받아 같은 위치에 배치
 ```
 
 - venv(`yolo/`)는 커밋되지 않으므로 각자 생성: `python3 -m venv yolo && yolo/bin/pip install ultralytics`
