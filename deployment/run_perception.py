@@ -23,6 +23,7 @@ sys.path.insert(0, ROOT)
 
 STATE_COLOR = {"SEARCHING": (180, 180, 180), "TARGET_CONFIRMED": (0, 200, 255),
                "PICKUP_READY": (0, 230, 0), "GIVE_UP": (0, 0, 200),
+               "FAR_CANDIDATE": (0, 165, 255),   # long-range approach target (orange)
                # Set 2 states:
                "UNKNOWN_CUBE": (160, 160, 160), "NON_TARGET_FRUIT": (0, 120, 220),
                "TARGET_CANDIDATE": (0, 200, 255), "REJECTED": (0, 0, 200)}

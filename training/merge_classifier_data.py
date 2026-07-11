@@ -14,7 +14,11 @@ import os
 import shutil
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SYN = os.path.join(ROOT, "datasets", "set1", "classifier")
+# Synthetic sources, newest first: v2 (real-venue arena: wood walls, taegukgi stickers,
+# tape lines) + v1 (white-wall). Missing dirs are skipped, so this works before AND
+# after the v2 regeneration; the per-class syn cap is shared across both.
+SYN_DIRS = [os.path.join(ROOT, "datasets", "set1_v2", "classifier"),
+            os.path.join(ROOT, "datasets", "set1", "classifier")]
 REAL = os.path.join(ROOT, "datasets", "set1_real", "classifier")
 OUT = os.path.join(ROOT, "datasets", "set1_merged", "classifier")
 CLASSES = ["cube", "octahedron", "dodecahedron", "icosahedron", "unknown"]
@@ -42,12 +46,14 @@ def main():
         for c in CLASSES:
             os.makedirs(os.path.join(out, split, c), exist_ok=True)
 
-    # train = synthetic (1x) + real (repeat x)
+    # train = synthetic (1x, v2 first) + real (repeat x)
     for c in CLASSES:
         n = 0
-        syn = sorted(glob.glob(os.path.join(SYN, "train", c, "*")))[:args.syn_cap]
-        for p in syn:
-            link(p, os.path.join(out, "train", c, "syn_" + os.path.basename(p))); n += 1
+        syn = []
+        for si, sdir in enumerate(SYN_DIRS):
+            syn += [(f"syn{si}_", p) for p in sorted(glob.glob(os.path.join(sdir, "train", c, "*")))]
+        for prefix, p in syn[:args.syn_cap]:
+            link(p, os.path.join(out, "train", c, prefix + os.path.basename(p))); n += 1
         for p in glob.glob(os.path.join(real, "train", c, "*")):
             for r in range(args.repeat):
                 stem = os.path.splitext(os.path.basename(p))[0]

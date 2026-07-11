@@ -21,18 +21,45 @@ assets:
     icosahedron: icosahedron.usd
 
 # --------------------------------------------------------------------------- arena
+# REAL VENUE (confirmed by photos, overrides the draft rulebook): bright wood-laminate
+# walls AND floor, taegukgi stickers on walls/floor, black tape lines on the floor.
 arena:
   size_x: 4.0           # m
   size_y: 4.0           # m
-  wall_height: 0.5      # m
+  wall_height: 0.3      # m (rulebook v2: 30 cm fence)
   wall_thickness: 0.05  # m
-  floor_color: [0.45, 0.30, 0.17]   # wood-ish brown (UsdPreviewSurface diffuse)
+  texture_dir: assets/arena_textures   # wood/*.png + stickers/*.png (make_arena_textures.py)
+  wood_brightness: [0.75, 1.15]        # per-frame texture brightness jitter
+  # Solid-colour FALLBACK (only used when texture_dir has no wood files):
+  floor_color: [0.78, 0.62, 0.42]   # light wood laminate
   floor_color_jitter: 0.08
   floor_roughness: [0.5, 0.9]
-  wall_color: [0.92, 0.92, 0.92]    # white walls
-  wall_color_jitter: 0.06
+  wall_color: [0.78, 0.62, 0.42]    # walls are the same bright wood as the floor
+  wall_color_jitter: 0.08
   wall_roughness: [0.4, 0.8]
-  spawn_margin: 0.35    # keep objects/robot this far from walls (m)
+  stickers:                          # taegukgi + generic labels, randomized per frame
+    pool: 8                          # quads built once
+    count: [2, 6]                    # visible per frame
+    size_m: [0.10, 0.28]
+    floor_frac: 0.3                  # fraction placed on the floor (rest on walls)
+  tape:                              # black floor tape (zone boundaries)
+    enable: true
+    width_m: [0.015, 0.025]
+    color: [0.05, 0.05, 0.05]
+    color_jitter: 0.05
+    zone_squares: true               # 40x40 cm start/storage outlines in two corners
+    pool_runs: 4
+    n_random_runs: [1, 4]            # extra straight runs across the floor per frame
+  spawn_margin: 0.35    # legacy placement half-extent (kept for compatibility)
+
+# ------------------------------------------------------------- placement/camera sampling
+sampling:
+  cam_dist_near: [0.4, 1.5]   # m, classify range
+  cam_dist_far: [1.5, 3.8]    # m, long-range detection views
+  far_frac: 0.45              # fraction of frames drawn from the far range
+  wall_contact_frac: 0.35     # frames with a wall pulled right behind the object cluster
+  wall_gap_m: [0.30, 0.60]    # cluster-centre -> wall distance in those frames
+  negative_frame_frac: 0.10   # object-free frames (wood/sticker/tape only), empty labels
 
 # --------------------------------------------------------------------------- camera (NUROUM V11)
 camera:
@@ -78,6 +105,10 @@ objects:
     icosahedron: 0.098
   render_calib_m: 64.9        # empirical: rep scale 1.0 renders the (0.2-unit) USD at ~64.9 m
   scale_range: [0.85, 1.15]   # then multiplied by this (per-frame size variation)
+  # Set 2 fruit cubes appear in the SAME arena during the real match. They are added
+  # as detector positives (a cube candidate is a cube candidate) but NEVER become
+  # shape-classifier crops (see generate_set1_data + cross-set unknown injection).
+  fruit_cube_distractors: 2
   # Placement is anywhere on the arena floor within spawn_margin of the walls.
   z_on_floor: 0.0
   # White 3D-printed plastic material (UsdPreviewSurface).
@@ -103,7 +134,7 @@ postprocess:
 
 # --------------------------------------------------------------------------- dataset output
 dataset:
-  root: datasets/set1
+  root: datasets/set1_v2      # v2 = real-venue arena + long-range sampling (v1 kept)
   detector_subdir: detector       # images/{train,val} + labels/{train,val}
   classifier_subdir: classifier   # {train,val}/<class>/*.png
   metadata_subdir: metadata       # per-frame json
@@ -131,7 +162,14 @@ render:
 # --------------------------------------------------------------------------- runtime (Jetson)
 runtime:
   detector_conf: 0.25           # low -> high recall; classifier rejects junk
-  detector_imgsz: 640
+  detector_imgsz: 960           # 640 loses most 2m+ objects; validate latency on Jetson
+                                # with deployment/benchmark_latency.py before lowering
+  # Long-range candidate channel: below detector_conf but above far_conf, a SMALL box
+  # (too small to classify anyway) still enters the tracker as an approach candidate.
+  # Track persistence (far_min_hits) debounces it, so navigation gets far targets
+  # without loosening the pickup-side false-positive gates at all.
+  far_conf: 0.10
+  far_min_hits: 3               # consecutive-ish sightings before FAR_CANDIDATE is reported
   # Only classify a crop when the object is close/large enough to be reliable:
   min_bbox_px: 40               # min(w,h) in pixels
   min_bbox_area_ratio: 0.004    # bbox area / image area
@@ -145,6 +183,11 @@ runtime:
   track_max_age: 10             # frames a track survives unseen
   vote_window: 7                # recent classifications considered
   min_confirmations: 3          # target votes needed for TARGET_CONFIRMED
+  # Set 2 cubes are visually IDENTICAL to the Set 1 cube when no fruit face shows, so
+  # a 'cube' target needs more evidence than the other shapes (multi-view; the fruit
+  # side may be hidden). Cross-set unknown injection teaches the classifier that a
+  # fruit-showing cube is NOT a Set 1 cube.
+  cube_target_min_confirmations: 5
   max_reobserve: 6              # approach/re-observe attempts before giving up
   # PICKUP_READY gating:
   pickup_min_bbox_px: 90        # object must be close (large) to pick

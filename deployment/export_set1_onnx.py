@@ -12,11 +12,19 @@ import os
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
+def _detector_imgsz():
+    """Match the runtime inference size (configs/set1.yaml runtime.detector_imgsz)."""
+    import yaml
+    cfg = yaml.safe_load(open(os.path.join(ROOT, "configs", "set1.yaml"), encoding="utf-8"))
+    return int(cfg["runtime"]["detector_imgsz"])
+
+
 def export_detector():
     from ultralytics import YOLO
     p = os.path.join(ROOT, "models", "set1", "detector", "best.pt")
-    path = YOLO(p).export(format="onnx", imgsz=640, opset=12, simplify=True, dynamic=False)
-    print("detector ONNX ->", path)
+    sz = _detector_imgsz()
+    path = YOLO(p).export(format="onnx", imgsz=sz, opset=12, simplify=True, dynamic=False)
+    print(f"detector ONNX (imgsz {sz}) ->", path)
 
 
 def export_classifier():

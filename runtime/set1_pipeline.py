@@ -14,6 +14,8 @@ import numpy as np
 from runtime.tracking import Tracker
 from runtime.decision_policy import DecisionPolicy
 
+from runtime.backend_utils import resolve_detector_imgsz, detect_two_channel
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -85,6 +87,7 @@ class Set1Pipeline:
             raise SystemExit(f"no detector weights in {det_dir} (best.engine/onnx/pt)")
         print(f"[set1] detector backend: {os.path.basename(det)}")
         self.detector = YOLO(det)
+        resolve_detector_imgsz(det, rt, "set1")
         self.clf = ShapeClassifier(os.path.join(ROOT, "models", "set1", "classifier"))
         self.tracker = Tracker(rt["track_iou"], rt["track_max_age"], rt["vote_window"])
         self.policy = DecisionPolicy(rt, target_shape)
@@ -106,9 +109,8 @@ class Set1Pipeline:
         import cv2
         H, W = frame_bgr.shape[:2]
         rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-        res = self.detector.predict(frame_bgr, conf=self.rt["detector_conf"],
-                                    imgsz=self.rt["detector_imgsz"], verbose=False)[0]
-        boxes = [tuple(map(float, b)) for b in res.boxes.xyxy.cpu().numpy()] if res.boxes else []
+        boxes = detect_two_channel(self.detector, frame_bgr, self.rt,
+                                   [t.bbox for t in self.tracker.tracks])
 
         matched = self.tracker.update(boxes, self.frame_idx)
         out = []

@@ -22,6 +22,7 @@ import numpy as np
 
 from runtime.tracking import Tracker
 from runtime.set2_decision_policy import Set2DecisionPolicy
+from runtime.backend_utils import resolve_detector_imgsz, detect_two_channel
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -94,6 +95,7 @@ class Set2Pipeline:
             raise SystemExit(f"no detector weights in {det_dir} (best.engine/onnx/pt)")
         print(f"[set2] detector backend: {os.path.basename(det)}")
         self.detector = YOLO(det)
+        resolve_detector_imgsz(det, rt, "set2")
         self.clf = FruitClassifier(os.path.join(ROOT, "models", "set2", "classifier"))
         self.trackers = {}                         # camera -> Tracker (per-view association)
         self.policy = Set2DecisionPolicy(rt, target_fruit)
@@ -131,11 +133,9 @@ class Set2Pipeline:
         import cv2
         H, W = frame_bgr.shape[:2]
         rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-        res = self.detector.predict(frame_bgr, conf=self.rt["detector_conf"],
-                                    imgsz=self.rt["detector_imgsz"], verbose=False)[0]
-        boxes = [tuple(map(float, b)) for b in res.boxes.xyxy.cpu().numpy()] if res.boxes else []
-
         tracker = self._tracker(camera)
+        boxes = detect_two_channel(self.detector, frame_bgr, self.rt,
+                                   [t.bbox for t in tracker.tracks])
         matched = tracker.update(boxes, self.frame_idx)
         out = []
         for track, box in matched:

@@ -24,18 +24,45 @@ assets:
   cube_usd: null
 
 # --------------------------------------------------------------------------- arena (shared shape with set1)
+# REAL VENUE: bright wood-laminate walls AND floor, taegukgi stickers, black tape lines.
+# The taeguk red/blue circle is a key false-positive hazard for the fruit classifier.
 arena:
   size_x: 4.0
   size_y: 4.0
-  wall_height: 0.5
+  wall_height: 0.3                     # rulebook v2: 30 cm fence
   wall_thickness: 0.05
-  floor_color: [0.45, 0.30, 0.17]
+  texture_dir: assets/arena_textures   # wood/*.png + stickers/*.png (make_arena_textures.py)
+  wood_brightness: [0.75, 1.15]
+  # Solid-colour FALLBACK (only used when texture_dir has no wood files):
+  floor_color: [0.78, 0.62, 0.42]
   floor_color_jitter: 0.08
   floor_roughness: [0.5, 0.9]
-  wall_color: [0.92, 0.92, 0.92]
-  wall_color_jitter: 0.06
+  wall_color: [0.78, 0.62, 0.42]
+  wall_color_jitter: 0.08
   wall_roughness: [0.4, 0.8]
+  stickers:
+    pool: 8
+    count: [2, 6]
+    size_m: [0.10, 0.28]
+    floor_frac: 0.3
+  tape:
+    enable: true
+    width_m: [0.015, 0.025]
+    color: [0.05, 0.05, 0.05]
+    color_jitter: 0.05
+    zone_squares: true
+    pool_runs: 4
+    n_random_runs: [1, 4]
   spawn_margin: 0.35
+
+# ------------------------------------------------------------- placement/camera sampling
+sampling:
+  cam_dist_near: [0.3, 1.5]   # m, classify range
+  cam_dist_far: [1.5, 3.8]    # m, long-range detection views
+  far_frac: 0.45
+  wall_contact_frac: 0.35     # white cube against bright wood wall, touching allowed
+  wall_gap_m: [0.30, 0.60]
+  negative_frame_frac: 0.10   # cube-free frames (wood/sticker/tape only), empty labels
 
 # --------------------------------------------------------------------------- camera (NUROUM V11) - identical rig to set1
 camera:
@@ -82,9 +109,11 @@ cubes:
     color_jitter: 0.06
     roughness: [0.35, 0.7]
     metallic: 0.0
-  # Set 2 arena contains ONLY fruit cubes. Non-cube polyhedra (Set 1 shapes) are NOT
-  # present during the Set 2 mission, so they are disabled as scene negatives by default.
-  use_noncube_negatives: false        # true -> add octa/dodeca/icosa as hard negatives
+  # Rulebook v2: BOTH sets (28 objects) share the arena during the match, so the Set 1
+  # polyhedra ARE present and are trained as unlabelled hard negatives (they appear in
+  # the images but never get a 'cube_candidate' box, teaching the detector NOT to fire
+  # on them; their crops also become classifier 'unknown' samples).
+  use_noncube_negatives: true         # add octa/dodeca/icosa as hard negatives
   set1_usd_dir: isaac/assets/usd      # where those USDs live (only used if the flag is true)
   neg_size_m: 0.08                    # rendered size of non-cube negatives (if enabled)
   neg_calib_m: 64.9                   # set1 render_calib quirk: rep scale 1.0 renders USD at ~64.9 m
@@ -134,7 +163,7 @@ postprocess:
 
 # --------------------------------------------------------------------------- dataset output
 dataset:
-  root: datasets/set2
+  root: datasets/set2_v2      # v2 = real-venue arena + long-range sampling (v1 kept)
   detector_subdir: detector
   classifier_subdir: classifier
   metadata_subdir: metadata
@@ -170,7 +199,12 @@ render:
 # --------------------------------------------------------------------------- runtime (Jetson) - conservative, false-positive averse
 runtime:
   detector_conf: 0.25
-  detector_imgsz: 640
+  detector_imgsz: 960           # 640 loses most 2m+ cubes; validate latency on Jetson
+                                # with deployment/benchmark_latency.py before lowering
+  # Long-range candidate channel (see set1.yaml): small low-conf boxes become tracked
+  # approach candidates; pickup-side gates are untouched (false-positive-averse).
+  far_conf: 0.10
+  far_min_hits: 3
   # Only classify when the cube is close/large enough for reliable fruit reading:
   min_bbox_px: 48               # min(w,h) px (larger than set1: fruit detail needs resolution)
   min_bbox_area_ratio: 0.006

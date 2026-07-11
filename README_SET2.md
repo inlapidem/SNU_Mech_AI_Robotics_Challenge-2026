@@ -1,5 +1,10 @@
 # Set 2 — fruit-cube perception (Jetson Orin Nano)
 
+> **2026-07-10 원거리 인식 업그레이드**: 실제 대회장 반영(우드 벽·바닥, 태극기 스티커,
+> 테이프 라인) + 카메라 0.3~3.8 m 샘플링 + imgsz 960 + 런타임 FAR_CANDIDATE 정책.
+> 재생성/재학습/평가/촬영 가이드는 [docs/long_range_upgrade.md](docs/long_range_upgrade.md) 참고.
+
+
 Two-stage, conservative pipeline for competition Set 2: find white cubes from afar,
 read the **visible fruit** on a cube only when close and the fruit is actually in view,
 and pick only the announced target fruit. Wrong pickup = **−40**, miss = **0**, so the

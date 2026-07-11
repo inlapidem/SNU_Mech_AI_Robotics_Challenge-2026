@@ -8,6 +8,7 @@ cube stays unknown (the fruit image may simply be on a face we can't see).
 
 States:
   SEARCHING         gathering evidence / cube too far to classify
+  FAR_CANDIDATE     distant small box, persistently detected -> navigation approach target
   UNKNOWN_CUBE      cube visible but no identifiable fruit -> re-observe from a new view
   NON_TARGET_FRUIT  looks like a different fruit (not enough to hard-reject yet)
   TARGET_CANDIDATE  some target votes, not yet confirmed -> approach / keep observing
@@ -15,10 +16,16 @@ States:
   PICKUP_READY      confirmed + close + freshly re-confirmed -> safe to grasp
   REJECTED          confidently a different fruit (or conflicting) -> skip permanently
 
+Two-stage distance handling: FAR_CANDIDATE only steers navigation (the detector's
+low-conf far channel is debounced by far_min_hits). It never contributes fruit
+evidence - at long range a cube might even be a Set 1 polyhedron; the identity is
+settled by the classifier once close, so pickup safety is unchanged.
+
 This is Set 2-specific (separate from Set 1's DecisionPolicy).
 """
 
 SEARCHING = "SEARCHING"
+FAR_CANDIDATE = "FAR_CANDIDATE"
 UNKNOWN_CUBE = "UNKNOWN_CUBE"
 NON_TARGET_FRUIT = "NON_TARGET_FRUIT"
 TARGET_CANDIDATE = "TARGET_CANDIDATE"
@@ -114,5 +121,8 @@ class Set2DecisionPolicy:
                 info["request_reobserve"] = True
             return UNKNOWN_CUBE, info
 
-        # Detected but never classifiable (too far/small): approach.
+        # Detected but never classifiable (too far/small): persistent small tracks are
+        # navigation approach targets; brand-new ones may be far-channel noise.
+        if bbox_px < self.c["min_bbox_px"] and track.hits >= self.c.get("far_min_hits", 3):
+            return FAR_CANDIDATE, info
         return SEARCHING, info

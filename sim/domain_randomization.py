@@ -81,3 +81,64 @@ def sample_robot_base(rng, dist_range=(0.6, 3.0)):
     base_xy = (dist * math.cos(ang), dist * math.sin(ang))
     base_yaw_deg = math.degrees(ang) + 180.0          # face the origin
     return base_xy, base_yaw_deg, dist
+
+
+# ---------------------------------------------------------------- long-range sampling
+def sample_arena_offset(rng, scfg, arena_half=2.0, cluster_r=0.3):
+    """Arena translation for this frame (the object cluster stays at the origin).
+
+    With prob wall_contact_frac the nearest wall is pulled to wall_gap_m of the
+    cluster centre (white object against bright wood wall, touching allowed);
+    otherwise the cluster lands uniformly anywhere with full wall clearance.
+    """
+    if rng.uniform() < scfg.get("wall_contact_frac", 0.0):
+        gap = rng.uniform(*scfg.get("wall_gap_m", [cluster_r + 0.03, 0.6]))
+        side = rng.randint(4)                      # which wall hugs the cluster: N,S,E,W
+        mag = arena_half - gap                     # wall plane at +/-arena_half + offset
+        along = rng.uniform(-(arena_half - cluster_r - 0.2), arena_half - cluster_r - 0.2)
+        ox, oy = ((along, -mag), (along, mag), (-mag, along), (mag, along))[side]
+    else:
+        lim = arena_half - cluster_r - 0.15
+        ox, oy = rng.uniform(-lim, lim), rng.uniform(-lim, lim)
+    return float(ox), float(oy)
+
+
+def _max_dist_along(ang, arena_offset, arena_half, margin):
+    """Max camera distance from the cluster (origin) along `ang` that keeps the eye
+    inside the (offset) arena. eye = dist * (cos ang, sin ang); arena spans
+    offset +/- arena_half per axis."""
+    ox, oy = arena_offset
+    max_d = 10.0
+    for d, o in ((math.cos(ang), ox), (math.sin(ang), oy)):
+        if abs(d) > 1e-6:
+            for bound in (o - arena_half + margin, o + arena_half - margin):
+                t = bound / d
+                if t > 0:
+                    max_d = min(max_d, t)
+    return max_d
+
+
+def sample_camera_view(rng, scfg, arena_offset, arena_half=2.0, margin=0.15):
+    """(approach angle, camera distance, far?) for this frame: near/far mixture.
+
+    The angle is re-sampled a few times looking for a direction with enough room
+    for the drawn distance. For far draws this defeats wall clipping (cluster
+    against a wall -> viewed from across the arena, 3.5 m+; otherwise the far tail
+    collapses onto ~2 m). For near draws it prevents the opposite failure: in a
+    wall-contact frame an angle toward the pulled-in wall leaves only ~0.15 m of
+    room, which would put the camera INSIDE the object cluster.
+    """
+    rng_near = scfg.get("cam_dist_near", [0.4, 1.5])
+    rng_far = scfg.get("cam_dist_far", [1.5, 3.8])
+    far = rng.uniform() < scfg.get("far_frac", 0.45)
+    dist = rng.uniform(*(rng_far if far else rng_near))
+    ang = rng.uniform(-math.pi, math.pi)
+    best_ang, best_d = ang, _max_dist_along(ang, arena_offset, arena_half, margin)
+    for _ in range(8):
+        if best_d >= dist:
+            break
+        ang = rng.uniform(-math.pi, math.pi)
+        d = _max_dist_along(ang, arena_offset, arena_half, margin)
+        if d > best_d:
+            best_ang, best_d = ang, d
+    return float(best_ang), float(min(dist, best_d)), far

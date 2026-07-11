@@ -27,9 +27,13 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "configs"))
 from set2_classes import CLASSIFIER_CLASSES  # noqa: E402
 
-SYN_C = os.path.join(ROOT, "datasets", "set2", "classifier")
+# Synthetic sources, newest first: v2 (real-venue arena) + v1 (white-wall). Missing
+# dirs are skipped, so this works before AND after the v2 regeneration.
+SYN_C_DIRS = [os.path.join(ROOT, "datasets", "set2_v2", "classifier"),
+              os.path.join(ROOT, "datasets", "set2", "classifier")]
 REAL_C = os.path.join(ROOT, "datasets", "set2_real", "classifier")
-SYN_D = os.path.join(ROOT, "datasets", "set2", "detector")
+SYN_D_DIRS = [os.path.join(ROOT, "datasets", "set2_v2", "detector"),
+              os.path.join(ROOT, "datasets", "set2", "detector")]
 REAL_D = os.path.join(ROOT, "datasets", "set2_real", "detector")
 OUT = os.path.join(ROOT, "datasets", "set2_merged")
 DET_YAML = os.path.join(ROOT, "configs", "set2_detector_merged.yaml")
@@ -42,14 +46,17 @@ def link(src, dst):
 
 def merge_classifier(repeat, syn_cap):
     out = os.path.join(OUT, "classifier")
+    if os.path.isdir(out):        # stale links (old prefixes, xset_) must not survive
+        shutil.rmtree(out)
     stats = {}
     for c in CLASSIFIER_CLASSES:
         # train = capped synthetic + repeated real; val = REAL ONLY
         d = os.path.join(out, "train", c)
         os.makedirs(d, exist_ok=True)
-        syn = sorted(glob.glob(os.path.join(SYN_C, "train", c, "*")))[:syn_cap]
-        for f in syn:
-            link(f, os.path.join(d, "syn_" + os.path.basename(f)))
+        syn = [(f"syn{si}_", f) for si, sdir in enumerate(SYN_C_DIRS)
+               for f in sorted(glob.glob(os.path.join(sdir, "train", c, "*")))][:syn_cap]
+        for prefix, f in syn:
+            link(f, os.path.join(d, prefix + os.path.basename(f)))
         real = sorted(glob.glob(os.path.join(REAL_C, "train", c, "*")))
         for k in range(repeat):
             for f in real:
@@ -66,6 +73,9 @@ def merge_classifier(repeat, syn_cap):
 
 
 def merge_detector(repeat, syn_cap):
+    det_out = os.path.join(OUT, "detector")
+    if os.path.isdir(det_out):    # stale links from a previous merge must not survive
+        shutil.rmtree(det_out)
     for sub in ("images", "labels"):
         for split in ("train", "val"):
             os.makedirs(os.path.join(OUT, "detector", sub, split), exist_ok=True)
@@ -82,8 +92,9 @@ def merge_detector(repeat, syn_cap):
                                prefix + stem + ".txt"))
         return 1
 
-    n_syn = sum(pair_link(f, "syn_", "train") for f in sorted(
-        glob.glob(os.path.join(SYN_D, "images", "train", "*")))[:syn_cap])
+    syn_imgs = [(f"syn{si}_", f) for si, sdir in enumerate(SYN_D_DIRS)
+                for f in sorted(glob.glob(os.path.join(sdir, "images", "train", "*")))][:syn_cap]
+    n_syn = sum(pair_link(f, prefix, "train") for prefix, f in syn_imgs)
     real_tr = sorted(glob.glob(os.path.join(REAL_D, "images", "train", "*")))
     n_real = sum(pair_link(f, f"r{k}_", "train")
                  for k in range(repeat) for f in real_tr)

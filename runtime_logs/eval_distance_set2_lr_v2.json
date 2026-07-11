@@ -1,0 +1,53 @@
+{
+ "weights": "models/set2/detector/best.pt",
+ "images": [
+  "datasets/set2_v2/detector/images/val",
+  "datasets/set2_real/detector/images/val"
+ ],
+ "results": [
+  {
+   "imgsz": 960,
+   "conf": 0.25,
+   "buckets": {
+    "<1m": {
+     "n_gt": 2000,
+     "tp": 1979,
+     "fn": 21,
+     "fp": 40,
+     "recall": 0.9895,
+     "precision": 0.9802
+    },
+    "1-2m": {
+     "n_gt": 879,
+     "tp": 848,
+     "fn": 31,
+     "fp": 48,
+     "recall": 0.9647,
+     "precision": 0.9464
+    },
+    "2-3m": {
+     "n_gt": 509,
+     "tp": 477,
+     "fn": 32,
+     "fp": 48,
+     "recall": 0.9371,
+     "precision": 0.9086
+    },
+    "3m+": {
+     "n_gt": 155,
+     "tp": 112,
+     "fn": 43,
+     "fp": 9,
+     "recall": 0.7226,
+     "precision": 0.9256
+    }
+   },
+   "latency_ms": {
+    "mean": 12.6,
+    "p90": 16.6
+   },
+   "neg_frames": 152,
+   "neg_fp": 0
+  }
+ ]
+}

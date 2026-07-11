@@ -1,0 +1,19 @@
+# Set 2 detector, LONG-RANGE training mix.
+#   set2_v2   = Isaac synth, real-venue arena (wood walls/floor, taegukgi stickers,
+#               tape lines), camera 0.3-3.8 m, wall-contact shots, 10% empty negative
+#               frames, Set 1 polyhedra as unlabelled hard negatives.
+#               Generate with: python sim/generate_set2_data.py --frames 9000
+#   set2      = v1 synth (white-wall arena, 0.3-1.6 m) - kept for diversity.
+#   set2_real = ArUco-composited real frames (all <1 m; near-range grounding).
+# val mixes v2 synth (the only source with 2 m+ boxes) + real (deployment domain);
+# report per-distance-bucket metrics with training/eval_detector_by_distance.py.
+path: /home/user/joon/datasets
+train:
+  - set2_v2/detector/images/train
+  - set2/detector/images/train
+  - set2_real/detector/images/train
+val:
+  - set2_v2/detector/images/val
+  - set2_real/detector/images/val
+names:
+  0: cube_candidate

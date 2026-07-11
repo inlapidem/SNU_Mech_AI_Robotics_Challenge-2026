@@ -35,8 +35,14 @@ def classifier_probs(clf, crop_rgb):
 
 def main():
     ap = argparse.ArgumentParser()
+    import yaml
+    rt = yaml.safe_load(open(os.path.join(ROOT, "configs", "set1.yaml"),
+                             encoding="utf-8"))["runtime"]
     ap.add_argument("--images", nargs="+", required=True, help="real photo(s), globs ok")
     ap.add_argument("--det-conf", type=float, default=0.15)
+    ap.add_argument("--imgsz", type=int, default=rt["detector_imgsz"],
+                    help="detector input size (default: runtime config, so this tool "
+                         "diagnoses at the DEPLOYED resolution)")
     ap.add_argument("--save-crops", action="store_true", help="dump each crop for review")
     args = ap.parse_args()
 
@@ -59,7 +65,7 @@ def main():
             print(f"!! could not read {path}"); continue
         H, W = frame.shape[:2]
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        res = detector.predict(frame, conf=args.det_conf, imgsz=640, verbose=False)[0]
+        res = detector.predict(frame, conf=args.det_conf, imgsz=args.imgsz, verbose=False)[0]
         boxes = res.boxes.xyxy.cpu().numpy() if res.boxes is not None else []
         print(f"=== {os.path.basename(path)} : {len(boxes)} detections ===")
         for i, b in enumerate(boxes):

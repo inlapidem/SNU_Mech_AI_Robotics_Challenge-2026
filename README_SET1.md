@@ -1,5 +1,10 @@
 # Set 1 — white polyhedra perception (Jetson Orin Nano)
 
+> **2026-07-10 원거리 인식 업그레이드**: 실제 대회장 반영(우드 벽·바닥, 태극기 스티커,
+> 테이프 라인) + 카메라 0.3~3.8 m 샘플링 + imgsz 960 + 런타임 FAR_CANDIDATE 정책.
+> 재생성/재학습/평가/촬영 가이드는 [docs/long_range_upgrade.md](docs/long_range_upgrade.md) 참고.
+
+
 Two-stage, conservative pipeline for the robotics competition Set 1: find white 3D-printed
 polyhedra from afar, classify the shape only when close and reliable, and pick only the
 announced target. **Set 1 and Set 2 are kept fully separate** (datasets, models, configs,

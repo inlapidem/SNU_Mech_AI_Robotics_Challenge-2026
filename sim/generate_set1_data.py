@@ -44,6 +44,7 @@ from pxr import Usd, UsdGeom                          # noqa: E402
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 from sim import arena_builder, robot_sensor_rig, domain_randomization as dr  # noqa: E402
+from sim.fruit_cube import FruitCube  # noqa: E402  (Set 2 distractor cubes in Set 1 scenes)
 
 try:
     import yaml
@@ -97,11 +98,15 @@ class Set1Writer(Writer):
     # -- helpers ----------------------------------------------------------------
     @staticmethod
     def _name(raw):
+        """Semantic label -> shape name, or 'fruitcube' for Set 2 distractor cubes
+        (detector positive, but never a shape-classifier crop), else None."""
         if isinstance(raw, dict):
             raw = raw.get("class", "") or next(iter(raw.values()), "")
         for part in str(raw).replace(":", " ").replace(",", " ").split():
             if part in SHAPES:
                 return part
+            if part == "fruitcube":
+                return "fruitcube"
         return None
 
     def _crop(self, rgb, box, margin, shift):
@@ -166,6 +171,16 @@ class Set1Writer(Writer):
             cx, cy = (x0 + x1) / 2 / self.W, (y0 + y1) / 2 / self.H
             det_lines.append(f"0 {cx:.6f} {cy:.6f} {bw / self.W:.6f} {bh / self.H:.6f}")
 
+            # Set 2 fruit-cube distractor: detector positive only. Its classifier
+            # treatment comes from cross-set 'unknown' crop injection (real fruit
+            # views), never from here - white-only views are indistinguishable from
+            # a Set 1 cube, so labelling them would poison the cube class.
+            if name == "fruitcube":
+                objects.append({"class": name, "bbox": [round(v, 1) for v in box],
+                                "visible": round(vis, 3), "label": "det_only",
+                                "reason": "set2_distractor"})
+                continue
+
             # ---- classifier: shape vs unknown ----
             reasons = []
             if min(bw, bh) < self.lab["min_box_px"]:
@@ -191,7 +206,7 @@ class Set1Writer(Writer):
 
         if self._frame < 5:
             n_shape = sum(1 for o in objects if o["label"] != self.cfg["classes"]["unknown"])
-            cd = self.ctx.get("robot_to_region_m", 1.0)
+            cd = self.ctx.get("robot_to_region_m") or 0.0   # None on negative frames
             dbg = []
             for o in objects:
                 bpx = round(min(o["bbox"][2] - o["bbox"][0], o["bbox"][3] - o["bbox"][1]))
@@ -200,14 +215,17 @@ class Set1Writer(Writer):
             print(f"[SET1] frame {self._frame}: cam_dist={cd} objs={len(objects)} "
                   f"shape_crops={n_shape} {dbg}", file=sys.stderr)
 
-        if not det_lines:                              # background-only frame: skip detector img
+        # Deliberate negative frames (stickers/tape/wood only) are kept with an EMPTY
+        # label file - they teach the detector NOT to fire on venue clutter and feed
+        # the sticker/tape false-positive evaluation. Accidental empties are skipped.
+        if not det_lines and not self.ctx.get("negative"):
             self._frame += 1
             return
 
         # ---- detector image + label ----
         _save_png(os.path.join(self.dirs[f"{self.det_sub}/images/{split}"], stem + ".png"), rgb)
         with open(os.path.join(self.dirs[f"{self.det_sub}/labels/{split}"], stem + ".txt"), "w") as f:
-            f.write("\n".join(det_lines) + "\n")
+            f.write("\n".join(det_lines) + ("\n" if det_lines else ""))
 
         # ---- occasional background 'unknown' crop (false-positive hardening) ----
         if RNG.uniform() < self.lab["background_unknown_frac"]:
@@ -231,10 +249,65 @@ rep.writers.register_writer(Set1Writer)
 
 
 # ============================ scene ===========================================
+def _set_class(prim, value):
+    """Attach a Replicator 'class' semantic to an existing USD prim (version-robust)."""
+    try:
+        from pxr import Semantics
+        if prim.HasAPI(Semantics.SemanticsAPI):
+            sem = Semantics.SemanticsAPI.Get(prim, "Semantics")
+        else:
+            sem = Semantics.SemanticsAPI.Apply(prim, "Semantics")
+            sem.CreateSemanticTypeAttr("class")
+            sem.CreateSemanticDataAttr()
+        sem.GetSemanticDataAttr().Set(value)
+    except Exception:
+        rep.modify.semantics([("class", value)],
+                             rep.get.prims(path_pattern=prim.GetPath().pathString))
+
+
+def _load_fruit_textures():
+    import glob
+    base = os.path.join(ROOT, "assets", "fruit_textures")
+    imgs = []
+    for ext in ("png", "jpg", "jpeg"):
+        imgs += glob.glob(os.path.join(base, "*", f"*.{ext}"))
+    return sorted(imgs)
+
+
+def _fruit_label_params(rng):
+    """Minimal Set 2-style label params for distractor cubes (see set2 fruit_label).
+    scale/offset are in CUBE-LOCAL units where the face edge is 2.0 (unit cube spans
+    [-1,1]), hence the x2.0 on the sampled face-edge fractions - matching set2's
+    sample_label_params so the decals render at the real 55-92% of the face."""
+    s = float(rng.uniform(0.55, 0.92)) * 2.0
+    off_lim = max(0.0, min(0.12 * 2.0, 1.0 - s / 2 - 0.02))   # keep the label on the face
+    return {"scale_x": s, "scale_y": s,
+            "off_u": float(rng.uniform(-1, 1) * off_lim),
+            "off_v": float(rng.uniform(-1, 1) * off_lim),
+            "rot_deg": float(rng.uniform(-8, 8)), "eps": 0.0008,
+            "roughness": float(rng.uniform(0.3, 0.7)),
+            "tint": {"scale": [1.0, 1.0, 1.0], "bias": [0.0, 0.0, 0.0]}}
+
+
 def build():
     stage = omni.usd.get_context().get_stage()
-    arena_builder.build_arena(stage, CFG)
+    arena = arena_builder.build_arena(stage, CFG)
     lights = dr.create_lights(stage)
+
+    # Set 2 fruit-cube distractors (both sets share the arena in the real match).
+    # Created BEFORE rep.new_layer() like set2's cubes (the validated pattern);
+    # driven manually per frame; semantics 'fruitcube' -> detector positive only.
+    fruit_cubes = []
+    n_fc = int(CFG["objects"].get("fruit_cube_distractors", 2))
+    fc_textures = _load_fruit_textures() if n_fc else []
+    if n_fc and fc_textures:
+        fc_cfg = {"cubes": {"fruit_faces": 3, "body_material": CFG["objects"]["material"]}}
+        for i in range(n_fc):
+            fc = FruitCube(stage, f"/World/FruitCube_{i}", i, fc_cfg)
+            _set_class(fc.body, "fruitcube")
+            fruit_cubes.append(fc)
+    elif n_fc:
+        print("[SET1] no fruit textures found - skipping fruit-cube distractors", file=sys.stderr)
     cam_prim = robot_sensor_rig.create_camera(stage, "/World/RobotCam", CFG["camera"])
     import math as _m
     _fl = cam_prim.GetFocalLengthAttr().Get(); _ha = cam_prim.GetHorizontalApertureAttr().Get()
@@ -256,6 +329,14 @@ def build():
         pool = []                                       # list of (node, base_scale)
         for shape in SHAPES:
             path = os.path.join(usd_dir, CFG["assets"]["usd_by_class"][shape])
+            if not os.path.isfile(path):
+                # Without this check the run "succeeds" but renders ONLY the fruit-cube
+                # distractors - a silently corrupt Set 1 dataset.
+                raise SystemExit(
+                    f"[SET1] missing polyhedron asset: {path}\n"
+                    f"Run  <isaac_python> isaac/convert_stl_to_usd.py  first (needs the "
+                    f"4 STLs in datasets/), or copy isaac/assets/usd/ from a machine "
+                    f"that has them.")
             base = real[shape] / calib
             print(f"[SET1] asset {shape} real={real[shape]} m base_scale={base:.6f}", file=sys.stderr)
             for _ in range(CFG["objects"]["max_per_class"]):
@@ -280,28 +361,71 @@ def build():
         writer = rep.writers.get("Set1Writer")
         writer.initialize(cfg=CFG)
         writer.attach([rp])
-    return stage, cam_prim, lights, writer
+    return stage, cam_prim, lights, writer, arena, fruit_cubes, fc_textures
 
 
 def main():
     import math
-    stage, cam_prim, lights, writer = build()
+    stage, cam_prim, lights, writer, arena, fruit_cubes, fc_textures = build()
     sub = CFG["render"]["rt_subframes"]
     rcfg = CFG["robot"]
+    scfg = CFG.get("sampling", {})
+    arena_half = CFG["arena"]["size_x"] / 2.0
     sides = ["left", "right"]
     for i in range(args.frames):
         side = sides[i % 2]
         sgn = 1.0 if side == "left" else -1.0
         jitter = dr.sample_jitter(rcfg, RNG)
 
-        # Camera eye: on a ring OUTSIDE the object cluster (radius ~0.7), at robot height,
-        # looking at a random point in the cluster -> whole objects, low robot-eye angle.
-        ang = RNG.uniform(-math.pi, math.pi)
-        dist = RNG.uniform(0.6, 2.0)        # near (classify, big) -> far (detect only, small)
+        negative = RNG.uniform() < scfg.get("negative_frame_frac", 0.0)
+
+        # Arena pose + appearance: sliding the arena around the origin-centred object
+        # cluster yields wall-contact shots AND full-diagonal (3.5 m+) far views.
+        # Negative frames use a centred-ish offset so the outward-looking eye (radius
+        # <=0.95 + lateral 0.15) always fits inside the arena without clamping the
+        # camera back into the object cluster.
+        if negative:
+            ox, oy = float(RNG.uniform(-0.85, 0.85)), float(RNG.uniform(-0.85, 0.85))
+        else:
+            ox, oy = dr.sample_arena_offset(RNG, scfg, arena_half, cluster_r=0.3)
+        arena_builder.set_arena_offset(arena, ox, oy)
+        arena_builder.randomize_arena(arena, CFG, RNG)
+
+        # Set 2 distractor cubes: near the cluster, random fruit faces, resting flat.
+        for fc in fruit_cubes:
+            if negative or RNG.uniform() < 0.5:
+                UsdGeom.Imageable(fc.xform).MakeInvisible()
+                continue
+            UsdGeom.Imageable(fc.xform).MakeVisible()
+            edge = 0.08 + float(RNG.uniform(-0.005, 0.005))
+            euler = (90.0 * RNG.randint(0, 4) + RNG.uniform(-4, 4),
+                     90.0 * RNG.randint(0, 4) + RNG.uniform(-4, 4),
+                     float(RNG.uniform(0, 360)))
+            # Stay within the cluster_r=0.3 contract of sample_arena_offset, or a
+            # wall-contact frame (wall at 0.30 m) can bury the cube in the wall.
+            fc.set_pose((float(RNG.uniform(-0.25, 0.25)), float(RNG.uniform(-0.25, 0.25)),
+                         edge / 2 + 0.002), euler, edge)
+            faces = list(RNG.choice(6, 3, replace=False))
+            imgs = [fc_textures[RNG.randint(len(fc_textures))] for _ in faces]
+            lps = [_fruit_label_params(RNG) for _ in faces]
+            fc.configure(faces, imgs, lps, [lp["tint"] for lp in lps])
+
         ez = rcfg["cam_height"] + jitter["height"]
-        eye = [dist * math.cos(ang), dist * math.sin(ang), ez]
-        # Aim at the cluster CENTRE (small jitter) so objects stay centred -> not truncated.
-        target = [float(RNG.uniform(-0.08, 0.08)), float(RNG.uniform(-0.08, 0.08)), 0.10]
+        if negative:
+            # Object-free view: eye just outside the cluster, looking OUTWARD so the
+            # cluster stays behind the camera -> wood/sticker/tape-only frame.
+            ang = RNG.uniform(-math.pi, math.pi)
+            ux, uy = math.cos(ang), math.sin(ang)
+            e = RNG.uniform(0.55, 0.95)
+            eye = [ux * e, uy * e, ez]
+            r = e + RNG.uniform(0.6, 1.8)
+            target = [ux * r, uy * r, float(RNG.uniform(0.0, 0.25))]
+            dist, far = 0.0, False
+        else:
+            ang, dist, far = dr.sample_camera_view(RNG, scfg, (ox, oy), arena_half)
+            eye = [dist * math.cos(ang), dist * math.sin(ang), ez]
+            # Aim at the cluster CENTRE (small jitter) -> objects centred, not truncated.
+            target = [float(RNG.uniform(-0.08, 0.08)), float(RNG.uniform(-0.08, 0.08)), 0.10]
 
         # Lateral mount offset (left/right parallax) perpendicular to the view direction.
         vx, vy = target[0] - eye[0], target[1] - eye[1]
@@ -309,18 +433,26 @@ def main():
         px, py = -vy / n, vx / n
         eye[0] += sgn * rcfg["cam_lateral_offset"] * px
         eye[1] += sgn * rcfg["cam_lateral_offset"] * py
-        # Keep the camera inside the arena walls.
-        eye[0] = max(-1.6, min(1.6, eye[0]))
-        eye[1] = max(-1.6, min(1.6, eye[1]))
+        # Keep the camera inside the (offset) arena walls.
+        eye[0] = max(ox - arena_half + 0.12, min(ox + arena_half - 0.12, eye[0]))
+        eye[1] = max(oy - arena_half + 0.12, min(oy + arena_half - 0.12, eye[1]))
+        target[0] = max(ox - arena_half, min(ox + arena_half, target[0]))
+        target[1] = max(oy - arena_half, min(oy + arena_half, target[1]))
 
         up = robot_sensor_rig._roll_up((vx, vy, 0.0), jitter["roll_deg"])
         robot_sensor_rig.set_camera_transform(cam_prim, tuple(eye), tuple(target), up)
         dr.randomize_lights(lights, CFG["lighting"], RNG)
 
+        # Metadata poses are written in the ARENA frame (arena centre = 0,0), like v1,
+        # so pose-replay/wall-distance tooling keeps working; the cluster centre sits
+        # at -arena_offset in this frame.
         writer.ctx = {"camera": f"{side}_camera",
-                      "cam_eye": [round(v, 3) for v in eye],
-                      "look_at": [round(v, 3) for v in target],
-                      "robot_to_region_m": round(dist, 3),
+                      "cam_eye": [round(eye[0] - ox, 3), round(eye[1] - oy, 3), round(eye[2], 3)],
+                      "look_at": [round(target[0] - ox, 3), round(target[1] - oy, 3),
+                                  round(target[2], 3)],
+                      "robot_to_region_m": None if negative else round(dist, 3),
+                      "arena_offset": [round(ox, 3), round(oy, 3)],
+                      "far_view": bool(far), "negative": bool(negative),
                       "cam_jitter": {k: round(v, 3) for k, v in jitter.items()}}
         try:
             rep.orchestrator.step(rt_subframes=sub)

@@ -18,9 +18,12 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def build_detector(half):
     from ultralytics import YOLO
+    import yaml
+    cfg = yaml.safe_load(open(os.path.join(ROOT, "configs", "set2.yaml"), encoding="utf-8"))
+    sz = int(cfg["runtime"]["detector_imgsz"])   # match runtime inference size
     p = os.path.join(ROOT, "models", "set2", "detector", "best.pt")
-    path = YOLO(p).export(format="engine", imgsz=640, half=half, dynamic=False)
-    print("detector engine ->", path)
+    path = YOLO(p).export(format="engine", imgsz=sz, half=half, dynamic=False)
+    print(f"detector engine (imgsz {sz}) ->", path)
 
 
 def build_classifier(half):

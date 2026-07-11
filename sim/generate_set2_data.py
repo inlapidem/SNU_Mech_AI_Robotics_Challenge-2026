@@ -262,13 +262,15 @@ class Set2Writer(Writer):
                   f"fruit_crops={n_fruit} {[(o['fruit'], o['label'], o['reason']) for o in objects]}",
                   file=sys.stderr)
 
-        if not det_lines:
+        # Deliberate negative frames (stickers/tape/wood only) are kept with an EMPTY
+        # label file - anti-false-positive training + taegukgi/tape FP evaluation.
+        if not det_lines and not self.ctx.get("negative"):
             self._frame += 1
             return
 
         _save_png(os.path.join(self.dirs[f"{self.det_sub}/images/{split}"], stem + ".png"), rgb)
         with open(os.path.join(self.dirs[f"{self.det_sub}/labels/{split}"], stem + ".txt"), "w") as f:
-            f.write("\n".join(det_lines) + "\n")
+            f.write("\n".join(det_lines) + ("\n" if det_lines else ""))
 
         if RNG.uniform() < self.lab["background_unknown_frac"]:
             s = int(RNG.uniform(self.lab["min_box_px"], self.lab["min_box_px"] * 3))
@@ -333,7 +335,7 @@ def sample_label_params(cfg, rng):
 # ============================ scene ===========================================
 def build():
     stage = omni.usd.get_context().get_stage()
-    arena_builder.build_arena(stage, CFG)
+    arena = arena_builder.build_arena(stage, CFG)
     lights = dr.create_lights(stage)
     cam_prim = robot_sensor_rig.create_camera(stage, "/World/RobotCam", CFG["camera"])
 
@@ -366,7 +368,14 @@ def build():
         usd_dir = os.path.join(ROOT, CFG["cubes"]["set1_usd_dir"])
         neg_paths = [os.path.join(usd_dir, f"{n}.usd") for n in
                      ("octahedron", "dodecahedron", "icosahedron")]
-        neg_paths = [p for p in neg_paths if os.path.isfile(p)]
+        missing = [p for p in neg_paths if not os.path.isfile(p)]
+        if missing:
+            # Both sets share the arena in the real match; training without these
+            # hard negatives silently weakens the detector, so fail loudly.
+            raise SystemExit(
+                f"[SET2] use_noncube_negatives=true but missing USDs: {missing}\n"
+                f"Run  <isaac_python> isaac/convert_stl_to_usd.py  first (needs the "
+                f"4 STLs in datasets/), or set use_noncube_negatives: false.")
     else:
         neg_paths = []                                   # Set 2 arena = fruit cubes only
     base = CFG["cubes"]["neg_size_m"] / CFG["cubes"]["neg_calib_m"]   # set1 render_calib quirk
@@ -391,7 +400,7 @@ def build():
         writer.attach([rp])
     print(f"[SET2] pool: {len(cubes)} cubes ({n_plain} plain), {len(negs)} non-cube negatives",
           file=sys.stderr)
-    return stage, cam_prim, lights, writer, cubes
+    return stage, cam_prim, lights, writer, cubes, arena
 
 
 def park(obj_xform):
@@ -399,10 +408,12 @@ def park(obj_xform):
 
 
 def main():
-    stage, cam_prim, lights, writer, cubes = build()
+    stage, cam_prim, lights, writer, cubes, arena = build()
     sub = CFG["render"]["rt_subframes"]
     rcfg = CFG["robot"]
     ccfg = CFG["cubes"]
+    scfg = CFG.get("sampling", {})
+    arena_half = CFG["arena"]["size_x"] / 2.0
     fixed_layout = ccfg["fixed_face_layout"]
     textures = load_textures(CFG)
     intr = {"fx": CFG["camera"]["fx"], "fy": CFG["camera"]["fy"],
@@ -419,10 +430,24 @@ def main():
         sgn = 1.0 if side == "left" else -1.0
         jitter = dr.sample_jitter(rcfg, RNG)
 
+        negative = RNG.uniform() < scfg.get("negative_frame_frac", 0.0)
+
+        # Arena pose + appearance: sliding the arena around the origin-centred cube
+        # cluster yields wall-contact shots AND full-diagonal (3.5 m+) far views.
+        # Negative frames use a centred-ish offset so the outward-looking eye (radius
+        # <=0.95 + lateral 0.15) always fits inside the arena without clamping.
+        if negative:
+            ox, oy = float(RNG.uniform(-0.85, 0.85)), float(RNG.uniform(-0.85, 0.85))
+        else:
+            ox, oy = dr.sample_arena_offset(RNG, scfg, arena_half, cluster_r=0.3)
+        arena_builder.set_arena_offset(arena, ox, oy)
+        arena_builder.randomize_arena(arena, CFG, RNG)
+
         # ---- choose active cubes + place them in a tight central cluster ----
         for c in cubes:
             park(c["obj"].xform)
-        n_active = RNG.randint(ccfg["count_range"][0], ccfg["count_range"][1] + 1)
+        n_active = 0 if negative else RNG.randint(ccfg["count_range"][0],
+                                                  ccfg["count_range"][1] + 1)
         # Bias toward fruit cubes but keep some distractors (plain) per distractor_frac.
         idxs = list(range(len(cubes)))
         RNG.shuffle(idxs)
@@ -454,17 +479,29 @@ def main():
         # (Non-cube negatives are randomized by the on_frame trigger set up in build().)
 
         # ---- camera on a ring OUTSIDE the cluster, robot-eye height, looking in ----
-        ang = RNG.uniform(-math.pi, math.pi)
-        dist = RNG.uniform(0.3, 1.6)        # near (classify) -> far (detect only)
         ez = rcfg["cam_height"] + jitter["height"]
-        eye = [dist * math.cos(ang), dist * math.sin(ang), ez]
-        target = [float(RNG.uniform(-0.06, 0.06)), float(RNG.uniform(-0.06, 0.06)), half]
+        if negative:
+            # Object-free view: look OUTWARD so any parked geometry stays behind.
+            ang = RNG.uniform(-math.pi, math.pi)
+            ux, uy = math.cos(ang), math.sin(ang)
+            e = RNG.uniform(0.55, 0.95)
+            eye = [ux * e, uy * e, ez]
+            r = e + RNG.uniform(0.6, 1.8)
+            target = [ux * r, uy * r, float(RNG.uniform(0.0, 0.25))]
+            dist, far = 0.0, False
+        else:
+            ang, dist, far = dr.sample_camera_view(RNG, scfg, (ox, oy), arena_half)
+            eye = [dist * math.cos(ang), dist * math.sin(ang), ez]
+            target = [float(RNG.uniform(-0.06, 0.06)), float(RNG.uniform(-0.06, 0.06)), half]
         vx, vy = target[0] - eye[0], target[1] - eye[1]
         nrm = math.hypot(vx, vy) or 1.0
         px2, py2 = -vy / nrm, vx / nrm
         eye[0] += sgn * rcfg["cam_lateral_offset"] * px2
         eye[1] += sgn * rcfg["cam_lateral_offset"] * py2
-        eye[0] = max(-1.6, min(1.6, eye[0])); eye[1] = max(-1.6, min(1.6, eye[1]))
+        eye[0] = max(ox - arena_half + 0.12, min(ox + arena_half - 0.12, eye[0]))
+        eye[1] = max(oy - arena_half + 0.12, min(oy + arena_half - 0.12, eye[1]))
+        target[0] = max(ox - arena_half, min(ox + arena_half, target[0]))
+        target[1] = max(oy - arena_half, min(oy + arena_half, target[1]))
         up = robot_sensor_rig._roll_up((vx, vy, 0.0), jitter["roll_deg"])
         robot_sensor_rig.set_camera_transform(cam_prim, tuple(eye), tuple(target), up)
         dr.randomize_lights(lights, CFG["lighting"], RNG)
@@ -479,10 +516,16 @@ def main():
                 cube_ctx[ci]["vis"] = fruit_visibility(fc, camm,
                                                        CFG["labeling"]["min_fruit_face_facing"])
 
+        # Metadata poses are written in the ARENA frame (arena centre = 0,0), like v1,
+        # so pose-replay/wall-distance tooling keeps working; the cluster centre sits
+        # at -arena_offset in this frame.
         writer.ctx = {"camera": f"{side}_camera",
-                      "cam_eye": [round(v, 3) for v in eye],
-                      "look_at": [round(v, 3) for v in target],
-                      "robot_to_region_m": round(dist, 3),
+                      "cam_eye": [round(eye[0] - ox, 3), round(eye[1] - oy, 3), round(eye[2], 3)],
+                      "look_at": [round(target[0] - ox, 3), round(target[1] - oy, 3),
+                                  round(target[2], 3)],
+                      "robot_to_region_m": None if negative else round(dist, 3),
+                      "arena_offset": [round(ox, 3), round(oy, 3)],
+                      "far_view": bool(far), "negative": bool(negative),
                       "cam_jitter": {k: round(v, 3) for k, v in jitter.items()},
                       "cubes": cube_ctx}
         try:
