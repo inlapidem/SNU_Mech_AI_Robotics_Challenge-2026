@@ -1,0 +1,10 @@
+/motor_bridge:
+  ros__parameters:
+    port: /dev/ttyACM0
+    baud: 115200
+    # --- 로봇 실측값으로 채우세요 ---
+    wheel_radius: 0.033       # 바퀴 반지름 [m]
+    wheel_base: 0.20          # 좌우 바퀴 간격 [m]
+    ticks_per_rev: 1320.0     # 바퀴 1회전당 엔코더 카운트 (CPR x 기어비)
+    max_wheel_speed: 0.5      # PWM 255일 때 대략 바퀴 속도 [m/s]
+    dry_run: false            # true면 하드웨어 없이 계산만 (테스트용)
