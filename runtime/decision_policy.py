@@ -1,11 +1,17 @@
-"""Conservative target-confirmation / pickup policy for Set 1.
+"""Conservative target-confirmation policy for Set 1.
 
 Turns a track's classification history into a state:
-  FAR_CANDIDATE / SEARCHING -> TARGET_CONFIRMED -> PICKUP_READY  (or gives up)
+  FAR_CANDIDATE / SEARCHING -> TARGET_CONFIRMED  (or gives up)
 
 Principle: never force a pickup on an ambiguous shape. dodecahedron vs icosahedron
 errors are costly, so we require multiple consistent, well-separated, calibrated
 observations of the *announced* target before committing. Set 1-specific policy.
+
+TARGET_CONFIRMED is this policy's terminal state: the old PICKUP_READY was redefined
+as CAPTURE_READY (verify gate passed + bin alignment) and is granted exclusively by
+runtime/capture_fsm.py from the front verify cameras -- a search camera can never
+authorize a capture. The old close-range re-confirmation is still computed and
+reported as info["close_reconfirmed"] for debugging/navigation.
 
 Two-stage distance handling: a track whose box is too small to classify is a
 navigation-only FAR_CANDIDATE once it has persisted far_min_hits frames (the
@@ -21,7 +27,6 @@ cross-set unknown injection, so extra views eventually expose a Set 2 cube).
 SEARCHING = "SEARCHING"
 FAR_CANDIDATE = "FAR_CANDIDATE"
 TARGET_CONFIRMED = "TARGET_CONFIRMED"
-PICKUP_READY = "PICKUP_READY"
 GIVE_UP = "GIVE_UP"
 
 
@@ -91,10 +96,12 @@ class DecisionPolicy:
         if not confirmed:
             return SEARCHING, info
 
-        # Pickup needs the object close (large bbox) and a very recent target re-confirm.
+        # Close-range re-confirmation (large bbox + fresh target sighting) no longer
+        # authorizes anything by itself -- capture authority moved to the verify gate
+        # (capture_fsm.py). It is still reported for debugging / navigation context.
         recent = [o for o in list(track.history)[-self.c["reconfirm_within"]:]]
         recent_target = any(o["cls"] == self.target and o["conf"] >= self.c["conf_threshold"]
                             for o in recent)
-        if bbox_px >= self.c["pickup_min_bbox_px"] and recent_target:
-            return PICKUP_READY, info
+        info["close_reconfirmed"] = bool(bbox_px >= self.c["pickup_min_bbox_px"]
+                                         and recent_target)
         return TARGET_CONFIRMED, info

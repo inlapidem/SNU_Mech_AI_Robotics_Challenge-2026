@@ -7,12 +7,14 @@ crop is classified by MobileNetV3 (torch .pt or .onnx) into apple/orange/banana/
 pineapple/unknown with temperature-calibrated confidence; results feed an IoU tracker
 and the conservative decision policy.
 
-Dual cameras: call process_frame(frame, camera='left'|'right'). A separate tracker per
-camera keeps IoU association valid (the two views don't share image coordinates); a
-cube that is 'unknown' in one camera can be classified by the other. Cross-camera
-fusion of the SAME physical cube needs a world-position estimate (LiDAR/odometry) and
-is left to the navigation layer; pass world_pos to process_frame to enable proximity
-fusion if you have it.
+Multi-camera: call process_frame(frame, camera='side_left'|...). A separate tracker +
+policy per camera keeps IoU association valid (views don't share image coordinates)
+and lets the rig give per-camera pixel-gate overrides via configure_camera() (the
+front IMX219 verify cams have a narrower HFOV than the side Nuroum search cams). A
+cube that is 'unknown' in one camera can be classified by another. The onboard LiDAR
+(RPLidar C1, mounted above the objects) contributes NOTHING here; cross-camera fusion
+of the SAME physical cube would need a world-position estimate from odometry and is
+left to the navigation layer - world_pos stays an optional external input.
 """
 
 import json
@@ -67,13 +69,16 @@ class FruitClassifier:
         img = (img - self.mean) / self.std
         return np.transpose(img, (2, 0, 1))[None].astype(np.float32)
 
-    def predict(self, crop_rgb):
+    def logits(self, crop_rgb):
+        """Raw (uncalibrated) logits -- used by the temperature-recalibration tool."""
         x = self._pre(crop_rgb)
         if self.backend == "onnx":
-            logits = self.sess.run(None, {self.inp: x})[0][0]
-        else:
-            with self.torch.no_grad():
-                logits = self.model(self.torch.from_numpy(x).to(self.device)).cpu().numpy()[0]
+            return self.sess.run(None, {self.inp: x})[0][0]
+        with self.torch.no_grad():
+            return self.model(self.torch.from_numpy(x).to(self.device)).cpu().numpy()[0]
+
+    def predict(self, crop_rgb):
+        logits = self.logits(crop_rgb)
         z = logits / self.T
         e = np.exp(z - z.max()); p = e / e.sum()
         order = p.argsort()[::-1]
@@ -97,24 +102,39 @@ class Set2Pipeline:
         self.detector = YOLO(det)
         resolve_detector_imgsz(det, rt, "set2")
         self.clf = FruitClassifier(os.path.join(ROOT, "models", "set2", "classifier"))
+        self.cam_rt = {}                           # camera -> rt merged with rig overrides
         self.trackers = {}                         # camera -> Tracker (per-view association)
-        self.policy = Set2DecisionPolicy(rt, target_fruit)
+        self.policies = {}                         # camera -> Set2DecisionPolicy
         self.frame_idx = 0
 
-    def _tracker(self, camera):
-        if camera not in self.trackers:
-            self.trackers[camera] = Tracker(self.rt["track_iou"], self.rt["track_max_age"],
-                                            self.rt["vote_window"])
-        return self.trackers[camera]
+    def configure_camera(self, camera, gate_overrides=None):
+        """Register per-camera pixel-gate overrides (min_bbox_px etc.) BEFORE the first
+        frame of that camera. Defaults are the Nuroum-1280x720 values in runtime:."""
+        rt = dict(self.rt)
+        rt.update(gate_overrides or {})
+        self.cam_rt[camera] = rt
 
-    def _classifiable(self, box, W, H):
+    def _camera(self, camera):
+        if camera not in self.trackers:
+            rt = self.cam_rt.setdefault(camera, dict(self.rt))
+            self.trackers[camera] = Tracker(rt["track_iou"], rt["track_max_age"],
+                                            rt["vote_window"])
+            self.policies[camera] = Set2DecisionPolicy(rt, self.target)
+        return self.trackers[camera], self.policies[camera], self.cam_rt[camera]
+
+    def reset_tracking(self):
+        """Fresh episode (e.g. after a LOADED capture): drop all tracks and votes."""
+        self.trackers.clear()
+        self.policies.clear()
+
+    def _classifiable(self, box, W, H, rt):
         """Only classify a cube that is close/large/untruncated enough to read fruit."""
         x0, y0, x1, y1 = box
-        if min(x1 - x0, y1 - y0) < self.rt["min_bbox_px"]:
+        if min(x1 - x0, y1 - y0) < rt["min_bbox_px"]:
             return False
-        if (x1 - x0) * (y1 - y0) / (W * H) < self.rt["min_bbox_area_ratio"]:
+        if (x1 - x0) * (y1 - y0) / (W * H) < rt["min_bbox_area_ratio"]:
             return False
-        m = self.rt["reject_truncation_px"]
+        m = rt["reject_truncation_px"]
         if x0 <= m or y0 <= m or x1 >= W - m or y1 >= H - m:
             return False
         return True
@@ -133,21 +153,21 @@ class Set2Pipeline:
         import cv2
         H, W = frame_bgr.shape[:2]
         rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-        tracker = self._tracker(camera)
-        boxes = detect_two_channel(self.detector, frame_bgr, self.rt,
+        tracker, policy, rt = self._camera(camera)
+        boxes = detect_two_channel(self.detector, frame_bgr, rt,
                                    [t.bbox for t in tracker.tracks])
         matched = tracker.update(boxes, self.frame_idx)
         out = []
         for track, box in matched:
             cls, conf, margin = None, 0.0, 0.0
-            if self._classifiable(box, W, H):
+            if self._classifiable(box, W, H, rt):
                 x0, y0, x1, y1 = (int(max(0, box[0])), int(max(0, box[1])),
                                   int(min(W, box[2])), int(min(H, box[3])))
                 crop = rgb[y0:y1, x0:x1]
                 if crop.size:
                     cls, conf, margin = self.clf.predict(crop)
                     track.add_obs(cls, conf, margin, self.frame_idx)
-            state, info = self.policy.evaluate(track)
+            state, info = policy.evaluate(track)
             info["camera"] = camera
             out.append({"bbox": box, "state": state, "cls": cls, "conf": conf,
                         "margin": margin, "camera": camera, "track": track.id,

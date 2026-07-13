@@ -159,6 +159,108 @@ labeling:
 render:
   rt_subframes: 32
 
+# --------------------------------------------------------------------------- sensor rig (deployment)
+# 3-layer sensor architecture (2026-07). The RPLidar C1 sits at ~20-25 cm so its scan
+# plane passes ABOVE every object: LiDAR is localization/wall-mapping ONLY and the
+# perception pipeline takes NO object candidates or distances from it (world_pos stays
+# an optional external input). Cameras carry the whole recognition task:
+#   role: search  = 2x NUROUM V11 (USB, sides, yawed forward-outward 30-45 deg).
+#                   Runs the detect->classify->track->vote pipeline, round-robin.
+#                   Drives SEARCHING -> FAR_CANDIDATE -> TARGET_CONFIRMED.
+#   role: verify  = 2x IMX219 (CSI, front). Final anti-misidentification gate: the SAME
+#                   detector+classifier run on these frames, but their evidence is only
+#                   used by the verify/veto/alignment rules (never for search states).
+# Any subset of the rig may be connected (bench tests): missing cameras warn and are
+# skipped. CLI can override any source (--cam NAME=SPEC) or role (--role NAME=ROLE).
+rig:
+  cameras:
+    side_left:
+      role: search
+      transport: usb          # cv2.VideoCapture(index) + MJPG width x height forced
+      source: 0               # /dev/video index
+      width: 1280
+      height: 720
+      hfov_deg: 90.0
+      fourcc: MJPG
+      buffersize: 1
+    side_right:
+      role: search
+      transport: usb
+      source: 1
+      width: 1280
+      height: 720
+      hfov_deg: 90.0
+      fourcc: MJPG
+      buffersize: 1
+    front_left:
+      role: verify
+      transport: csi          # nvarguscamerasrc via GStreamer (Jetson only)
+      source: 0               # sensor-id
+      width: 1280
+      height: 720
+      fps: 30
+      hfov_deg: 62.2          # IMX219 stock lens (horizontal)
+      flip_method: 0
+      # Domain-gap control: do NOT leave the ISP on auto. Lock white balance and
+      # exposure so the front-cam distribution stays constant across the match.
+      wbmode: 0               # nvarguscamerasrc wbmode (0 = off/manual, 1 = auto)
+      aelock: true            # freeze auto-exposure
+      awblock: true           # freeze auto-white-balance (belt and braces with wbmode 0)
+      exposure_range_ns: [5000000, 5000000]   # fixed exposure (ns); tune on the venue
+      gain_range: [1.0, 4.0]
+      isp_digital_gain_range: [1.0, 1.0]
+      # Optional per-camera pixel-gate overrides (defaults below are Nuroum 1280x720
+      # values from runtime:). IMX219 has a narrower HFOV (62 vs 90 deg) so an object
+      # at the same distance is ~1.45x wider in pixels; raise gates accordingly.
+      gates:
+        min_bbox_px: 58
+        min_bbox_area_ratio: 0.008
+    front_right:
+      role: verify
+      transport: csi
+      source: 1
+      width: 1280
+      height: 720
+      fps: 30
+      hfov_deg: 62.2
+      flip_method: 0
+      wbmode: 0
+      aelock: true
+      awblock: true
+      exposure_range_ns: [5000000, 5000000]
+      gain_range: [1.0, 4.0]
+      isp_digital_gain_range: [1.0, 1.0]
+      gates:
+        min_bbox_px: 58
+        min_bbox_area_ratio: 0.008
+  # Orin Nano load management: per-phase polling periods (in loop ticks; 1 = every
+  # tick, N = every Nth tick, 0 = off). SEARCH runs the Nuroum pair round-robin at
+  # full rate with the front cams idling; VERIFY inverts that.
+  phase_rates:
+    search: {search_every: 1, verify_every: 15}
+    verify: {verify_every: 1, search_every: 15}
+
+# ------------------------------------------------------- verify gate / capture (no gripper)
+# The robot has NO gripper: a front bin (inner width bin_width_m) is pushed over the
+# object; funnel wings at the mouth absorb small alignment error; an IR sensor deep
+# inside the bin confirms deep seating. PICKUP_READY is REDEFINED as CAPTURE_READY =
+# "verify gate passed + laterally aligned, safe to push in". Promotion happens ONLY
+# from verify-role (front) cameras.
+verify:
+  bin_width_m: 0.14           # bin inner width; alignment allowance derives from this
+  verify_k: 5                 # consecutive target frames on one front cam to pass
+  verify_margin: 0.25         # calibrated top1-top2 margin required for those frames
+  veto_m: 3                   # consecutive strong non-target frames -> VERIFY_REJECTED
+  veto_margin: 0.35           # margin for a veto observation (high-confidence wrongness)
+  margin_factor: 0.7          # fraction of allowed_offset_px actually accepted
+  verify_bbox_px_range: [64, 560]   # plausible bbox width on a front cam at verify range
+  verify_unknown_patience: 4  # consecutive unknown frames -> micro viewpoint adjust request
+  align_warn_min_px: 15       # startup WARNING if allowed_offset_px < this at max bbox
+  align_pair_max_age: 3       # two-cam alignment needs both cams seen within N updates
+  blind_handoff_bbox_px: 320  # bbox height >= this -> object at the bin lip -> go blind
+  blind_handoff_bottom_px: 6  # bbox bottom within N px of frame bottom -> go blind
+  capture_push_limit: 6.0     # s in BLIND_CAPTURE without IR seating -> CAPTURE_MISSED
+
 # --------------------------------------------------------------------------- runtime (Jetson)
 runtime:
   detector_conf: 0.25           # low -> high recall; classifier rejects junk
@@ -189,6 +291,7 @@ runtime:
   # fruit-showing cube is NOT a Set 1 cube.
   cube_target_min_confirmations: 5
   max_reobserve: 6              # approach/re-observe attempts before giving up
-  # PICKUP_READY gating:
-  pickup_min_bbox_px: 90        # object must be close (large) to pick
+  # Close-range re-confirmation (info.close_reconfirmed; capture itself is gated by
+  # the verify: section + front cams via runtime/capture_fsm.py):
+  pickup_min_bbox_px: 90        # object must be close (large) to count as re-confirmed
   reconfirm_within: 3           # must be re-seen as target within N recent frames

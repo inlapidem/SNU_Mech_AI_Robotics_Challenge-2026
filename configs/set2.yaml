@@ -196,6 +196,94 @@ labeling:
 render:
   rt_subframes: 32
 
+# --------------------------------------------------------------------------- sensor rig (deployment)
+# Same 3-layer architecture as set1 (see configs/set1.yaml rig: for the rationale).
+# LiDAR (RPLidar C1 @ ~20-25 cm) is localization-only: NO object candidates or
+# distances enter this pipeline from it. Search = 2x NUROUM V11 (USB sides),
+# verify = 2x IMX219 (CSI front, locked WB/exposure). Set 2 keeps its OWN models
+# and thresholds; only the rig structure is shared.
+rig:
+  cameras:
+    side_left:
+      role: search
+      transport: usb
+      source: 0
+      width: 1280
+      height: 720
+      hfov_deg: 90.0
+      fourcc: MJPG
+      buffersize: 1
+    side_right:
+      role: search
+      transport: usb
+      source: 1
+      width: 1280
+      height: 720
+      hfov_deg: 90.0
+      fourcc: MJPG
+      buffersize: 1
+    front_left:
+      role: verify
+      transport: csi
+      source: 0
+      width: 1280
+      height: 720
+      fps: 30
+      hfov_deg: 62.2          # IMX219 stock lens (horizontal)
+      flip_method: 0
+      # Lock the ISP: the fruit classifier is colour-sensitive and the IMX219 colour
+      # response already differs from Nuroum/sim - never add auto-WB drift on top.
+      wbmode: 0
+      aelock: true
+      awblock: true
+      exposure_range_ns: [5000000, 5000000]
+      gain_range: [1.0, 4.0]
+      isp_digital_gain_range: [1.0, 1.0]
+      # IMX219 62 vs Nuroum 90 deg HFOV -> ~1.45x more px per object; scale the gates.
+      gates:
+        min_bbox_px: 70
+        min_bbox_area_ratio: 0.012
+    front_right:
+      role: verify
+      transport: csi
+      source: 1
+      width: 1280
+      height: 720
+      fps: 30
+      hfov_deg: 62.2
+      flip_method: 0
+      wbmode: 0
+      aelock: true
+      awblock: true
+      exposure_range_ns: [5000000, 5000000]
+      gain_range: [1.0, 4.0]
+      isp_digital_gain_range: [1.0, 1.0]
+      gates:
+        min_bbox_px: 70
+        min_bbox_area_ratio: 0.012
+  phase_rates:
+    search: {search_every: 1, verify_every: 15}
+    verify: {verify_every: 1, search_every: 15}
+
+# ------------------------------------------------------- verify gate / capture (no gripper)
+# Front bin capture (see set1.yaml verify: for the mechanism). CAPTURE_READY replaces
+# PICKUP_READY and can only be granted by the front (verify) cameras. Wrong capture is
+# still -40: the veto/margin values below stay deliberately strict.
+verify:
+  bin_width_m: 0.14
+  verify_k: 5                 # consecutive target frames on one front cam
+  verify_margin: 0.15         # set2 softmax is peaky (see margin_threshold): 0.15 binds
+  veto_m: 3
+  veto_margin: 0.30
+  margin_factor: 0.7
+  verify_bbox_px_range: [80, 560]   # 8 cm cube on IMX219 at verify range
+  verify_unknown_patience: 4  # matches runtime.unknown_patience
+  align_warn_min_px: 15
+  align_pair_max_age: 3
+  blind_handoff_bbox_px: 320
+  blind_handoff_bottom_px: 6
+  capture_push_limit: 6.0
+
 # --------------------------------------------------------------------------- runtime (Jetson) - conservative, false-positive averse
 runtime:
   detector_conf: 0.25
@@ -224,7 +312,8 @@ runtime:
   min_confirmations: 3          # target-fruit votes needed for TARGET_CONFIRMED
   max_reobserve: 3              # active viewpoint changes for an unknown/uncertain cube
   unknown_patience: 4           # consecutive unknowns before requesting a viewpoint change
-  # PICKUP_READY gating:
-  pickup_min_bbox_px: 110       # cube must be close (large) to pick
+  # Close-range re-confirmation (info.close_reconfirmed; capture itself is gated by
+  # the verify: section + front cams via runtime/capture_fsm.py):
+  pickup_min_bbox_px: 110       # cube must be close (large) to count as re-confirmed
   reconfirm_within: 3           # re-seen as target within N recent frames
   conflict_reject: 2            # >=N strong non-target-fruit votes -> REJECT (never pick)

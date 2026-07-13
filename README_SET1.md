@@ -68,20 +68,34 @@ yolo/bin/python training/train_set1_classifier.py --epochs 60  --imgsz 128  # ->
 ## 3. Run onboard
 
 ```bash
-# dev test (laptop/WSL with a webcam)
+# Jetson 실기: 4캠 rig (Nuroum USB 0/1 = search + IMX219 CSI 0/1 = verify, configs/set1.yaml rig:)
+python deployment/run_perception.py --set set1 --target dodecahedron --show --phase SEARCH
+
+# WSL/개발 PC mock: 4캠을 동영상 파일로 대체 (CSI 없이 융합 로직 테스트)
+yolo/bin/python deployment/run_perception.py --set set1 --target dodecahedron --show \
+    --cam side_left=capture/search.mp4  --cam side_right=capture/search.mp4 \
+    --cam front_left=capture/verify_L.mp4 --cam front_right=capture/verify_R.mp4
+
+# 레거시 단일 카메라 디버그 (rig/FSM 없이)
 yolo/bin/python deployment/run_perception.py --set set1 --target dodecahedron --source 0 --show --log
 ```
 
+rig 모드 키(`--show`): `p` phase 토글 · `l`/`u` IR 시뮬 · `q` 종료 (`--ir-script`로 헤드리스
+주입 가능). 센서 구성/verify 게이트/적재함 캡처 FSM은 set2와 공통 구조 —
+[README_SET2.md](README_SET2.md#센서-구성-v2-2026-07) 참고. set1 특이사항: **정팔면체
+(13.6 cm)는 내폭 14 cm 적재함에서 시각 정렬 여유가 ±2 mm뿐**이라 시작 시 WARNING이 출력되고
+(깔때기 날개 의존), `cube` 타겟은 Set 2 큐브와의 혼동 때문에 더 많은 확인 횟수를 요구한다.
+
 Flow per frame: detect → keep boxes that are close/large/untruncated → crop → classify
-(calibrated) → IoU-track → vote over a window → policy. Uncertain crops are logged
-(`runtime_logs/set1/`) for the improvement loop.
+(calibrated) → IoU-track **per camera** → vote over a window → policy → CaptureFSM 융합.
+Uncertain crops are logged (`runtime_logs/set1/`) for the improvement loop.
 
 ### Decision policy (conservative)
-- `TARGET_CONFIRMED`: ≥`min_confirmations` strong target votes (conf≥`conf_threshold`,
-  top1−top2 margin≥`margin_threshold`), avg conf high, **no** strong conflicting shape, more
-  target votes than `unknown`.
-- `PICKUP_READY`: confirmed **and** object is close (`pickup_min_bbox_px`) **and** re-seen as
-  the target within the last `reconfirm_within` frames.
+- `TARGET_CONFIRMED` (policy의 종단 상태): ≥`min_confirmations` strong target votes
+  (conf≥`conf_threshold`, top1−top2 margin≥`margin_threshold`), avg conf high, **no** strong
+  conflicting shape, more target votes than `unknown`. 가깝고 재확인되면
+  `info.close_reconfirmed`가 표시되지만, **캡처 승인(CAPTURE_READY)은 verify 캠 +
+  `runtime/capture_fsm.py`에서만** 나온다 (기존 PICKUP_READY의 재정의).
 - `GIVE_UP` (skip): confidently a different shape, or no usable signal after `max_reobserve`.
 - Otherwise `SEARCHING` → approach and re-observe. **Never picks on an ambiguous shape.**
 
@@ -96,8 +110,12 @@ Defaults in `configs/set1.yaml → runtime` (unit-tested): `conf_threshold 0.60`
 yolo/bin/python deployment/export_set1_onnx.py
 # ON the Jetson (engines are device-specific):
 python deployment/build_set1_tensorrt.py --half      # detector + classifier FP16 engines
-python deployment/run_perception.py --set set1 --target <shape> --source 0
+python deployment/run_perception.py --set set1 --target <shape> --show    # 4-cam rig
 ```
+
+전면 IMX219 도메인 갭 도구(`capture_front_crops.py` / `eval_front_domain_gap.py` /
+`recalibrate_temperature.py --set set1`)는 [README_SET2.md](README_SET2.md) 4b와 동일하게
+set1에도 쓸 수 있다 (같은 엔진 공유, temperature만 재보정).
 
 `run_perception.py` auto-uses `best.engine`/`best.onnx` when present (TensorRT EP → CUDA →
 CPU). FP16 ≈ 2× throughput on Orin Nano with negligible accuracy loss. Both nets are tiny
@@ -111,7 +129,7 @@ few crops per frame, so detector latency dominates.
 - **Classifier**: overall acc, per-class precision/recall, confusion matrix, **dodeca↔icosa
   rate** (`models/set1/classifier/confusion.txt`), and `unknown` rejection quality.
 - **Threshold tuning**: raise `conf_threshold`/`margin_threshold` until the validation
-  false-pickup rate (wrong shape reaching PICKUP_READY) is ~0, accepting more `unknown`/skips.
+  false-pickup rate (wrong shape reaching CAPTURE_READY) is ~0, accepting more `unknown`/skips.
 - **Sim→real**: pretrain on synthetic, then fine-tune both nets on real `left_camera` /
   `right_camera` captures (clear + ambiguous dodeca/icosa, far/near, near-wall, low/bright
   light, motion blur, occlusion). Feed deployment failure logs back as new `unknown`/hard

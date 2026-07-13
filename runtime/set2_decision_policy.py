@@ -12,9 +12,14 @@ States:
   UNKNOWN_CUBE      cube visible but no identifiable fruit -> re-observe from a new view
   NON_TARGET_FRUIT  looks like a different fruit (not enough to hard-reject yet)
   TARGET_CANDIDATE  some target votes, not yet confirmed -> approach / keep observing
-  TARGET_CONFIRMED  stable target evidence, but not yet in pickup range
-  PICKUP_READY      confirmed + close + freshly re-confirmed -> safe to grasp
+  TARGET_CONFIRMED  stable target evidence (terminal here; see below)
   REJECTED          confidently a different fruit (or conflicting) -> skip permanently
+
+TARGET_CONFIRMED is this policy's terminal state: the old PICKUP_READY was redefined
+as CAPTURE_READY (verify gate passed + bin alignment) and is granted exclusively by
+runtime/capture_fsm.py from the front verify cameras -- a search camera can never
+authorize a capture. The old close-range re-confirmation is still computed and
+reported as info["close_reconfirmed"] for debugging/navigation.
 
 Two-stage distance handling: FAR_CANDIDATE only steers navigation (the detector's
 low-conf far channel is debounced by far_min_hits). It never contributes fruit
@@ -30,7 +35,6 @@ UNKNOWN_CUBE = "UNKNOWN_CUBE"
 NON_TARGET_FRUIT = "NON_TARGET_FRUIT"
 TARGET_CANDIDATE = "TARGET_CANDIDATE"
 TARGET_CONFIRMED = "TARGET_CONFIRMED"
-PICKUP_READY = "PICKUP_READY"
 REJECTED = "REJECTED"
 
 FRUITS = {"apple", "orange", "banana", "pineapple"}
@@ -100,10 +104,13 @@ class Set2DecisionPolicy:
                      and n_other == 0
                      and n_target > n_unknown)
         if confirmed:
+            # Close-range re-confirmation no longer authorizes a pickup by itself --
+            # capture authority moved to the verify gate (capture_fsm.py). Reported
+            # for debugging / navigation context only.
             recent = list(track.history)[-self.c["reconfirm_within"]:]
             recent_target = any(self._categorize(o) == "target" for o in recent)
-            if bbox_px >= self.c["pickup_min_bbox_px"] and recent_target:
-                return PICKUP_READY, info
+            info["close_reconfirmed"] = bool(bbox_px >= self.c["pickup_min_bbox_px"]
+                                             and recent_target)
             return TARGET_CONFIRMED, info
 
         # ---- partial target evidence -> keep approaching ----
