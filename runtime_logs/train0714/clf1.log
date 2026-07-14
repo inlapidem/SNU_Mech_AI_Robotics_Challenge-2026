@@ -1,0 +1,76 @@
+classes: {'cube': 6711, 'dodecahedron': 7095, 'icosahedron': 6663, 'octahedron': 6801, 'unknown': 16980}
+epoch 1/60  val_acc=0.9355
+epoch 2/60  val_acc=0.9364
+epoch 3/60  val_acc=0.9400
+epoch 4/60  val_acc=0.9255
+epoch 5/60  val_acc=0.9445
+epoch 6/60  val_acc=0.9355
+epoch 7/60  val_acc=0.8855
+epoch 8/60  val_acc=0.9091
+epoch 9/60  val_acc=0.9427
+epoch 10/60  val_acc=0.9391
+epoch 11/60  val_acc=0.9345
+epoch 12/60  val_acc=0.9318
+epoch 13/60  val_acc=0.9355
+epoch 14/60  val_acc=0.9100
+epoch 15/60  val_acc=0.9036
+epoch 16/60  val_acc=0.9500
+epoch 17/60  val_acc=0.9109
+epoch 18/60  val_acc=0.9491
+epoch 19/60  val_acc=0.9182
+epoch 20/60  val_acc=0.9491
+epoch 21/60  val_acc=0.9500
+epoch 22/60  val_acc=0.9145
+epoch 23/60  val_acc=0.9464
+epoch 24/60  val_acc=0.9455
+epoch 25/60  val_acc=0.9482
+epoch 26/60  val_acc=0.9482
+epoch 27/60  val_acc=0.9482
+epoch 28/60  val_acc=0.9236
+epoch 29/60  val_acc=0.9427
+epoch 30/60  val_acc=0.9100
+epoch 31/60  val_acc=0.9491
+epoch 32/60  val_acc=0.9482
+epoch 33/60  val_acc=0.9264
+epoch 34/60  val_acc=0.9445
+epoch 35/60  val_acc=0.9464
+epoch 36/60  val_acc=0.9209
+epoch 37/60  val_acc=0.9509
+epoch 38/60  val_acc=0.9509
+epoch 39/60  val_acc=0.9264
+epoch 40/60  val_acc=0.9482
+epoch 41/60  val_acc=0.9400
+epoch 42/60  val_acc=0.9418
+epoch 43/60  val_acc=0.9436
+epoch 44/60  val_acc=0.9473
+epoch 45/60  val_acc=0.9436
+epoch 46/60  val_acc=0.9445
+epoch 47/60  val_acc=0.9445
+epoch 48/60  val_acc=0.9445
+epoch 49/60  val_acc=0.9445
+epoch 50/60  val_acc=0.9409
+epoch 51/60  val_acc=0.9400
+epoch 52/60  val_acc=0.9455
+epoch 53/60  val_acc=0.9445
+epoch 54/60  val_acc=0.9436
+epoch 55/60  val_acc=0.9427
+epoch 56/60  val_acc=0.9364
+epoch 57/60  val_acc=0.9373
+epoch 58/60  val_acc=0.9364
+epoch 59/60  val_acc=0.9400
+epoch 60/60  val_acc=0.9382
+best val_acc=0.9509  temperature=0.662
+confusion matrix (rows=true, cols=pred)
+	cube	dodecahedron	icosahedron	octahedron	unknown
+cube	152	14	1	0	2
+dodecahedron	28	123	0	0	1
+icosahedron	0	0	149	0	0
+octahedron	0	1	2	132	1
+unknown	4	0	0	0	490
+cube           precision=0.826 recall=0.899
+dodecahedron   precision=0.891 recall=0.809
+icosahedron    precision=0.980 recall=1.000
+octahedron     precision=1.000 recall=0.971
+unknown        precision=0.992 recall=0.992
+dodeca<->icosa confusion rate = 0/301 = 0.000
+saved -> /home/user/joon/models/set1/classifier

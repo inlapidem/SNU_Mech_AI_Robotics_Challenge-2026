@@ -5,7 +5,8 @@ Why decal quads instead of texturing an imported STL:
     An STL has no UVs and no per-face grouping, so painting a *different* image on
     exactly 3 of 6 faces (with per-label scale/offset/rotation) is unreliable. We
     instead build a clean white box body and lay thin textured "label" quads flush
-    on 3 faces - which is also a faithful model of a printed/sticker label and makes
+    on the configured top + opposite-side faces. This faithfully models the real
+    printed/sticker layout and makes
     the white-face-only views (the core 'unknown' case) fall out naturally from the
     camera geometry. The body can optionally be a real cube USD (cfg.assets.cube_usd).
 
@@ -35,6 +36,27 @@ FACE_FRAMES = [
     ("nz", (0, 0, -1), (0, 0, -1), (1, 0, 0), (0, -1, 0)),
 ]
 
+FACE_ID_BY_NAME = {frame[0]: idx for idx, frame in enumerate(FACE_FRAMES)}
+OPPOSITE_FACE = {"px": "nx", "nx": "px", "py": "ny", "ny": "py",
+                 "pz": "nz", "nz": "pz"}
+
+
+def resolve_fruit_face_ids(face_names):
+    """Validate the real layout: top (+Z) plus one opposite pair of side faces."""
+    names = list(face_names)
+    unknown = [name for name in names if name not in FACE_ID_BY_NAME]
+    if unknown:
+        raise ValueError(f"unknown cube face names: {unknown}")
+    if len(names) != 3 or len(set(names)) != 3:
+        raise ValueError("fruit_face_names must contain exactly 3 unique faces")
+    if "pz" not in names:
+        raise ValueError("fruit_face_names must include the top face 'pz'")
+    sides = [name for name in names if name != "pz"]
+    if len(sides) != 2 or OPPOSITE_FACE[sides[0]] != sides[1] or "nz" in sides:
+        raise ValueError(
+            "fruit_face_names must be 'pz' plus opposite side faces (px/nx or py/ny)")
+    return [FACE_ID_BY_NAME[name] for name in names]
+
 
 # ============================ small vector helpers ============================
 def _v(a):
@@ -56,6 +78,25 @@ def _cross(a, b):
 def _norm(a):
     n = math.sqrt(_dot(a, a)) or 1.0
     return (a[0] / n, a[1] / n, a[2] / n)
+
+
+def euler_rotation(euler_deg):
+    """XYZ-euler -> Gf.Rotation, the exact composition FruitCube.set_pose uses."""
+    return Gf.Rotation(Gf.Vec3d(1, 0, 0), euler_deg[0]) * \
+        Gf.Rotation(Gf.Vec3d(0, 1, 0), euler_deg[1]) * \
+        Gf.Rotation(Gf.Vec3d(0, 0, 1), euler_deg[2])
+
+
+def cube_rest_z(euler_deg, edge_m, eps=0.0002):
+    """Cube-centre height that rests this orientation EXACTLY on the floor (z=0).
+
+    With the old fixed z = edge/2 the settle tilts (+-4 deg) sank a corner into the
+    floor; here the lowest of the 8 rotated corners lands on z=0 for any rotation.
+    """
+    M = Gf.Matrix4d().SetRotate(euler_rotation(euler_deg))
+    zmin = min(M.Transform(Gf.Vec3d(sx, sy, sz))[2]
+               for sx in (-1, 1) for sy in (-1, 1) for sz in (-1, 1))
+    return -zmin * (edge_m / 2.0) + eps
 
 
 # ============================ pinhole camera model ============================
@@ -144,7 +185,7 @@ def _textured_material(stage, path):
     tex.CreateInput("st", Sdf.ValueTypeNames.Float2).ConnectToSource(st_out)
     tex.CreateInput("wrapS", Sdf.ValueTypeNames.Token).Set("clamp")
     tex.CreateInput("wrapT", Sdf.ValueTypeNames.Token).Set("clamp")
-    # scale/bias multiply+add the sampled RGBA -> printed brightness/contrast/saturation jitter.
+    # scale/bias multiply+add the sampled RGBA -> printed brightness/contrast jitter.
     tex.CreateInput("scale", Sdf.ValueTypeNames.Float4).Set(Gf.Vec4f(1, 1, 1, 1))
     tex.CreateInput("bias", Sdf.ValueTypeNames.Float4).Set(Gf.Vec4f(0, 0, 0, 0))
     tex_rgb = tex.CreateOutput("rgb", Sdf.ValueTypeNames.Float3)
@@ -219,9 +260,7 @@ class FruitCube:
     def set_pose(self, pos, euler_deg, edge_m):
         """Place + orient + size the cube. Body is a unit cube (half=1) so scale=edge/2."""
         h = edge_m / 2.0
-        rot = Gf.Rotation(Gf.Vec3d(1, 0, 0), euler_deg[0]) * \
-            Gf.Rotation(Gf.Vec3d(0, 1, 0), euler_deg[1]) * \
-            Gf.Rotation(Gf.Vec3d(0, 0, 1), euler_deg[2])
+        rot = euler_rotation(euler_deg)
         M = Gf.Matrix4d(1.0)
         M.SetScale(Gf.Vec3d(h, h, h))
         M = M * Gf.Matrix4d().SetRotate(rot)

@@ -1,10 +1,14 @@
 """Build the 4x4 m competition arena on a USD stage - REAL-VENUE edition.
 
 The confirmed venue (photos, overriding the draft rulebook): bright wood-laminate
-walls AND floor, taegukgi stickers scattered on walls and floor, black tape lines on
-the floor (zone boundaries), 30 cm walls. Floor/walls are textured quads fed from
-assets/arena_textures/wood/*.png; stickers are textured quads from
-assets/arena_textures/stickers/*.png; tape lines are thin dark boxes.
+walls AND floor, taegukgi stickers AT THE GOAL/STORAGE CORNER ONLY (on its floor and
+the two adjacent walls - the bottom-left corner, matching the tape zone square and
+the navigator geofence), generic labels on the floor, black tape lines on the floor
+(zone boundaries), 30 cm walls. Floor/walls are textured quads fed from
+assets/arena_textures/wood/*.png - real venue photos (real_floor_*/real_wall_*) are
+kept in surface-specific pools and preferred over the procedural wood_* files;
+stickers are textured quads from assets/arena_textures/stickers/*.png (taegukgi vs
+generic split by filename); tape lines are thin dark boxes.
 
 Per-frame domain randomization lives here too:
   * randomize_arena(arena, cfg, rng)  - wood texture choice + brightness, sticker
@@ -121,6 +125,27 @@ def _set_quad_tf(entry, translate, rotate, scale):
     entry["op"].Set(m)
 
 
+def _named(files, key):
+    return [f for f in files if key in os.path.basename(f).lower()]
+
+
+def _image_aspect(path, default):
+    """Texture width/height so quads render photos undistorted (PIL optional)."""
+    try:
+        from PIL import Image
+        with Image.open(path) as im:
+            return im.size[0] / float(im.size[1] or 1)
+    except Exception:
+        return default
+
+
+def _pick_texture(real_files, generic_files, rng, real_frac):
+    """Prefer a real venue photo with prob real_frac; fall back to whichever pool exists."""
+    use_real = real_files and (not generic_files or rng.uniform() < real_frac)
+    pool = real_files if use_real else generic_files
+    return pool[rng.randint(len(pool))]
+
+
 # ============================ build ==========================================
 def build_arena(stage, cfg, root="/World/Arena"):
     """Construct textured floor + 4 walls + sticker/tape pools under a movable root.
@@ -142,6 +167,17 @@ def build_arena(stage, cfg, root="/World/Arena"):
     sticker_files = sorted(glob.glob(os.path.join(tex_dir, "stickers", "*.png")) +
                            glob.glob(os.path.join(tex_dir, "stickers", "*.jpg")))
     textured = bool(wood_files)
+
+    # Surface-specific texture pools: real venue photos are floor-vs-wall specific
+    # (real_floor_* / real_wall_*); procedural wood_* files stay usable on both.
+    real_floor = _named(wood_files, "floor")
+    real_wall = _named(wood_files, "wall")
+    generic_wood = [f for f in wood_files if f not in real_floor and f not in real_wall]
+    # Sticker pools: taegukgi (goal-corner only) vs generic labels (floor anywhere).
+    taegukgi_files = _named(sticker_files, "taegukgi")
+    generic_stickers = [f for f in sticker_files if f not in taegukgi_files]
+    sticker_aspect = {
+        f: _image_aspect(f, 1.5 if f in taegukgi_files else 1.0) for f in sticker_files}
 
     if textured:
         floor_mat, floor_tex, floor_surf = create_textured_material(
@@ -218,6 +254,9 @@ def build_arena(stage, cfg, root="/World/Arena"):
         "floor_shader": floor_shader, "wall_shader": wall_shader,
         "floor_tex": floor_tex, "wall_tex": wall_tex,
         "wood_files": wood_files, "sticker_files": sticker_files,
+        "real_floor": real_floor, "real_wall": real_wall, "generic_wood": generic_wood,
+        "taegukgi_files": taegukgi_files, "generic_stickers": generic_stickers,
+        "sticker_aspect": sticker_aspect,
         "stickers": stickers, "tape": tape,
         "size": (sx, sy), "wall_height": h,
         "offset": (0.0, 0.0),
@@ -246,62 +285,88 @@ def randomize_arena(arena, cfg, rng):
     hx, hy = sx / 2.0, sy / 2.0
     h = arena["wall_height"]
 
-    # ---- wood texture + brightness ----
+    # ---- wood texture + brightness (real venue photos preferred, per surface) ----
     if arena["floor_tex"] is not None and arena["wood_files"]:
         b_lo, b_hi = a.get("wood_brightness", [0.75, 1.15])
-        files = arena["wood_files"]
-        _set_tex(arena["floor_tex"], files[rng.randint(len(files))], rng.uniform(b_lo, b_hi))
-        _set_tex(arena["wall_tex"], files[rng.randint(len(files))], rng.uniform(b_lo, b_hi))
+        rf = a.get("real_texture_frac", 0.7)
+        _set_tex(arena["floor_tex"],
+                 _pick_texture(arena["real_floor"], arena["generic_wood"], rng, rf),
+                 rng.uniform(b_lo, b_hi))
+        _set_tex(arena["wall_tex"],
+                 _pick_texture(arena["real_wall"], arena["generic_wood"], rng, rf),
+                 rng.uniform(b_lo, b_hi))
     else:  # legacy solid-colour jitter
         for shader, base, jit in ((arena["floor_shader"], a["floor_color"], a["floor_color_jitter"]),
                                   (arena["wall_shader"], a["wall_color"], a["wall_color_jitter"])):
             col = [min(1, max(0, c + rng.uniform(-jit, jit))) for c in base]
             shader.GetInput("diffuseColor").Set(Gf.Vec3f(*col))
 
-    # ---- stickers: some on walls, some on the floor ----
+    # ---- stickers: taegukgi at the goal corner (floor + 2 walls), generic on floor ----
+    # Real venue: taegukgi markings exist ONLY around the goal/storage zone - the
+    # bottom-left corner in arena coords, same corner as the tape zone square and the
+    # navigator's hardcoded goal. Other labels lie flat on the floor elsewhere.
     st_cfg = a.get("stickers", {})
     stickers = arena["stickers"]
     if stickers:
-        files = arena["sticker_files"]
-        lo_n, hi_n = st_cfg.get("count", [2, 6])
-        n_show = rng.randint(lo_n, hi_n + 1)
-        s_lo, s_hi = st_cfg.get("size_m", [0.10, 0.28])
-        floor_frac = st_cfg.get("floor_frac", 0.3)
+        tg_files = arena["taegukgi_files"]
+        gn_files = arena["generic_stickers"]
+        aspects = arena["sticker_aspect"]
+        tf_lo, tf_hi = st_cfg.get("taegukgi_floor_count", [1, 2])
+        tw_lo, tw_hi = st_cfg.get("taegukgi_wall_count", [1, 2])
+        g_lo, g_hi = st_cfg.get("generic_count", [0, 3])
+        n_tf = rng.randint(tf_lo, tf_hi + 1) if tg_files else 0
+        n_tw = rng.randint(tw_lo, tw_hi + 1) if tg_files else 0
+        n_g = rng.randint(g_lo, g_hi + 1) if gn_files else 0
+        # Separate jobs guarantee that the real goal marking is represented on both
+        # the floor and an adjacent wall in every randomized scene.
+        jobs = ([("taegukgi_floor", tg_files)] * n_tf +
+                [("taegukgi_wall", tg_files)] * n_tw +
+                [("generic", gn_files)] * n_g)
+        goal_ext = st_cfg.get("goal_zone_extent_m", 0.55)
+        wall_ext = st_cfg.get("wall_extent_m", 1.0)
+        eps = 0.004
+        x90 = Gf.Rotation(Gf.Vec3d(1, 0, 0), 90)
         for i, entry in enumerate(stickers):
-            if i >= n_show:
+            if i >= len(jobs):
                 UsdGeom.Imageable(entry["xform"]).MakeInvisible()
                 continue
+            kind, files = jobs[i]
+            file = files[rng.randint(len(files))]
             UsdGeom.Imageable(entry["xform"]).MakeVisible()
-            w = rng.uniform(s_lo, s_hi)
-            hgt = w / 1.5 if rng.uniform() < 0.7 else w          # flags are 3:2
-            spin = Gf.Rotation(Gf.Vec3d(0, 0, 1), rng.uniform(-15, 15))
-            if rng.uniform() < floor_frac:                        # on the floor
+            if kind.startswith("taegukgi"):
+                s_lo, s_hi = st_cfg.get("taegukgi_size_m", [0.15, 0.30])
+                w = rng.uniform(s_lo, s_hi)
+                hgt = w / aspects.get(file, 1.5)
+                if kind == "taegukgi_wall":               # goal-corner wall (S or W)
+                    if hgt > 0.8 * h:                      # must fit the 30 cm wall
+                        w, hgt = w * (0.8 * h / hgt), 0.8 * h
+                    zc = rng.uniform(hgt / 2 + 0.02,
+                                     max(h - hgt / 2 - 0.02, hgt / 2 + 0.03))
+                    # Applied stickers hang near-level: small spin only. Gf composes
+                    # LEFT-first: spin in the quad plane FIRST, then orient onto the
+                    # wall - otherwise the spin would yaw it out of the wall plane.
+                    spin = Gf.Rotation(Gf.Vec3d(0, 0, 1), rng.uniform(-6, 6))
+                    along_lo = w / 2 + 0.05
+                    along = rng.uniform(along_lo, max(wall_ext, along_lo + 0.05))
+                    if rng.uniform() < 0.5:                # south wall (y=-hy), faces +Y
+                        rot = spin * Gf.Rotation(Gf.Vec3d(1, 0, 0), -90)
+                        _set_quad_tf(entry, (-hx + along, -hy + eps, zc), rot, (w, hgt))
+                    else:                                  # west wall (x=-hx), faces +X
+                        rot = spin * x90 * Gf.Rotation(Gf.Vec3d(0, 0, 1), 90)
+                        _set_quad_tf(entry, (-hx + eps, -hy + along, zc), rot, (w, hgt))
+                else:                                      # goal-zone floor
+                    spin = Gf.Rotation(Gf.Vec3d(0, 0, 1), rng.uniform(0, 360))
+                    px = -hx + rng.uniform(w / 2 + 0.03, max(goal_ext, w / 2 + 0.06))
+                    py = -hy + rng.uniform(hgt / 2 + 0.03, max(goal_ext, hgt / 2 + 0.06))
+                    _set_quad_tf(entry, (px, py, 0.0015), spin, (w, hgt))
+            else:                                          # generic label: floor, anywhere
+                s_lo, s_hi = st_cfg.get("size_m", [0.08, 0.20])
+                w = rng.uniform(s_lo, s_hi)
+                hgt = w / aspects.get(file, 1.0)
+                spin = Gf.Rotation(Gf.Vec3d(0, 0, 1), rng.uniform(0, 360))
                 px = rng.uniform(-hx + 0.3, hx - 0.3)
                 py = rng.uniform(-hy + 0.3, hy - 0.3)
                 _set_quad_tf(entry, (px, py, 0.0015), spin, (w, hgt))
-            else:                                                 # on a wall, inner face
-                wall = rng.randint(4)                             # N,S,E,W
-                if hgt > 0.8 * h:                                 # sticker must fit the 30 cm wall
-                    w, hgt = w * (0.8 * h / hgt), 0.8 * h
-                zc = rng.uniform(hgt / 2 + 0.02, max(h - hgt / 2 - 0.02, hgt / 2 + 0.03))
-                along = rng.uniform(-hx + 0.3, hx - 0.3)
-                eps = 0.004
-                # Gf composes LEFT-first: spin in the quad plane (about its local +Z
-                # normal) FIRST, then orient onto the wall - otherwise the "spin"
-                # would yaw the sticker out of the wall plane.
-                x90 = Gf.Rotation(Gf.Vec3d(1, 0, 0), 90)
-                if wall == 0:                                     # y=+hy, faces -Y
-                    _set_quad_tf(entry, (along, hy - eps, zc), spin * x90, (w, hgt))
-                elif wall == 1:                                   # y=-hy, faces +Y
-                    rot = spin * Gf.Rotation(Gf.Vec3d(1, 0, 0), -90)
-                    _set_quad_tf(entry, (along, -hy + eps, zc), rot, (w, hgt))
-                elif wall == 2:                                   # x=+hx, faces -X
-                    rot = spin * x90 * Gf.Rotation(Gf.Vec3d(0, 0, 1), -90)
-                    _set_quad_tf(entry, (hx - eps, along, zc), rot, (w, hgt))
-                else:                                             # x=-hx, faces +X
-                    rot = spin * x90 * Gf.Rotation(Gf.Vec3d(0, 0, 1), 90)
-                    _set_quad_tf(entry, (-hx + eps, along, zc), rot, (w, hgt))
-            file = files[rng.randint(len(files))]
             _set_tex(entry["tex"], file, rng.uniform(0.8, 1.1))
 
     # ---- tape: darkness jitter + random straight runs across the floor ----

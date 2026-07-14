@@ -1,5 +1,6 @@
 # ============================================================================
-# Set 2 perception config - white cubes with fruit images on 3 of 6 faces, in
+# Set 2 perception config - upright white cubes with fruit images on the top and
+# two opposite side faces, in
 # the same 4x4 m arena. SEPARATE from Set 1 (own dataset, models, thresholds,
 # runtime policy). Every tunable for the Isaac Sim data generation lives here so
 # the sim files stay generic. Edit values to match the real cubes / arena.
@@ -13,19 +14,25 @@ classes:
   unknown: unknown                             # classifier reject class
 
 # --------------------------------------------------------------------------- assets
-# Fruit images used as randomized printed/sticker labels. Drop multiple real
-# photos per class into these folders (png/jpg). sim/make_fruit_textures.py can
-# generate distinguishable PLACEHOLDERS so the pipeline runs before real images
-# arrive - replace them with real fruit photos for sim->real quality.
+# Fruit images used as randomized printed/sticker labels. The allowlist deliberately
+# keeps only ordinary, whole/unpeeled fruit with canonical colours; sliced/peeled
+# source assets remain in the repository but are never sampled by Isaac Sim.
 assets:
   fruit_texture_dir: assets/fruit_textures   # <dir>/<fruit>/*.png|jpg
+  fruit_texture_allowlist:
+    apple: [apple_1.jpg, apple_2.jpg, apple_4.jpg, apple_7.jpg]
+    orange: [orange_2.png, orange_6.jpg]
+    banana: [banana_2.jpg, banana_4.jpg, banana_7.jpg]
+    pineapple: [pineapple_2.png]
   # Optional: a cube body USD (e.g. converted from a real cube STL). If null/missing
   # the generator builds a clean procedural box (preferred for per-face texturing).
   cube_usd: null
 
 # --------------------------------------------------------------------------- arena (shared shape with set1)
-# REAL VENUE: bright wood-laminate walls AND floor, taegukgi stickers, black tape lines.
-# The taeguk red/blue circle is a key false-positive hazard for the fruit classifier.
+# REAL VENUE: bright wood-laminate walls AND floor, taegukgi stickers AT THE GOAL/
+# STORAGE CORNER ONLY (its floor + the two adjacent walls), black tape lines.
+# The taeguk red/blue circle is a key false-positive hazard for the fruit classifier
+# (real 0714 frames: wall taegukgi accepted as apple 0.941 before hard-neg retraining).
 arena:
   size_x: 4.0
   size_y: 4.0
@@ -33,6 +40,9 @@ arena:
   wall_thickness: 0.05
   texture_dir: assets/arena_textures   # wood/*.png + stickers/*.png (make_arena_textures.py)
   wood_brightness: [0.75, 1.15]
+  # Real venue photos (real_floor_*/real_wall_*) form surface-specific pools; this is
+  # the per-surface per-frame probability of using one over a procedural wood_* file:
+  real_texture_frac: 0.7
   # Solid-colour FALLBACK (only used when texture_dir has no wood files):
   floor_color: [0.78, 0.62, 0.42]
   floor_color_jitter: 0.08
@@ -40,11 +50,15 @@ arena:
   wall_color: [0.78, 0.62, 0.42]
   wall_color_jitter: 0.08
   wall_roughness: [0.4, 0.8]
-  stickers:
+  stickers:                            # split by filename: *taegukgi* vs the rest
     pool: 8
-    count: [2, 6]
-    size_m: [0.10, 0.28]
-    floor_frac: 0.3
+    taegukgi_floor_count: [1, 2]       # goal-corner floor (at least one every frame)
+    taegukgi_wall_count: [1, 2]        # S/W goal-corner walls (at least one every frame)
+    taegukgi_size_m: [0.15, 0.30]
+    goal_zone_extent_m: 0.55           # floor taegukgi lie within this of the corner
+    wall_extent_m: 1.0                 # wall taegukgi within this along-wall of the corner
+    generic_count: [0, 3]              # non-flag labels: floor only, anywhere
+    size_m: [0.08, 0.20]
   tape:
     enable: true
     width_m: [0.015, 0.025]
@@ -63,6 +77,7 @@ sampling:
   wall_contact_frac: 0.35     # white cube against bright wood wall, touching allowed
   wall_gap_m: [0.30, 0.60]
   negative_frame_frac: 0.10   # cube-free frames (wood/sticker/tape only), empty labels
+  negative_goal_frac: 0.5     # of those, fraction aimed at the goal-corner taegukgi
 
 # --------------------------------------------------------------------------- camera (NUROUM V11) - identical rig to set1
 camera:
@@ -99,10 +114,9 @@ cubes:
   count_range: [1, 4]          # cubes present per frame
   n_plain: 0                   # plain (no-fruit) white cubes; 0 = only fruit cubes in the arena
                                # (white-face 'unknown' crops still come from fruit cubes' 3 plain faces)
-  z_on_floor: true
-  fixed_face_layout: false     # true -> fruit always on the same 3 faces (real object);
-                               # false -> randomize which 3 faces per cube (robustness)
-  fruit_faces: 3               # exactly 3 of 6 faces carry fruit
+  fruit_faces: 3               # invariant real layout: top + opposite side pair
+  fruit_face_names: [pz, px, nx]
+  upright_tilt_deg: [-2.0, 2.0] # upright on the bottom; tiny physical settle variation only
   # White 3D-printed plastic body (UsdPreviewSurface).
   body_material:
     base_color: [0.88, 0.88, 0.88]
@@ -115,8 +129,8 @@ cubes:
   # on them; their crops also become classifier 'unknown' samples).
   use_noncube_negatives: true         # add octa/dodeca/icosa as hard negatives
   set1_usd_dir: isaac/assets/usd      # where those USDs live (only used if the flag is true)
-  neg_size_m: 0.08                    # rendered size of non-cube negatives (if enabled)
-  neg_calib_m: 64.9                   # set1 render_calib quirk: rep scale 1.0 renders USD at ~64.9 m
+  neg_size_m: 0.08                    # rendered size of non-cube negatives (if enabled);
+                                      # they now REST on the floor like the Set 1 solids
 
 # --------------------------------------------------------------------------- fruit label (printed/sticker) realism
 # A fruit image is rendered as a thin textured decal sitting flush on a face,
@@ -127,10 +141,9 @@ fruit_label:
   rotation_deg: [-8, 8]        # in-plane misalignment
   border_frac: [0.0, 0.10]     # paper/sticker white border (fraction of label)
   raise_eps_m: 0.0008          # lift above the face to avoid z-fighting
-  # Printed-look colour/exposure jitter applied via the texture scale/bias inputs:
+  # Hue-preserving printed-look exposure jitter via the texture scale/bias inputs:
   brightness: [0.8, 1.15]
   contrast: [0.85, 1.15]
-  saturation: [0.8, 1.15]
   glare_prob: 0.25             # chance of a brighter specular label material
   roughness: [0.3, 0.7]
 
@@ -163,7 +176,8 @@ postprocess:
 
 # --------------------------------------------------------------------------- dataset output
 dataset:
-  root: datasets/set2_v2      # v2 = real-venue arena + long-range sampling (v1 kept)
+  root: datasets/set2_v3      # v3 = real venue photos + exact floor resting + goal-corner
+                              # taegukgi policy (v2 kept - the LR training mixes cite it)
   detector_subdir: detector
   classifier_subdir: classifier
   metadata_subdir: metadata

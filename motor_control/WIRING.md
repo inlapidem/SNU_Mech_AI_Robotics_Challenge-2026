@@ -1,4 +1,4 @@
-# 바퀴 모터 회로 배선 가이드 (Jetson + Arduino Uno + L298N + 엔코더 모터 x2)
+# 바퀴 모터 회로 배선 가이드 (Jetson + Arduino Uno + L298N + 엔코더 모터 x2 + 빈 IR 센서)
 
 > 이 문서는 회로를 **여러 번 연결/분리**할 때마다 보는 참고용입니다.
 > 핀 번호는 펌웨어 [`firmware/motor_fw/motor_fw.ino`](../firmware/motor_fw/motor_fw.ino) 와 반드시 일치해야 합니다.
@@ -48,7 +48,23 @@
 
 > D2·D3만 Uno의 하드웨어 인터럽트 핀 → 각 엔코더의 **A 채널만** 여기에 연결.
 
-### 1-4. Jetson ↔ Arduino
+### 1-4. 빈(bin) IR 안착 센서 ↔ Arduino
+포획 빈 안쪽 깊숙이 장착해 물체가 완전히 들어왔는지 확인하는 센서.
+디지털 출력형 IR 장애물 센서 모듈(예: FC-51, TCRT5000 모듈, E18-D80NK) 사용.
+
+| 센서 | Arduino Uno |
+|---|---|
+| `VCC` | 5V |
+| `GND` | GND |
+| `OUT` (디지털) | **D6** |
+
+> - 대부분의 모듈은 **감지 시 LOW** 출력 → `motor_control/params.yaml` 의 `ir_active_low: true` (기본값) 그대로.
+>   반대인 모듈이면 `false` 로 변경.
+> - 모듈의 감지 거리 가변저항을 **빈 안쪽 벽까지(~10cm) 이내**로 조여서, 빈이 비어 있을 때
+>   바닥/전방 물체를 오감지하지 않게 조정. 물체를 손으로 넣고 빼며 `E l r ir` 값 토글 확인.
+> - 펌웨어가 20ms마다 `E <l> <r> <ir>` 로 보고, motor_bridge 가 `/bin_ir`(Bool) 발행.
+
+### 1-5. Jetson ↔ Arduino
 | 연결 | 비고 |
 |---|---|
 | USB 케이블 1개 | `/dev/ttyACM0`. Arduino 전원도 이 USB에서 공급됨 |
@@ -111,6 +127,7 @@
 - [ ] ENA/ENB, IN1~IN4 → D9/D10/D8/D7/D12/D13 정확
 - [ ] 엔코더 A → D2(왼쪽)/D3(오른쪽), B → D4/D5
 - [ ] 엔코더 VCC = Arduino 5V
+- [ ] 빈 IR 센서 OUT → D6, VCC=5V (물체 넣으면 `E` 라인 3번째 값 토글)
 - [ ] 바퀴 띄움
 - [ ] USB → Jetson 연결, 그 다음 모터 배터리 연결
 
@@ -134,7 +151,8 @@ arduino-cli upload -p /dev/ttyACM0 --fqbn arduino:avr:uno /home/teamtwo/joon/fir
 python3 -c "import serial,time; s=serial.Serial('/dev/ttyACM0',115200); time.sleep(2); \
 s.write(b'M 120 120\n'); [print(s.readline().decode().strip()) for _ in range(5)]; s.write(b'M 0 0\n')"
 ```
-→ `E <숫자> <숫자>` 가 **증가**하면 엔코더 정상, 바퀴가 돌면 모터 정상.
+→ `E <숫자> <숫자> <ir>` 에서 앞 두 값이 **증가**하면 엔코더 정상, 바퀴가 돌면 모터 정상.
+마지막 `<ir>` 은 빈 IR raw 값 — 물체를 빈에 넣으면 토글돼야 함 (모듈 대부분 감지=0).
 
 ---
 
@@ -171,3 +189,26 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard
 - 카메라(USB/CSI)와 Arduino는 **서로 다른 인터페이스**라 충돌 없음. 단, USB 카메라면 Arduino와 **다른 USB 포트** 권장.
 - 모터 배터리와 Jetson 전원은 분리되어 있으므로, 모터를 뽑았다 꽂아도 **Jetson/카메라/추론은 계속 동작**함.
 - 반복 탈착 시 위 **4·5번 순서**만 지키면 카메라 테스트 중에도 안전하게 회로를 붙였다 뗄 수 있음.
+
+---
+
+## 12. 엔코더 CPR·최고속도 실측 (`calibrate_encoder.py`)
+
+`motor_control/params.yaml`의 `ticks_per_rev`(현재 1441 = 11PPR × 1x × 기어비 131 공칭)와
+`max_wheel_speed`(현재 0.2 추정)는 아래로 실측 확정한다. ROS 불필요(pyserial만).
+
+```bash
+# 1) 모터 구동 없이 (가장 먼저, 지금 상태에서도 가능):
+#    바퀴를 손으로 전진 방향 10바퀴 → CPR 자동 계산 + 부호(배선) 검사
+python3 motor_control/calibrate_encoder.py                # --revs 5 로 줄여도 됨
+
+# 2) 교차 검증 (모터 구동 가능해지면): 3초 직진 후 실제 거리 입력
+python3 motor_control/calibrate_encoder.py --mode drive --pwm 150 --secs 3
+
+# 3) 최고속도: 바퀴 띄우고 PWM 255 → max_wheel_speed 산출 (무부하 측정은 10~20% 높게 나옴)
+python3 motor_control/calibrate_encoder.py --mode speed --secs 3
+```
+
+- hand 모드에서 **전진 방향인데 틱이 감소**하면 → 위 10번 표의 A↔B 교체 항목.
+- 좌/우 CPR이 5% 이상 다르면 한쪽 엔코더 신호 누락(배선/풀업) 의심.
+- 결과를 `params.yaml`에 반영 후, 1m 직진시켜 `/odom` 거리와 줄자 비교로 최종 확인.

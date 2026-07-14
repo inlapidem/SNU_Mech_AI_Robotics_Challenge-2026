@@ -25,7 +25,6 @@ Built on the validated Replicator patterns from generate_set1_data.py.
 """
 
 import argparse
-import glob
 import os
 import sys
 import json
@@ -47,12 +46,15 @@ import numpy as np                                     # noqa: E402
 import omni.usd                                        # noqa: E402
 import omni.replicator.core as rep                     # noqa: E402
 from omni.replicator.core import Writer, AnnotatorRegistry  # noqa: E402
-from pxr import UsdGeom, Gf                             # noqa: E402
+from pxr import UsdGeom, UsdShade, Gf                   # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 from sim import arena_builder, robot_sensor_rig, domain_randomization as dr  # noqa: E402
-from sim.fruit_cube import FruitCube, CameraModel, fruit_visibility  # noqa: E402
+from sim.fruit_cube import (FruitCube, CameraModel, fruit_visibility,  # noqa: E402
+                            cube_rest_z, _white_material, resolve_fruit_face_ids)
+from sim.fruit_texture_pool import load_fruit_texture_pool  # noqa: E402
+from sim.poly_assets import RestingPoly, load_polyhedron_geo  # noqa: E402
 from configs.set2_classes import FRUIT_CLASSES, CUBES_PER_CLASS  # noqa: E402
 
 try:
@@ -292,16 +294,13 @@ rep.writers.register_writer(Set2Writer)
 
 # ============================ texture pool ====================================
 def load_textures(cfg):
-    base = os.path.join(ROOT, cfg["assets"]["fruit_texture_dir"])
-    pool = {}
-    for fruit in FRUIT_CLASSES:
-        imgs = []
-        for ext in ("png", "jpg", "jpeg", "PNG", "JPG"):
-            imgs += glob.glob(os.path.join(base, fruit, f"*.{ext}"))
-        if not imgs:
-            raise SystemExit(f"No fruit images for '{fruit}' in {base}/{fruit}. "
-                             f"Run sim/make_fruit_textures.py or add real photos.")
-        pool[fruit] = sorted(imgs)
+    try:
+        pool = load_fruit_texture_pool(ROOT, cfg, FRUIT_CLASSES)
+    except (ValueError, FileNotFoundError) as exc:
+        raise SystemExit(f"[SET2] invalid fruit texture pool: {exc}") from exc
+    print("[SET2] fruit textures: " +
+          ", ".join(f"{fruit}={len(pool[fruit])}" for fruit in FRUIT_CLASSES),
+          file=sys.stderr)
     return pool
 
 
@@ -314,12 +313,11 @@ def sample_label_params(cfg, rng):
     off_lim = min(fl["offset_frac"] * 2.0, max_off)
     bright = rng.uniform(*fl["brightness"])
     contrast = rng.uniform(*fl["contrast"])
-    sat = rng.uniform(*fl["saturation"])
-    # UsdUVTexture: out = sampled*scale + bias. Brightness*contrast about 0.5 midpoint,
-    # with a small per-channel saturation tweak.
+    # UsdUVTexture: out = sampled*scale + bias. Brightness/contrast vary around
+    # the 0.5 midpoint, using the SAME transform for R/G/B so canonical fruit hues
+    # (red apple, yellow banana, orange orange, etc.) are never shifted arbitrarily.
     s = bright * contrast
     bias = bright * (0.5 - 0.5 * contrast)
-    sat_ch = [1.0 + (sat - 1.0) * d for d in (1.0, -0.5, -1.0)]
     glare = rng.uniform() < fl["glare_prob"]
     rough = (fl["roughness"][0] if glare else rng.uniform(*fl["roughness"]))
     return {"scale_x": sx, "scale_y": sy,
@@ -328,7 +326,7 @@ def sample_label_params(cfg, rng):
             "rot_deg": float(rng.uniform(*fl["rotation_deg"])),
             "eps": fl["raise_eps_m"],            # cube-local (half=1); ~mm at 6cm cube
             "roughness": rough,
-            "tint": {"scale": [s * sat_ch[0], s * sat_ch[1], s * sat_ch[2]],
+            "tint": {"scale": [s, s, s],
                      "bias": [bias, bias, bias]}}
 
 
@@ -342,7 +340,16 @@ def build():
     body_usd = CFG["assets"].get("cube_usd")
     body_usd = os.path.join(ROOT, body_usd) if body_usd else None
 
-    # Fruit-cube pool (manually driven via USD xforms each frame, like the camera):
+    # Fruit-cube pool (manually driven via USD xforms each frame, like the camera).
+    # The physical attachment rule is invariant: top (+Z) + an opposite side pair.
+    face_names = CFG["cubes"]["fruit_face_names"]
+    try:
+        face_ids = resolve_fruit_face_ids(face_names)
+    except ValueError as exc:
+        raise SystemExit(f"[SET2] invalid fruit face layout: {exc}") from exc
+    if len(face_ids) != int(CFG["cubes"]["fruit_faces"]):
+        raise SystemExit("[SET2] fruit_faces must match fruit_face_names")
+
     # CUBES_PER_CLASS per fruit (=12) + a few plain (no-fruit) cubes.
     cubes = []
     i = 0
@@ -350,8 +357,8 @@ def build():
         for _ in range(CUBES_PER_CLASS):
             fc = FruitCube(stage, f"/World/Cube_{i}", i, CFG, body_usd)
             _set_class(fc.body, f"c{i}")
-            faces = list(RNG.choice(6, CFG["cubes"]["fruit_faces"], replace=False))
-            cubes.append({"obj": fc, "fruit": fruit, "fixed_faces": faces})
+            cubes.append({"obj": fc, "fruit": fruit, "fixed_faces": list(face_ids),
+                          "face_names": list(face_names)})
             i += 1
     n_plain = CFG["cubes"].get("n_plain", 3)
     for _ in range(n_plain):
@@ -360,10 +367,10 @@ def build():
         cubes.append({"obj": fc, "fruit": None, "fixed_faces": None})
         i += 1
 
-    # Non-cube negatives (octa/dodeca/icosa) if the Set 1 USDs are present. These are
-    # randomized declaratively by an on_frame trigger (the Set-1-proven path), and appear
-    # as UNLABELLED hard negatives + 'unknown' crops. render_product + trigger + writer
-    # live inside rep.new_layer() exactly like generate_set1_data.py.
+    # Non-cube negatives (octa/dodeca/icosa) if the Set 1 USDs are present: manually
+    # driven references (sim/poly_assets) resting EXACTLY on the floor like the real
+    # Set 1 solids - the old declarative scatter (z 0.03-0.18) left them floating
+    # mid-air. They appear as UNLABELLED hard negatives + 'unknown' crops.
     if CFG["cubes"].get("use_noncube_negatives", False):
         usd_dir = os.path.join(ROOT, CFG["cubes"]["set1_usd_dir"])
         neg_paths = [os.path.join(usd_dir, f"{n}.usd") for n in
@@ -378,29 +385,38 @@ def build():
                 f"4 STLs in datasets/), or set use_noncube_negatives: false.")
     else:
         neg_paths = []                                   # Set 2 arena = fruit cubes only
-    base = CFG["cubes"]["neg_size_m"] / CFG["cubes"]["neg_calib_m"]   # set1 render_calib quirk
+
+    bm = CFG["cubes"]["body_material"]
+    negs = []
+    for ni, p in enumerate(neg_paths):
+        geo = load_polyhedron_geo(p)
+        root = f"/World/Neg{ni}_{os.path.splitext(os.path.basename(p))[0]}"
+        obj = RestingPoly(stage, root, p, geo)
+        _set_class(obj.prim, "neg")
+        # White plastic like the real Set 1 solids (they used to render untextured);
+        # the trigger below adds the same per-frame color jitter Set 1 uses.
+        UsdShade.MaterialBindingAPI(obj.prim).Bind(_white_material(
+            stage, root + "/Mat", bm["base_color"], sum(bm["roughness"]) / 2))
+        negs.append(obj)
 
     with rep.new_layer():
         rp = rep.create.render_product(cam_prim.GetPath().pathString,
                                        (CFG["camera"]["width"], CFG["camera"]["height"]))
-        negs = [rep.create.from_usd(p, semantics=[("class", "neg")]) for p in neg_paths]
         if negs:
+            # rep.get.prims on manual stage prims inside the layer is the validated
+            # sun/dome pattern from isaac/generate_replicator.py.
+            lo = [c - bm["color_jitter"] for c in bm["base_color"]]
+            hi = [c + bm["color_jitter"] for c in bm["base_color"]]
             with rep.trigger.on_frame(num_frames=args.frames):
-                for node in negs:
-                    with node:
-                        # Scatter across the cluster; many frames place them off to the
-                        # side / out of view (sometimes visible -> hard negative + unknown).
-                        rep.modify.pose(
-                            position=rep.distribution.uniform((-0.6, -0.6, 0.03),
-                                                              (0.6, 0.6, 0.18)),
-                            rotation=rep.distribution.uniform((0, 0, 0), (360, 360, 360)),
-                            scale=rep.distribution.uniform(base * 0.85, base * 1.3))
+                with rep.get.prims(path_pattern="/World/Neg.*/Geom"):
+                    rep.randomizer.color(colors=rep.distribution.uniform(lo, hi))
         writer = rep.writers.get("Set2Writer")
         writer.initialize(cfg=CFG)
         writer.attach([rp])
     print(f"[SET2] pool: {len(cubes)} cubes ({n_plain} plain), {len(negs)} non-cube negatives",
           file=sys.stderr)
-    return stage, cam_prim, lights, writer, cubes, arena
+    print(f"[SET2] fruit face layout: {face_names} (upright cubes)", file=sys.stderr)
+    return stage, cam_prim, lights, writer, cubes, negs, arena
 
 
 def park(obj_xform):
@@ -408,13 +424,12 @@ def park(obj_xform):
 
 
 def main():
-    stage, cam_prim, lights, writer, cubes, arena = build()
+    stage, cam_prim, lights, writer, cubes, negs, arena = build()
     sub = CFG["render"]["rt_subframes"]
     rcfg = CFG["robot"]
     ccfg = CFG["cubes"]
     scfg = CFG.get("sampling", {})
     arena_half = CFG["arena"]["size_x"] / 2.0
-    fixed_layout = ccfg["fixed_face_layout"]
     textures = load_textures(CFG)
     intr = {"fx": CFG["camera"]["fx"], "fy": CFG["camera"]["fy"],
             "cx": CFG["camera"]["cx"], "cy": CFG["camera"]["cy"],
@@ -452,47 +467,67 @@ def main():
         idxs = list(range(len(cubes)))
         RNG.shuffle(idxs)
         active = idxs[:n_active]
+        bounds = dr.cluster_bounds(0.25, (ox, oy), arena_half)
+        placed = []
         cube_ctx = {}
         for ci in active:
             c = cubes[ci]
             fc = c["obj"]
             edge = ccfg["size_m"] + float(RNG.uniform(-1, 1)) * ccfg["size_jitter_m"]
-            half = edge / 2.0
-            # Cluster placement, resting on a face (axis-aligned 90deg steps + small tilt).
-            px = float(RNG.uniform(-0.25, 0.25)); py = float(RNG.uniform(-0.25, 0.25))
-            euler = (90.0 * RNG.randint(0, 4) + RNG.uniform(-4, 4),
-                     90.0 * RNG.randint(0, 4) + RNG.uniform(-4, 4),
+            # Cubes remain upright so the configured +Z decal is the real top face;
+            # only yaw and a small settle tilt vary. The opposite side decals mean
+            # that at least one is normally visible from a low robot viewpoint. The
+            # rest height puts the lowest corner EXACTLY on the floor (the old fixed
+            # half+0.002 sank a tilted corner into it); non-overlapping and clipped
+            # inside the (offset) arena so wall-contact frames can't bury a cube.
+            tilt_lo, tilt_hi = ccfg.get("upright_tilt_deg", [-2.0, 2.0])
+            euler = (float(RNG.uniform(tilt_lo, tilt_hi)),
+                     float(RNG.uniform(tilt_lo, tilt_hi)),
                      float(RNG.uniform(0, 360)))
+            xy = dr.place_nonoverlapping(RNG, 0.65 * edge, placed, bounds)
             UsdGeom.Imageable(fc.xform).MakeVisible()
-            fc.set_pose((px, py, half + 0.002), euler, edge)
+            fc.set_pose((xy[0], xy[1], cube_rest_z(euler, edge)), euler, edge)
+            placed.append((xy[0], xy[1], 0.65 * edge))
             if c["fruit"] is None:
                 fc.hide_labels()
             else:
-                faces = c["fixed_faces"] if fixed_layout else \
-                    list(RNG.choice(6, ccfg["fruit_faces"], replace=False))
+                faces = c["fixed_faces"]
                 imgs = [textures[c["fruit"]][RNG.randint(len(textures[c["fruit"]]))]
                         for _ in faces]
                 lps = [sample_label_params(CFG, RNG) for _ in faces]
                 fc.configure(list(faces), imgs, lps, [lp["tint"] for lp in lps])
-            cube_ctx[ci] = {"fruit": c["fruit"]}
+            cube_ctx[ci] = {"fruit": c["fruit"],
+                            "fruit_faces": c.get("face_names", [])}
 
-        # (Non-cube negatives are randomized by the on_frame trigger set up in build().)
+        # Set 1 solids (hard negatives): resting on the floor, scattered wider than
+        # the cube cluster (some frames put them out of view - fine). Hidden on
+        # negative frames so those stay venue-clutter-only for the FP metrics.
+        if negs:
+            nb = dr.cluster_bounds(0.6, (ox, oy), arena_half)
+            for ng in negs:
+                if negative:
+                    UsdGeom.Imageable(ng.xform).MakeInvisible()
+                    continue
+                UsdGeom.Imageable(ng.xform).MakeVisible()
+                size = ccfg["neg_size_m"] * float(RNG.uniform(0.85, 1.3))
+                xy = dr.place_nonoverlapping(RNG, 0.55 * size, placed, nb)
+                ng.place(RNG, xy, size)
+                placed.append((xy[0], xy[1], 0.55 * size))
 
         # ---- camera on a ring OUTSIDE the cluster, robot-eye height, looking in ----
         ez = rcfg["cam_height"] + jitter["height"]
         if negative:
-            # Object-free view: look OUTWARD so any parked geometry stays behind.
-            ang = RNG.uniform(-math.pi, math.pi)
-            ux, uy = math.cos(ang), math.sin(ang)
-            e = RNG.uniform(0.55, 0.95)
-            eye = [ux * e, uy * e, ez]
-            r = e + RNG.uniform(0.6, 1.8)
-            target = [ux * r, uy * r, float(RNG.uniform(0.0, 0.25))]
+            # Object-free frame (objects hidden above): legacy outward floor sweep,
+            # or aimed at the goal-corner taegukgi cluster (FP hardening views).
+            exy, target = dr.sample_negative_view(
+                RNG, (ox, oy), arena_half, scfg.get("negative_goal_frac", 0.5))
+            eye = [exy[0], exy[1], ez]
             dist, far = 0.0, False
         else:
             ang, dist, far = dr.sample_camera_view(RNG, scfg, (ox, oy), arena_half)
             eye = [dist * math.cos(ang), dist * math.sin(ang), ez]
-            target = [float(RNG.uniform(-0.06, 0.06)), float(RNG.uniform(-0.06, 0.06)), half]
+            target = [float(RNG.uniform(-0.06, 0.06)), float(RNG.uniform(-0.06, 0.06)),
+                      ccfg["size_m"] / 2.0]
         vx, vy = target[0] - eye[0], target[1] - eye[1]
         nrm = math.hypot(vx, vy) or 1.0
         px2, py2 = -vy / nrm, vx / nrm

@@ -83,6 +83,69 @@ def sample_robot_base(rng, dist_range=(0.6, 3.0)):
     return base_xy, base_yaw_deg, dist
 
 
+# ---------------------------------------------------------------- object placement
+def place_nonoverlapping(rng, radius, placed, bounds, tries=12):
+    """Sample an (x, y) whose disc of `radius` avoids already-placed discs.
+
+    bounds = (xlo, xhi, ylo, yhi) for the object CENTRE before the radius inset;
+    the sampling region is inset by `radius` so the object body stays inside (e.g.
+    never pokes through a pulled-in wall). placed = [(x, y, radius), ...]. Objects
+    used to be scattered independently, so two solids could interpenetrate; a few
+    rejection tries fix virtually all of that (on exhaustion the overlap is kept -
+    it is no worse than the old behaviour).
+    """
+    xlo, xhi, ylo, yhi = bounds
+    xlo, xhi = xlo + radius, xhi - radius
+    ylo, yhi = ylo + radius, yhi - radius
+    if xlo > xhi:
+        xlo = xhi = (xlo + xhi) / 2.0
+    if ylo > yhi:
+        ylo = yhi = (ylo + yhi) / 2.0
+    x = y = 0.0
+    for _ in range(tries):
+        x, y = float(rng.uniform(xlo, xhi)), float(rng.uniform(ylo, yhi))
+        if all((x - px) ** 2 + (y - py) ** 2 >= (radius + pr) ** 2
+               for px, py, pr in placed):
+            break
+    return x, y
+
+
+def cluster_bounds(lim, arena_offset, arena_half, wall_margin=0.02):
+    """Centre bounds for cluster placement: the +-lim box CLIPPED to the (offset)
+    arena interior, so wall-contact frames can no longer bury an object in a wall."""
+    ox, oy = arena_offset
+    return (max(-lim, ox - arena_half + wall_margin),
+            min(lim, ox + arena_half - wall_margin),
+            max(-lim, oy - arena_half + wall_margin),
+            min(lim, oy + arena_half - wall_margin))
+
+
+def sample_negative_view(rng, arena_offset, arena_half, goal_frac=0.5):
+    """Eye-xy + target for an object-free (negative) frame.
+
+    With prob goal_frac the camera looks AT the goal/storage corner where the
+    taegukgi stickers cluster (the #1 false-positive hazard - wall taegukgi was
+    accepted as apple 0.941 on real 0714 frames); otherwise the legacy outward
+    view over random floor/tape/wall. Callers hide all objects on negative frames,
+    so any interior viewpoint is safe. The caller clamps the eye into the arena.
+    """
+    ox, oy = arena_offset
+    if rng.uniform() < goal_frac:
+        gx = ox - arena_half + rng.uniform(0.10, 0.50)     # goal corner = arena (-h, -h)
+        gy = oy - arena_half + rng.uniform(0.10, 0.50)
+        ang = rng.uniform(math.radians(10.0), math.radians(80.0))  # into the arena
+        d = rng.uniform(0.5, 3.0)
+        eye_xy = (gx + d * math.cos(ang), gy + d * math.sin(ang))
+        target = [float(gx), float(gy), float(rng.uniform(0.0, 0.20))]
+    else:
+        ang = rng.uniform(-math.pi, math.pi)
+        e = rng.uniform(0.55, 0.95)
+        eye_xy = (math.cos(ang) * e, math.sin(ang) * e)
+        r = e + rng.uniform(0.6, 1.8)
+        target = [math.cos(ang) * r, math.sin(ang) * r, float(rng.uniform(0.0, 0.25))]
+    return (float(eye_xy[0]), float(eye_xy[1])), target
+
+
 # ---------------------------------------------------------------- long-range sampling
 def sample_arena_offset(rng, scfg, arena_half=2.0, cluster_r=0.3):
     """Arena translation for this frame (the object cluster stays at the origin).

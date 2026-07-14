@@ -1,0 +1,18 @@
+# Set 2 detector, LR mix + 0714 real venue photos (phone, resized to 1280x720).
+#   set2_cam0714 = 2026-07-14 real arena photos; cubes (white + apple fruit cube)
+#                  labeled cube_candidate; set1 polyhedra present but UNLABELED
+#                  (hard negatives, matches set2_v2 policy); taegukgi stickers and
+#                  goal-zone tape unlabeled (folder 1 = pure negative frames).
+# Everything else identical to set2_detector_lr.yaml.
+path: /home/user/joon/datasets
+train:
+  - set2_v2/detector/images/train
+  - set2/detector/images/train
+  - set2_real/detector/images/train
+  - set2_cam0714/detector/images/train
+val:
+  - set2_v2/detector/images/val
+  - set2_real/detector/images/val
+  - set2_cam0714/detector/images/val
+names:
+  0: cube_candidate

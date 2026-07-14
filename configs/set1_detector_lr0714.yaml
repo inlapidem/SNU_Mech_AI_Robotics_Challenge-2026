@@ -1,0 +1,22 @@
+# Set 1 detector, LR mix + 0714 real venue photos (phone, resized to 1280x720).
+#   set1_cam0714 = 2026-07-14 real competition-arena photos, burst-sampled every
+#                  2nd frame, boxes = reviewed reference boxes propagated by ECC
+#                  alignment + per-frame detection snapping. Includes:
+#                  goal-zone taegukgi stickers as UNLABELED hard negatives
+#                  (folder 1 = pure negative frames), far objects to 4 m (folder 5),
+#                  robot-POV start-position views (folder 2).
+# Everything else identical to set1_detector_lr.yaml.
+path: /home/user/joon/datasets
+train:
+  - set1_v2/detector/images/train
+  - set1/detector/images/train
+  - set1_real/detector/images/train
+  - set1_autolabel/detector/images/train
+  - set1_cam0714/detector/images/train
+val:
+  - set1_v2/detector/images/val
+  - set1_real/detector/images/val
+  - set1_autolabel/detector/images/val
+  - set1_cam0714/detector/images/val
+names:
+  0: polyhedron

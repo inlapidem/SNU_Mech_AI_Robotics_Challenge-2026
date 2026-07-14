@@ -42,7 +42,9 @@ observations never lead to a capture (wrong capture = -40, miss = 0).
 """
 
 import argparse
+import json
 import os
+import socket
 import sys
 import time
 
@@ -187,6 +189,59 @@ def run_set2_legacy(cfg, args):
 
 
 # ------------------------------------------------------------------ rig mode
+class NavigatorBridge:
+    """UDP 로 내비게이터(navigation/navigator_node.py)와 연결.
+
+    송신(:event_port): 처리된 프레임마다 fsm 상태/요청/조향 + 관측 결과 JSON 1개.
+    수신(:cmd_port):   {"cmd": "set_phase"|"note_loaded"|"note_payload_lost"|
+                       "reset_tracking", ...} — 내비게이터가 미션 진행에 맞춰 보냄.
+    """
+
+    def __init__(self, host, event_port, cmd_port, set_name):
+        self.set_name = set_name
+        self.addr = (host, event_port)
+        self.tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.rx.bind((host, cmd_port))
+        self.rx.setblocking(False)
+
+    def send_frame(self, cam, out, results, shape):
+        msg = dict(type="frame", cam=cam.name, role=cam.role,
+                   img_h=int(shape[0]), img_w=int(shape[1]),
+                   fsm_state=out["state"], request=out["request"],
+                   steering=out["steering"],
+                   results=[dict(cls=r.get("cls"),
+                                 set=r.get("set", self.set_name),
+                                 state=r.get("state"), conf=r.get("conf"),
+                                 bbox=[float(v) for v in r["bbox"]])
+                            for r in results])
+        try:
+            self.tx.sendto(json.dumps(msg).encode(), self.addr)
+        except OSError:
+            pass
+
+    def poll_cmds(self, fsm, pipe):
+        while True:
+            try:
+                data, _ = self.rx.recvfrom(4096)
+            except BlockingIOError:
+                return
+            try:
+                c = json.loads(data.decode())
+            except ValueError:
+                continue
+            cmd = c.get("cmd")
+            if cmd == "set_phase":
+                fsm.set_phase(c["phase"])
+                print(f"[udp] set_phase({c['phase']})")
+            elif cmd == "note_loaded":
+                fsm.note_loaded(bool(c.get("loaded", True)))
+            elif cmd == "note_payload_lost":
+                fsm.note_payload_lost()
+            elif cmd == "reset_tracking":
+                pipe.reset_tracking()
+
+
 def _parse_kv_list(items, what):
     out = {}
     for it in items or []:
@@ -238,6 +293,12 @@ def run_rig(cfg, args):
     fsm = CaptureFSM(cfg, args.target)
     fsm.set_phase(args.phase)
     logger = FailureLogger(os.path.join(ROOT, "runtime_logs", set_name), enabled=args.log)
+    bridge = None
+    if args.udp:
+        bridge = NavigatorBridge(args.udp_host, args.udp_event_port,
+                                 args.udp_cmd_port, set_name)
+        print(f"[rig] UDP 브리지: 이벤트 -> {args.udp_host}:{args.udp_event_port}, "
+              f"명령 수신 :{args.udp_cmd_port}")
 
     groups = {"search": [c for c in cams.values() if c.role == "search"],
               "verify": [c for c in cams.values() if c.role == "verify"]}
@@ -260,6 +321,8 @@ def run_rig(cfg, args):
     running = True
 
     while running and any(groups.values()):
+        if bridge:
+            bridge.poll_cmds(fsm, pipe)
         phase_key = "search" if fsm.phase == PHASE_SEARCH else "verify"
         pr = rates.get(phase_key, {})
         due = []
@@ -293,6 +356,8 @@ def run_rig(cfg, args):
             for r in results:
                 r["fsm_state"] = out["state"]
                 r["steering"] = out["steering"]
+            if bridge:
+                bridge.send_frame(cam, out, results, frame.shape[:2])
 
             if out["state"] != prev_state:
                 print(f"[fsm] {prev_state} -> {out['state']}  "
@@ -393,6 +458,11 @@ def main():
     ap.add_argument("--right", default=None, help="LEGACY set2: right camera index/path")
     ap.add_argument("--show", action="store_true")
     ap.add_argument("--log", action="store_true", help="save uncertain crops for the data loop")
+    ap.add_argument("--udp", action="store_true",
+                    help="내비게이터 UDP 브리지 활성 (navigation/navigator_node.py)")
+    ap.add_argument("--udp-host", default="127.0.0.1")
+    ap.add_argument("--udp-event-port", type=int, default=5601)
+    ap.add_argument("--udp-cmd-port", type=int, default=5602)
     args = ap.parse_args()
 
     cfg_path = args.config or os.path.join(ROOT, "configs", f"{args.set_name}.yaml")

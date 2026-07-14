@@ -1,0 +1,33 @@
+/wall_localizer:
+  ros__parameters:
+    # --- 경기장 (위에서 본 기준: map 원점 = 안쪽 왼쪽-아래 모서리, x→오른쪽, y→위) ---
+    arena_width: 4.0          # 안쪽 가로 [m] — 벽 안쪽 면 기준 실측 권장
+    arena_height: 4.0         # 안쪽 세로 [m]
+
+    # --- 초기 자세: 오른쪽-아래 스타트 존(40x40cm) 중심에서 위쪽(+y) 향함 ---
+    start_x: 3.8
+    start_y: 0.2
+    start_yaw_deg: 90.0
+
+    # --- 라이다 장착 (base_link=바퀴축 중심 기준) --- 실측값으로 채우세요 ---
+    laser_x: 0.01              # 전방 +x [m] (바퀴축보다 1cm 앞)
+    laser_y: 0.005             # 좌측 +y [m] — 실측: 왼쪽 바퀴 타이어 중심에서 오른쪽 17cm
+                               #   = wheel_base/2(0.175) - 0.17 = +0.005 (거의 정중앙)
+    laser_z: 0.21             # 높이 [m] (바퀴 중앙 기준, 바퀴 r = 0.033, 벽 290mm보다 반드시 낮게)
+    laser_yaw_deg: 0.0        # 라이다 0° 방향이 로봇 전방과 이루는 각 [deg]
+    laser_upside_down: false  # 뒤집어 장착했으면 true
+    laser_frame: laser        # 라이다 드라이버의 frame_id와 일치시킬 것
+
+    # --- 토픽 / 거리 필터 ---
+    scan_topic: /scan
+    odom_topic: /odom
+    range_min: 0.15           # 로봇 몸체 반사 제거 [m]
+    range_max: 6.0            # 4x4 대각선 5.66m — 그 이상은 노이즈 [m]
+
+    # --- 정합 (기본값은 sim_localizer.py 시나리오 A~F 검증값) ---
+    assoc_thresh: 0.15        # 벽 대응 허용 거리 [m]
+    huber_delta: 0.05         # 이음부/골대/상대로봇 아웃라이어 완충 [m]
+    min_inlier_ratio: 0.40
+    max_rms: 0.08
+    publish_tf: true
+    publish_map_grid: true

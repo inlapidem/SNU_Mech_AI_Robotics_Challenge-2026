@@ -39,12 +39,13 @@ import numpy as np                                   # noqa: E402
 import omni.usd                                      # noqa: E402
 import omni.replicator.core as rep                   # noqa: E402
 from omni.replicator.core import Writer, AnnotatorRegistry  # noqa: E402
-from pxr import Usd, UsdGeom                          # noqa: E402
+from pxr import Usd, UsdGeom, UsdShade                 # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 from sim import arena_builder, robot_sensor_rig, domain_randomization as dr  # noqa: E402
-from sim.fruit_cube import FruitCube  # noqa: E402  (Set 2 distractor cubes in Set 1 scenes)
+from sim.fruit_cube import FruitCube, cube_rest_z, _white_material  # noqa: E402
+from sim.poly_assets import RestingPoly, load_polyhedron_geo  # noqa: E402
 
 try:
     import yaml
@@ -314,62 +315,64 @@ def build():
     print(f"[SET1] camera focal={_fl} hAperture={_ha} -> HFOV={_m.degrees(2*_m.atan(_ha/(2*_fl))):.1f} deg",
           file=sys.stderr)
 
+    # White polyhedra: manually-driven USD references (the validated FruitCube
+    # pattern) with per-shape semantics. Each frame computes an EXACT face-down
+    # resting pose from the mesh vertices (sim/poly_assets) - the old declarative
+    # rep.modify.pose (fixed z band + random SO(3)) left solids part-buried in the
+    # floor or hovering above it.
+    usd_dir = os.path.join(ROOT, CFG["assets"]["usd_dir"])
+    real = CFG["objects"]["real_size_m"]
+    m = CFG["objects"]["material"]
+    polys = []
+    for shape in SHAPES:
+        path = os.path.join(usd_dir, CFG["assets"]["usd_by_class"][shape])
+        if not os.path.isfile(path):
+            # Without this check the run "succeeds" but renders ONLY the fruit-cube
+            # distractors - a silently corrupt Set 1 dataset.
+            raise SystemExit(
+                f"[SET1] missing polyhedron asset: {path}\n"
+                f"Run  <isaac_python> isaac/convert_stl_to_usd.py  first (needs the "
+                f"4 STLs in datasets/), or copy isaac/assets/usd/ from a machine "
+                f"that has them.")
+        geo = load_polyhedron_geo(path)
+        print(f"[SET1] asset {shape} real={real[shape]} m usd_size={geo['size']:.3f} m "
+              f"rest_faces={len(geo['rest_normals'])}", file=sys.stderr)
+        for _ in range(CFG["objects"]["max_per_class"]):
+            root = f"/World/Poly{len(polys)}_{shape}"
+            p = RestingPoly(stage, root, path, geo)
+            _set_class(p.prim, shape)
+            # Base white-plastic bind (fallback look); the per-frame color
+            # randomizer in the trigger below re-binds over it.
+            UsdShade.MaterialBindingAPI(p.prim).Bind(_white_material(
+                stage, root + "/Mat", m["base_color"], sum(m["roughness"]) / 2))
+            polys.append({"obj": p, "shape": shape, "size": real[shape]})
+
     with rep.new_layer():
         rp = rep.create.render_product(cam_prim.GetPath().pathString,
                                        (CFG["camera"]["width"], CFG["camera"]["height"]))
 
-        # White polyhedra pool with per-shape semantics. Each asset is measured and given a
-        # per-node base scale so its longest side == target_size_m, REGARDLESS of the USD's
-        # modelled size (robust to un-normalized USDs). Final scale = base * scale_range.
-        usd_dir = os.path.join(ROOT, CFG["assets"]["usd_dir"])
-        real = CFG["objects"]["real_size_m"]
-        calib = CFG["objects"].get("render_calib_m", 64.9)
-        # rep scale 1.0 renders the (uniformly 0.2-unit) USD at ~calib metres, so to render a
-        # shape at its REAL longest-side size: base_scale = real_size[shape] / calib.
-        pool = []                                       # list of (node, base_scale)
-        for shape in SHAPES:
-            path = os.path.join(usd_dir, CFG["assets"]["usd_by_class"][shape])
-            if not os.path.isfile(path):
-                # Without this check the run "succeeds" but renders ONLY the fruit-cube
-                # distractors - a silently corrupt Set 1 dataset.
-                raise SystemExit(
-                    f"[SET1] missing polyhedron asset: {path}\n"
-                    f"Run  <isaac_python> isaac/convert_stl_to_usd.py  first (needs the "
-                    f"4 STLs in datasets/), or copy isaac/assets/usd/ from a machine "
-                    f"that has them.")
-            base = real[shape] / calib
-            print(f"[SET1] asset {shape} real={real[shape]} m base_scale={base:.6f}", file=sys.stderr)
-            for _ in range(CFG["objects"]["max_per_class"]):
-                pool.append((rep.create.from_usd(path, semantics=[("class", shape)]), base))
-
-        m = CFG["objects"]["material"]
+        # Near-white plastic color jitter stays a Replicator randomizer (pose is
+        # manual now). rep.get.prims on manual stage prims inside the layer is the
+        # validated sun/dome pattern from isaac/generate_replicator.py.
         lo = [c - m["color_jitter"] for c in m["base_color"]]
         hi = [c + m["color_jitter"] for c in m["base_color"]]
-        s_lo, s_hi = CFG["objects"]["scale_range"]
         with rep.trigger.on_frame(num_frames=args.frames):
-            for node, base in pool:
-                with node:
-                    # Tight central cluster so the robot camera (posed outside, looking in)
-                    # frames whole objects instead of giant truncated close-ups.
-                    rep.modify.pose(
-                        position=rep.distribution.uniform((-0.25, -0.25, 0.035), (0.25, 0.25, 0.045)),
-                        rotation=rep.distribution.uniform((0, 0, 0), (360, 360, 360)),
-                        scale=rep.distribution.uniform(base * s_lo, base * s_hi),
-                    )
-                    rep.randomizer.color(colors=rep.distribution.uniform(lo, hi))  # near-white plastic
+            with rep.get.prims(path_pattern="/World/Poly.*/Geom"):
+                rep.randomizer.color(colors=rep.distribution.uniform(lo, hi))
 
         writer = rep.writers.get("Set1Writer")
         writer.initialize(cfg=CFG)
         writer.attach([rp])
-    return stage, cam_prim, lights, writer, arena, fruit_cubes, fc_textures
+    return stage, cam_prim, lights, writer, arena, fruit_cubes, fc_textures, polys
 
 
 def main():
     import math
-    stage, cam_prim, lights, writer, arena, fruit_cubes, fc_textures = build()
+    stage, cam_prim, lights, writer, arena, fruit_cubes, fc_textures, polys = build()
     sub = CFG["render"]["rt_subframes"]
     rcfg = CFG["robot"]
     scfg = CFG.get("sampling", {})
+    s_lo, s_hi = CFG["objects"]["scale_range"]
     arena_half = CFG["arena"]["size_x"] / 2.0
     sides = ["left", "right"]
     for i in range(args.frames):
@@ -391,6 +394,24 @@ def main():
         arena_builder.set_arena_offset(arena, ox, oy)
         arena_builder.randomize_arena(arena, CFG, RNG)
 
+        # Objects rest EXACTLY on the floor: a random large face down + small settle
+        # tilt, support height from the mesh vertices - no more buried or floating
+        # solids. Placement is non-overlapping and clipped inside the (offset) arena
+        # (the +-0.25 cluster keeps the cluster_r=0.3 contract of
+        # sample_arena_offset). All objects hidden on negative frames - those must
+        # be truly object-free now that the camera may look anywhere.
+        bounds = dr.cluster_bounds(0.25, (ox, oy), arena_half)
+        placed = []
+        for p in polys:
+            if negative:
+                UsdGeom.Imageable(p["obj"].xform).MakeInvisible()
+                continue
+            UsdGeom.Imageable(p["obj"].xform).MakeVisible()
+            size = p["size"] * float(RNG.uniform(s_lo, s_hi))
+            xy = dr.place_nonoverlapping(RNG, 0.55 * size, placed, bounds)
+            p["obj"].place(RNG, xy, size)
+            placed.append((xy[0], xy[1], 0.55 * size))
+
         # Set 2 distractor cubes: near the cluster, random fruit faces, resting flat.
         for fc in fruit_cubes:
             if negative or RNG.uniform() < 0.5:
@@ -401,10 +422,9 @@ def main():
             euler = (90.0 * RNG.randint(0, 4) + RNG.uniform(-4, 4),
                      90.0 * RNG.randint(0, 4) + RNG.uniform(-4, 4),
                      float(RNG.uniform(0, 360)))
-            # Stay within the cluster_r=0.3 contract of sample_arena_offset, or a
-            # wall-contact frame (wall at 0.30 m) can bury the cube in the wall.
-            fc.set_pose((float(RNG.uniform(-0.25, 0.25)), float(RNG.uniform(-0.25, 0.25)),
-                         edge / 2 + 0.002), euler, edge)
+            xy = dr.place_nonoverlapping(RNG, 0.65 * edge, placed, bounds)
+            fc.set_pose((xy[0], xy[1], cube_rest_z(euler, edge)), euler, edge)
+            placed.append((xy[0], xy[1], 0.65 * edge))
             faces = list(RNG.choice(6, 3, replace=False))
             imgs = [fc_textures[RNG.randint(len(fc_textures))] for _ in faces]
             lps = [_fruit_label_params(RNG) for _ in faces]
@@ -412,14 +432,11 @@ def main():
 
         ez = rcfg["cam_height"] + jitter["height"]
         if negative:
-            # Object-free view: eye just outside the cluster, looking OUTWARD so the
-            # cluster stays behind the camera -> wood/sticker/tape-only frame.
-            ang = RNG.uniform(-math.pi, math.pi)
-            ux, uy = math.cos(ang), math.sin(ang)
-            e = RNG.uniform(0.55, 0.95)
-            eye = [ux * e, uy * e, ez]
-            r = e + RNG.uniform(0.6, 1.8)
-            target = [ux * r, uy * r, float(RNG.uniform(0.0, 0.25))]
+            # Object-free frame (objects hidden above): legacy outward floor sweep,
+            # or aimed at the goal-corner taegukgi cluster (FP hardening views).
+            exy, target = dr.sample_negative_view(
+                RNG, (ox, oy), arena_half, scfg.get("negative_goal_frac", 0.5))
+            eye = [exy[0], exy[1], ez]
             dist, far = 0.0, False
         else:
             ang, dist, far = dr.sample_camera_view(RNG, scfg, (ox, oy), arena_half)

@@ -1,12 +1,15 @@
-// Arduino Uno 모터+엔코더 펌웨어 (Jetson Option B)
+// Arduino Uno 모터+엔코더+빈IR 펌웨어 (Jetson Option B)
 // 시리얼 프로토콜 @115200:
 //   Jetson -> Uno:  "M <left_pwm> <right_pwm>\n"   (-255..255)
-//   Uno -> Jetson:  "E <left_ticks> <right_ticks>\n"  (20ms마다)
+//   Uno -> Jetson:  "E <left_ticks> <right_ticks> <ir>\n"  (20ms마다)
+//                    ir = IR 핀 raw 값 (모듈 대부분 감지 시 0/LOW —
+//                    해석은 motor_bridge 의 ir_active_low 파라미터가 담당)
 
 const uint8_t ENC_L_A = 2, ENC_L_B = 4;    // 왼쪽 엔코더 (A는 INT0)
 const uint8_t ENC_R_A = 3, ENC_R_B = 5;    // 오른쪽 엔코더 (A는 INT1)
 const uint8_t ENA = 9,  IN1 = 7,  IN2 = 8;    // 왼쪽 모터 (L298N) — 실배선 반영
 const uint8_t ENB = 10, IN3 = 11, IN4 = 12;   // 오른쪽 모터 — 실배선 반영
+const uint8_t IR_PIN = 6;                     // 빈 안쪽 IR 안착 센서 (디지털 출력형)
 
 volatile long ticksL = 0, ticksR = 0;
 
@@ -31,6 +34,7 @@ void setup() {
   pinMode(ENC_R_A, INPUT_PULLUP); pinMode(ENC_R_B, INPUT_PULLUP);
   pinMode(ENA, OUTPUT); pinMode(IN1, OUTPUT); pinMode(IN2, OUTPUT);
   pinMode(ENB, OUTPUT); pinMode(IN3, OUTPUT); pinMode(IN4, OUTPUT);
+  pinMode(IR_PIN, INPUT_PULLUP);   // 오픈컬렉터 모듈 대비 풀업 (미연결=1 로 읽힘)
   attachInterrupt(digitalPinToInterrupt(ENC_L_A), isrL, RISING);
   attachInterrupt(digitalPinToInterrupt(ENC_R_A), isrR, RISING);
 }
@@ -58,6 +62,7 @@ void loop() {
     lastReport = millis();
     long l, r;
     noInterrupts(); l = ticksL; r = ticksR; interrupts();
-    Serial.print("E "); Serial.print(l); Serial.print(' '); Serial.println(r);
+    Serial.print("E "); Serial.print(l); Serial.print(' '); Serial.print(r);
+    Serial.print(' '); Serial.println(digitalRead(IR_PIN));
   }
 }

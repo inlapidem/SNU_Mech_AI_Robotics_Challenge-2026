@@ -1,0 +1,30 @@
+# 내비게이터 파라미터 (navigator_node.py 용)
+# 미션 로직 기본값은 mission_fsm.DEFAULT_PARAMS — 여기의 mission.* 가 덮어쓴다.
+# ⚠ 실측 후 반드시 갱신: robot_radius, payload_offset, cam_yaws_deg,
+#    cruise_v(모터 실측 max_wheel_speed 의 ~75%), steering_sign(실차 부호 확인)
+/navigator:
+  ros__parameters:
+    control_rate: 20.0
+    match_duration_s: 180.0
+    auto_start_delay_s: -1.0        # -1 = /mission_start 토픽 대기
+    # --- 경기 직전 공지 후 설정 (1분 세팅 시간에!) ---
+    target_set1: ''                 # cube | octa | dodeca | icosa
+    target_set2: ''                 # apple | orange | banana | pineapple
+    # --- 인지 UDP 브리지 (run_perception.py --udp 와 포트 일치) ---
+    udp_event_port: 5601
+    udp_cmd_host: 127.0.0.1
+    udp_cmd_port: 5602
+    percep_stale_s: 0.6
+    # --- 카메라 장착 (bearing/단안거리 계산용, base_link 기준 실측) ---
+    cam_names: [search_left, search_right, front_left, front_right]
+    cam_yaws_deg: [90.0, -90.0, 3.0, -3.0]
+    cam_hfovs_deg: [90.0, 90.0, 62.0, 62.0]   # nuroum 90, IMX219 62
+    # --- 미션 오버라이드 (전체 키는 mission_fsm.DEFAULT_PARAMS 참조) ---
+    mission.cruise_v: 0.15
+    mission.approach_v: 0.10
+    mission.push_v: 0.06
+    mission.robot_radius: 0.22
+    mission.payload_offset: 0.26
+    mission.standoff_dist: 0.60
+    mission.steering_sign: -1.0     # 픽셀 오프셋 +(우측) → 우회전(w<0). 실차 확인!
+    mission.endgame_margin_s: 8.0

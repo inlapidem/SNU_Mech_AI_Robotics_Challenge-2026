@@ -1,0 +1,89 @@
+classes: {'apple': 7112, 'banana': 6988, 'orange': 7056, 'pineapple': 7180, 'unknown': 19257}
+epoch 1/70  val_acc=0.9514
+epoch 2/70  val_acc=0.9572
+epoch 3/70  val_acc=0.9578
+epoch 4/70  val_acc=0.9616
+epoch 5/70  val_acc=0.9626
+epoch 6/70  val_acc=0.9632
+epoch 7/70  val_acc=0.9616
+epoch 8/70  val_acc=0.9653
+epoch 9/70  val_acc=0.9619
+epoch 10/70  val_acc=0.9616
+epoch 11/70  val_acc=0.9629
+epoch 12/70  val_acc=0.9619
+epoch 13/70  val_acc=0.9626
+epoch 14/70  val_acc=0.9568
+epoch 15/70  val_acc=0.9619
+epoch 16/70  val_acc=0.9619
+epoch 17/70  val_acc=0.9636
+epoch 18/70  val_acc=0.9599
+epoch 19/70  val_acc=0.9602
+epoch 20/70  val_acc=0.9599
+epoch 21/70  val_acc=0.9632
+epoch 22/70  val_acc=0.9649
+epoch 23/70  val_acc=0.9602
+epoch 24/70  val_acc=0.9585
+epoch 25/70  val_acc=0.9626
+epoch 26/70  val_acc=0.9595
+epoch 27/70  val_acc=0.9626
+epoch 28/70  val_acc=0.9619
+epoch 29/70  val_acc=0.9602
+epoch 30/70  val_acc=0.9605
+epoch 31/70  val_acc=0.9602
+epoch 32/70  val_acc=0.9605
+epoch 33/70  val_acc=0.9629
+epoch 34/70  val_acc=0.9619
+epoch 35/70  val_acc=0.9612
+epoch 36/70  val_acc=0.9599
+epoch 37/70  val_acc=0.9585
+epoch 38/70  val_acc=0.9605
+epoch 39/70  val_acc=0.9602
+epoch 40/70  val_acc=0.9619
+epoch 41/70  val_acc=0.9592
+epoch 42/70  val_acc=0.9595
+epoch 43/70  val_acc=0.9589
+epoch 44/70  val_acc=0.9626
+epoch 45/70  val_acc=0.9609
+epoch 46/70  val_acc=0.9616
+epoch 47/70  val_acc=0.9592
+epoch 48/70  val_acc=0.9582
+epoch 49/70  val_acc=0.9599
+epoch 50/70  val_acc=0.9602
+epoch 51/70  val_acc=0.9592
+epoch 52/70  val_acc=0.9605
+epoch 53/70  val_acc=0.9595
+epoch 54/70  val_acc=0.9589
+epoch 55/70  val_acc=0.9605
+epoch 56/70  val_acc=0.9602
+epoch 57/70  val_acc=0.9616
+epoch 58/70  val_acc=0.9605
+epoch 59/70  val_acc=0.9605
+epoch 60/70  val_acc=0.9609
+epoch 61/70  val_acc=0.9616
+epoch 62/70  val_acc=0.9609
+epoch 63/70  val_acc=0.9602
+epoch 64/70  val_acc=0.9605
+epoch 65/70  val_acc=0.9605
+epoch 66/70  val_acc=0.9605
+epoch 67/70  val_acc=0.9605
+epoch 68/70  val_acc=0.9605
+epoch 69/70  val_acc=0.9602
+epoch 70/70  val_acc=0.9602
+best val_acc=0.9653  temperature=0.863
+confusion matrix (rows=true, cols=pred)
+	apple	banana	orange	pineapple	unknown
+apple	360	0	0	0	5
+banana	0	330	0	0	0
+orange	0	0	331	0	1
+pineapple	0	0	0	355	1
+unknown	21	23	29	23	1486
+apple      precision=0.945 recall=0.986
+banana     precision=0.935 recall=1.000
+orange     precision=0.919 recall=0.997
+pineapple  precision=0.939 recall=0.997
+unknown    precision=0.995 recall=0.939
+--- at runtime gate conf>=0.9 margin>=0.1 ---
+unknown_leak_rate (junk accepted as fruit) = 75/1582 = 0.0474   <-- drives -40 penalties, push toward 0
+fruit_confusion_rate (wrong fruit accepted) = 0/1345 = 0.0000
+identifiable_fruit_recall = 0.9725
+saved -> /home/user/joon/models/set2/classifier

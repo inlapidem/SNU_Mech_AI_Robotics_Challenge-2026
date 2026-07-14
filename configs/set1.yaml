@@ -22,7 +22,8 @@ assets:
 
 # --------------------------------------------------------------------------- arena
 # REAL VENUE (confirmed by photos, overrides the draft rulebook): bright wood-laminate
-# walls AND floor, taegukgi stickers on walls/floor, black tape lines on the floor.
+# walls AND floor, taegukgi stickers AT THE GOAL/STORAGE CORNER ONLY (its floor + the
+# two adjacent walls), generic labels on the floor, black tape lines on the floor.
 arena:
   size_x: 4.0           # m
   size_y: 4.0           # m
@@ -30,6 +31,9 @@ arena:
   wall_thickness: 0.05  # m
   texture_dir: assets/arena_textures   # wood/*.png + stickers/*.png (make_arena_textures.py)
   wood_brightness: [0.75, 1.15]        # per-frame texture brightness jitter
+  # Real venue photos (real_floor_*/real_wall_*) form surface-specific pools; this is
+  # the per-surface per-frame probability of using one over a procedural wood_* file:
+  real_texture_frac: 0.7
   # Solid-colour FALLBACK (only used when texture_dir has no wood files):
   floor_color: [0.78, 0.62, 0.42]   # light wood laminate
   floor_color_jitter: 0.08
@@ -37,11 +41,15 @@ arena:
   wall_color: [0.78, 0.62, 0.42]    # walls are the same bright wood as the floor
   wall_color_jitter: 0.08
   wall_roughness: [0.4, 0.8]
-  stickers:                          # taegukgi + generic labels, randomized per frame
+  stickers:                          # split by filename: *taegukgi* vs the rest
     pool: 8                          # quads built once
-    count: [2, 6]                    # visible per frame
-    size_m: [0.10, 0.28]
-    floor_frac: 0.3                  # fraction placed on the floor (rest on walls)
+    taegukgi_floor_count: [1, 2]     # goal-corner floor (at least one every frame)
+    taegukgi_wall_count: [1, 2]      # S/W goal-corner walls (at least one every frame)
+    taegukgi_size_m: [0.15, 0.30]
+    goal_zone_extent_m: 0.55         # floor taegukgi lie within this of the corner
+    wall_extent_m: 1.0               # wall taegukgi within this along-wall of the corner
+    generic_count: [0, 3]            # non-flag labels: floor only, anywhere
+    size_m: [0.08, 0.20]
   tape:                              # black floor tape (zone boundaries)
     enable: true
     width_m: [0.015, 0.025]
@@ -60,6 +68,7 @@ sampling:
   wall_contact_frac: 0.35     # frames with a wall pulled right behind the object cluster
   wall_gap_m: [0.30, 0.60]    # cluster-centre -> wall distance in those frames
   negative_frame_frac: 0.10   # object-free frames (wood/sticker/tape only), empty labels
+  negative_goal_frac: 0.5     # of those, fraction aimed at the goal-corner taegukgi
 
 # --------------------------------------------------------------------------- camera (NUROUM V11)
 camera:
@@ -103,14 +112,13 @@ objects:
     octahedron: 0.136
     dodecahedron: 0.098
     icosahedron: 0.098
-  render_calib_m: 64.9        # empirical: rep scale 1.0 renders the (0.2-unit) USD at ~64.9 m
-  scale_range: [0.85, 1.15]   # then multiplied by this (per-frame size variation)
+  scale_range: [0.85, 1.15]   # per-frame size variation on top of real_size_m
   # Set 2 fruit cubes appear in the SAME arena during the real match. They are added
   # as detector positives (a cube candidate is a cube candidate) but NEVER become
   # shape-classifier crops (see generate_set1_data + cross-set unknown injection).
   fruit_cube_distractors: 2
-  # Placement is anywhere on the arena floor within spawn_margin of the walls.
-  z_on_floor: 0.0
+  # Placement: each solid RESTS on the floor - random large face down + settle tilt,
+  # ground contact computed from the mesh vertices (sim/poly_assets), non-overlapping.
   # White 3D-printed plastic material (UsdPreviewSurface).
   material:
     base_color: [0.88, 0.88, 0.88]
@@ -134,7 +142,8 @@ postprocess:
 
 # --------------------------------------------------------------------------- dataset output
 dataset:
-  root: datasets/set1_v2      # v2 = real-venue arena + long-range sampling (v1 kept)
+  root: datasets/set1_v3      # v3 = real venue photos + exact floor resting + goal-corner
+                              # taegukgi policy (v2 kept - the LR training mixes cite it)
   detector_subdir: detector       # images/{train,val} + labels/{train,val}
   classifier_subdir: classifier   # {train,val}/<class>/*.png
   metadata_subdir: metadata       # per-frame json
