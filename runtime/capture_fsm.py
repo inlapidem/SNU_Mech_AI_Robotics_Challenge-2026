@@ -44,6 +44,8 @@ observation vetoes, and ambiguity never leads to a capture.
 
 import time
 
+from configs.merged_classes import set_of
+
 # ---- mission states -------------------------------------------------------------
 SEARCHING = "SEARCHING"
 FAR_CANDIDATE = "FAR_CANDIDATE"
@@ -77,11 +79,16 @@ def allowed_offset_px(bbox_width_px, obj_width_m, bin_width_m):
     return max(0.0, bbox_width_px * (bin_width_m - obj_width_m) / (2.0 * obj_width_m))
 
 
-def target_object_width_m(cfg, target):
-    """Physical width of the announced target: set1 uses the per-shape printed size,
-    set2 uses the common cube edge. Raises on an unknown target (fail fast at start)."""
+def object_width_m(cfg, cls):
+    """Physical width (m) of an object by class name. The merged config lists every
+    object under objects.real_size_m (shapes at their true printed size, fruit cubes at
+    the 8 cm edge); the legacy per-set configs fall back to their own layout. Raises on
+    an unknown class (fail fast at start)."""
+    sizes = (cfg.get("objects") or {}).get("real_size_m", {})
+    if cls in sizes:
+        return float(sizes[cls])
     if cfg.get("set") == "set1":
-        return float(cfg["objects"]["real_size_m"][target])
+        return float(cfg["objects"]["real_size_m"][cls])
     return float(cfg["cubes"]["size_m"])
 
 
@@ -95,6 +102,7 @@ class _VerifyCam:
         self.unknown_streak = 0
         self.offset_px = None
         self.bbox_width_px = None
+        self.obj_width_m = None           # physical width of this cam's last selection
         self.last_seen_vu = -10**9        # verify-update counter at last selection
         self.last_strong_other_vu = -10**9
 
@@ -113,26 +121,47 @@ class CaptureFSM:
     caller must then reset the pipelines' trackers/votes (fresh episode).
     """
 
-    def __init__(self, cfg, target, clock=time.monotonic):
+    def __init__(self, cfg, targets, clock=time.monotonic):
+        self.cfg = cfg
+        # Announced targets: a {set: name} dict (merged), a single name, or a list.
+        if isinstance(targets, dict):
+            names = [v for v in targets.values() if v]
+        elif isinstance(targets, str):
+            names = [targets]
+        else:
+            names = list(targets or [])
+        self.targets = set(names)
+
         vf = cfg["verify"]
         rt = cfg["runtime"]
-        self.target = target
-        self.obj_width_m = target_object_width_m(cfg, target)
-        self.bin_width_m = float(vf["bin_width_m"])
-        self.conf_th = float(rt["conf_threshold"])
-        self.verify_k = int(vf["verify_k"])
-        self.verify_margin = float(vf["verify_margin"])
-        self.veto_m = int(vf["veto_m"])
-        self.veto_margin = float(vf["veto_margin"])
-        self.margin_factor = float(vf["margin_factor"])
-        self.bbox_range = tuple(vf["verify_bbox_px_range"])
-        self.unknown_patience = int(vf.get("verify_unknown_patience",
-                                           rt.get("unknown_patience", 4)))
-        self.align_warn_min_px = float(vf.get("align_warn_min_px", 15))
-        self.pair_max_age = int(vf.get("align_pair_max_age", 3))
-        self.blind_bbox_px = float(vf["blind_handoff_bbox_px"])
-        self.blind_bottom_px = float(vf.get("blind_handoff_bottom_px", 6))
-        self.push_limit_s = float(vf["capture_push_limit"])
+        # Split the verify + runtime blocks into a shared base + per-set overrides, then
+        # build one flat table per set. A fruit crop must clear a stricter gate than a
+        # shape crop, so verify_margin/veto_margin/conf_threshold are resolved by the
+        # SELECTED object's derived set at evaluation time (see _update_verify).
+        vbase = {k: v for k, v in vf.items() if k not in ("set1", "set2")}
+        rshared = {k: v for k, v in rt.items() if k not in ("set1", "set2")}
+        self.vf_set, self.conf_th_set = {}, {}
+        for s in ("set1", "set2"):
+            self.vf_set[s] = {**vbase, **vf.get(s, {})}
+            self.conf_th_set[s] = float({**rshared, **rt.get(s, {})}.get(
+                "conf_threshold", rshared.get("conf_threshold", 0.6)))
+        self._width_cache = {}
+
+        self.bin_width_m = float(vbase["bin_width_m"])
+        self.verify_k = int(vbase["verify_k"])
+        self.veto_m = int(vbase["veto_m"])
+        self.margin_factor = float(vbase["margin_factor"])
+        self.unknown_patience = int(vbase.get("verify_unknown_patience",
+                                              rshared.get("unknown_patience", 4)))
+        self.align_warn_min_px = float(vbase.get("align_warn_min_px", 15))
+        self.pair_max_age = int(vbase.get("align_pair_max_age", 3))
+        self.blind_bbox_px = float(vbase["blind_handoff_bbox_px"])
+        self.blind_bottom_px = float(vbase.get("blind_handoff_bottom_px", 6))
+        self.push_limit_s = float(vbase["capture_push_limit"])
+        # Selection size range = union of the per-set ranges (per-object logic refines).
+        ranges = [self.vf_set[s]["verify_bbox_px_range"] for s in ("set1", "set2")
+                  if "verify_bbox_px_range" in self.vf_set[s]]
+        self.bbox_range = (min(r[0] for r in ranges), max(r[1] for r in ranges))
 
         self.phase = PHASE_SEARCH
         self.state = SEARCHING
@@ -146,20 +175,29 @@ class CaptureFSM:
         for w in self.startup_warnings():
             print(w)
 
+    def _width(self, cls):
+        if cls not in self._width_cache:
+            self._width_cache[cls] = object_width_m(self.cfg, cls)
+        return self._width_cache[cls]
+
     # ------------------------------------------------------------------ warnings
     def startup_warnings(self):
         """Targets whose bin clearance leaves almost no visual alignment allowance
         (e.g. the 13.6 cm octahedron in the 14 cm bin) are flagged once at start:
         vision cannot centre them better than the funnel wings can."""
         ref_w = self.bbox_range[1]
-        allowed = allowed_offset_px(ref_w, self.obj_width_m, self.bin_width_m)
-        if allowed < self.align_warn_min_px:
-            return [f"[capture] WARNING: target '{self.target}' "
-                    f"({self.obj_width_m*100:.1f} cm) in the {self.bin_width_m*100:.1f} cm "
-                    f"bin allows only {allowed:.1f}px of lateral offset even at a "
-                    f"{ref_w}px bbox (< {self.align_warn_min_px:.0f}px). Visual alignment "
-                    f"margin is nearly zero -- capture relies on the funnel wings."]
-        return []
+        warns = []
+        for tgt in sorted(self.targets):
+            w_m = self._width(tgt)
+            allowed = allowed_offset_px(ref_w, w_m, self.bin_width_m)
+            if allowed < self.align_warn_min_px:
+                warns.append(
+                    f"[capture] WARNING: target '{tgt}' ({w_m*100:.1f} cm) in the "
+                    f"{self.bin_width_m*100:.1f} cm bin allows only {allowed:.1f}px of "
+                    f"lateral offset even at a {ref_w}px bbox "
+                    f"(< {self.align_warn_min_px:.0f}px). Visual alignment margin is "
+                    f"nearly zero -- capture relies on the funnel wings.")
+        return warns
 
     # ------------------------------------------------------------------ phase API
     def set_phase(self, phase):
@@ -307,13 +345,13 @@ class CaptureFSM:
         """Per-frame visual-servoing feedback for the navigator (spec rule 8)."""
         per_cam, fresh = {}, []
         for name, c in self._cams.items():
-            if c.offset_px is None:
+            if c.offset_px is None or c.obj_width_m is None:
                 continue
             age = self._vu - c.last_seen_vu
             per_cam[name] = {"offset_px": round(c.offset_px, 1),
                              "bbox_width_px": round(c.bbox_width_px, 1),
                              "allowed_offset_px": round(allowed_offset_px(
-                                 c.bbox_width_px, self.obj_width_m, self.bin_width_m), 1),
+                                 c.bbox_width_px, c.obj_width_m, self.bin_width_m), 1),
                              "age": age}
             if age <= self.pair_max_age:
                 fresh.append(c)
@@ -323,13 +361,14 @@ class CaptureFSM:
             pair = True
             combined = (a.offset_px + b.offset_px) / 2.0
             allowed = allowed_offset_px((a.bbox_width_px + b.bbox_width_px) / 2.0,
-                                        self.obj_width_m, self.bin_width_m)
+                                        (a.obj_width_m + b.obj_width_m) / 2.0,
+                                        self.bin_width_m)
             opposite = a.offset_px * b.offset_px <= 0
             aligned = opposite and abs(combined) <= allowed * self.margin_factor
         elif len(fresh) == 1:
             c = fresh[0]
             combined = c.offset_px
-            allowed = allowed_offset_px(c.bbox_width_px, self.obj_width_m,
+            allowed = allowed_offset_px(c.bbox_width_px, c.obj_width_m,
                                         self.bin_width_m)
             aligned = abs(combined) <= allowed * self.margin_factor
         return {"per_cam": per_cam,
@@ -357,10 +396,25 @@ class CaptureFSM:
             cam.bbox_width_px = x1 - x0
             cam.last_seen_vu = self._vu
             cls, conf, margin = sel["cls"], sel["conf"], sel["margin"]
-            strong_target = (cls == self.target and conf >= self.conf_th
-                             and margin >= self.verify_margin)
-            strong_other = (cls not in (None, "unknown", self.target)
-                            and conf >= self.conf_th and margin >= self.veto_margin)
+            # Resolve the gate by the selected object's derived set (fruit gates are
+            # stricter). 'unknown'/None classes never pass strong_target/other anyway.
+            s = set_of(cls) or "set2"
+            conf_th = self.conf_th_set[s]
+            verify_margin = self.vf_set[s].get("verify_margin", 0.2)
+            veto_margin = self.vf_set[s].get("veto_margin", 0.35)
+            if cls not in (None, "unknown"):
+                cam.obj_width_m = self._width(cls)
+            strong_target = (cls in self.targets and conf >= conf_th
+                             and margin >= verify_margin)
+            # A non-target 'cube' is AMBIGUOUS (a plain cube OR a target fruit cube's
+            # blank side), so it must NOT veto -- else a target fruit whose fruit faces
+            # are momentarily hidden gets rejected/blacklisted. It counts as unknown
+            # (unknown_streak -> micro viewpoint adjust). Only a definite non-target
+            # (a specific wrong fruit, or an unambiguous non-cube shape) vetoes.
+            ambiguous_cube = cls == "cube" and "cube" not in self.targets
+            strong_other = (cls not in (None, "unknown") and cls not in self.targets
+                            and not ambiguous_cube
+                            and conf >= conf_th and margin >= veto_margin)
             cam.target_streak = cam.target_streak + 1 if strong_target else 0
             cam.veto_streak = cam.veto_streak + 1 if strong_other else 0
             cam.veto_cls = cls if strong_other else (cam.veto_cls if cam.veto_streak else None)

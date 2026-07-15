@@ -20,10 +20,16 @@ classes:
 assets:
   fruit_texture_dir: assets/fruit_textures   # <dir>/<fruit>/*.png|jpg
   fruit_texture_allowlist:
-    apple: [apple_1.jpg, apple_2.jpg, apple_4.jpg, apple_7.jpg]
-    orange: [orange_2.png, orange_6.jpg]
-    banana: [banana_2.jpg, banana_4.jpg, banana_7.jpg]
-    pineapple: [pineapple_2.png]
+    # Real photos of ordinary whole/unpeeled fruit only. Illustrations and sliced/
+    # peeled examples remain in assets but are intentionally excluded here.
+    apple: [apple1.jpg, apple2.jpg, apple4.png, apple5.png, apple7.jpg, apple8.jpg,
+            apple9.jpg, apple10.jpg]
+    orange: [orange1.jpg, orange3.jpg, orange5.jpg, orange6.jpg, orange7.jpg,
+             orange9.jpg]
+    banana: [banana1.jpg, banana4.png, banana5.jpg, banana6.jpg]
+    pineapple: [pineapple1.jpg, pineapple2.jpg, pineapple3.png, pineapple4.jpg,
+                pineapple5.jpg, pineapple6.jpg, pineapple8.png, pineapple9.jpg,
+                pineapple10.jpg]
   # Optional: a cube body USD (e.g. converted from a real cube STL). If null/missing
   # the generator builds a clean procedural box (preferred for per-face texturing).
   cube_usd: null
@@ -194,8 +200,8 @@ labeling:
   max_truncation_px: 2            # cube box this close to the image border = truncated
   # Fruit-evidence gates (ALL must hold for a fruit-class label, else -> unknown):
   min_fruit_face_facing: 0.30     # max over fruit faces of (-normal . view_dir), 0..1
-  min_fruit_area_ratio: 0.10      # visible fruit pixel area / cube box pixel area
-  min_fruit_box_px: 14            # min(w,h) px of the visible fruit region
+  min_fruit_area_ratio: 0.08      # visible fruit pixel area / cube box pixel area
+  min_fruit_box_px: 10            # min(w,h) px of the visible fruit region
   # Classifier crop augmentation (simulate detector imperfection):
   crop_margin_frac: [-0.08, 0.20]
   crop_shift_frac: 0.10
@@ -203,9 +209,19 @@ labeling:
   # Hard-but-identifiable share: keep some borderline-but-clear fruit views as the
   # fruit class (not unknown) so the classifier still recognizes harder real views.
   hard_positive_keep: 0.5
-  # Extra explicit unknown sources:
-  background_unknown_frac: 0.3    # frames that also emit a background crop
-  whiteface_unknown_boost: true   # white-face-only cube views -> unknown (the core case)
+  # Unknown labels stay conservative; these probabilities only thin redundant
+  # classifier crops. The objects/scenes and detector labels are never removed.
+  unknown_crop_keep:
+    small_cube: 0.10              # far/tiny cube crops are highly repetitive
+    noncube: 0.05                 # 3 Set 1 solids/frame; thousands remain at full scale
+    distractor_or_white: 1.0      # core white-face/plain-cube rejection case
+    occluded: 0.40                # retain a diverse safety-relevant subset
+    truncated: 1.0
+    no_visible_fruit: 0.40
+    borderline: 0.50
+  unknown_target_frac: [0.40, 0.45] # post-run QC target (reported, not forced)
+  # Extra explicit unknown source:
+  background_unknown_frac: 0.05   # saved frames that also emit a background crop
 
 render:
   rt_subframes: 32

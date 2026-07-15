@@ -1,0 +1,174 @@
+# ============================================================================
+# UNIFIED runtime/deployment config - one detector + one classifier for BOTH
+# object sets, which share the arena during a match. See configs/merged_classes.py
+# for the label space and class->set derivation.
+#
+# SCOPE: this file drives the RUNTIME (deployment/run_perception.py rig/legacy,
+# runtime/merged_pipeline.py, capture_fsm) and the deploy/export tooling. DATA
+# GENERATION stays in configs/set1.yaml + configs/set2.yaml: they describe two
+# scene distributions (polyhedron-dominant vs fruit-cube-dominant) whose generators
+# now BOTH emit unified 'object' detector labels + the 9-class classifier crops.
+#
+# The runtime block is split into SHARED keys (one detector, one classifier, one
+# per-camera tracker + classification-eligibility gate) and PER-SET acceptance
+# thresholds (a fruit crop must clear a much stricter gate than a shape crop:
+# wrong pickup = -40, miss = 0). runtime/merged_pipeline.py routes each detection
+# to the Set 1 or Set 2 decision policy by its DERIVED set and feeds that policy
+# {**shared, **runtime[set]} so the existing per-set policies are reused verbatim.
+# ============================================================================
+
+set: merged
+
+classes:
+  detector: [object]                                        # detector: single class
+  shapes: [cube, octahedron, dodecahedron, icosahedron]     # Set 1 classifier classes
+  fruits: [apple, orange, banana, pineapple]                # Set 2 classifier classes
+  unknown: unknown                                          # classifier reject class
+
+# Physical width (m, longest side) of every object, used by the capture verify gate
+# (runtime/capture_fsm.py) for bin-alignment math. Shapes at their true printed size
+# (from configs/set1.yaml objects.real_size_m); every Set 2 fruit cube is the 8 cm edge.
+objects:
+  real_size_m:
+    cube: 0.080
+    octahedron: 0.136
+    dodecahedron: 0.098
+    icosahedron: 0.098
+    apple: 0.080
+    orange: 0.080
+    banana: 0.080
+    pineapple: 0.080
+
+# --------------------------------------------------------------------------- runtime (Jetson)
+runtime:
+  # ---- SHARED: one detector, one classifier, one per-camera tracker ----
+  detector_conf: 0.25           # low -> high recall; the classifier rejects junk
+  detector_imgsz: 960           # 640 loses most 2 m+ objects; validate Jetson latency
+                                # with deployment/benchmark_latency.py before lowering
+  far_conf: 0.10                # long-range approach-candidate channel (below detector_conf)
+  far_min_hits: 3               # consecutive-ish sightings before FAR_CANDIDATE is reported
+  classifier_imgsz: 128
+  reject_truncation_px: 3       # skip detections this close to the image border
+  # Classification-eligibility gate (pre-classify, so it CANNOT depend on class): use
+  # the more permissive Set 1 values so small/distant SHAPES still get read. The
+  # per-set acceptance thresholds below re-impose the stricter fruit gate after the
+  # class (and therefore the set) is known.
+  min_bbox_px: 40               # min(w,h) in pixels
+  min_bbox_area_ratio: 0.004    # bbox area / image area
+  # Tracking + voting (one tracker per camera view, shared by all object types):
+  track_iou: 0.3
+  track_max_age: 12             # max(set1=10, set2=12): keep the more persistent value
+  vote_window: 9                # max(set1=7, set2=9)
+
+  # ---- PER-SET: classifier acceptance + decision-policy thresholds ----
+  # runtime/merged_pipeline.py builds rt_set1 = {**shared, **runtime.set1} and passes it
+  # to DecisionPolicy; rt_set2 = {**shared, **runtime.set2} -> Set2DecisionPolicy.
+  set1:                         # SHAPE crops -> runtime.DecisionPolicy
+    conf_threshold: 0.60        # calibrated softmax prob for top-1 shape
+    margin_threshold: 0.20      # top1 - top2 probability
+    min_confirmations: 3        # target votes needed for TARGET_CONFIRMED
+    # A bare white cube is identical to a Set 2 fruit cube's blank side, so a 'cube'
+    # target needs more evidence (the mission layer proves it by multi-view coverage).
+    cube_target_min_confirmations: 5
+    max_reobserve: 6            # approach/re-observe attempts before giving up
+    pickup_min_bbox_px: 90      # object must be close (large) to count as re-confirmed
+    reconfirm_within: 3         # must be re-seen as target within N recent frames
+  set2:                         # FRUIT crops -> runtime.Set2DecisionPolicy
+    conf_threshold: 0.90        # calibrated softmax prob for top-1 fruit (strict: -40 penalty)
+    margin_threshold: 0.10      # top1 - top2 (set2 softmax is peaky; a flat-distribution guard)
+    unknown_conf_relax: 0.60    # below this top-1 conf, treat as unknown regardless of class
+    min_confirmations: 3        # target-fruit votes needed for TARGET_CONFIRMED
+    max_reobserve: 3            # active viewpoint changes for an unknown/uncertain cube
+    unknown_patience: 4         # consecutive unknowns before requesting a viewpoint change
+    pickup_min_bbox_px: 110     # cube must be close (large) to count as re-confirmed
+    reconfirm_within: 3
+    conflict_reject: 2          # >=N strong non-target-fruit votes -> REJECT (never pick)
+
+# --------------------------------------------------------------------------- sensor rig
+# Physically identical to configs/set1.yaml / set2.yaml (same robot). The front
+# (verify) IMX219 gates use the more permissive Set 1 values so small shapes remain
+# classification-eligible on the front cams too; per-set acceptance still applies.
+rig:
+  cameras:
+    side_left:
+      role: search
+      transport: usb
+      source: 0
+      width: 1280
+      height: 720
+      hfov_deg: 90.0
+      fourcc: MJPG
+      buffersize: 1
+    side_right:
+      role: search
+      transport: usb
+      source: 1
+      width: 1280
+      height: 720
+      hfov_deg: 90.0
+      fourcc: MJPG
+      buffersize: 1
+    front_left:
+      role: verify
+      transport: csi
+      source: 0
+      width: 1280
+      height: 720
+      fps: 30
+      hfov_deg: 62.2
+      flip_method: 0
+      wbmode: 0
+      aelock: true
+      awblock: true
+      exposure_range_ns: [5000000, 5000000]
+      gain_range: [1.0, 4.0]
+      isp_digital_gain_range: [1.0, 1.0]
+      gates:
+        min_bbox_px: 58
+        min_bbox_area_ratio: 0.008
+    front_right:
+      role: verify
+      transport: csi
+      source: 1
+      width: 1280
+      height: 720
+      fps: 30
+      hfov_deg: 62.2
+      flip_method: 0
+      wbmode: 0
+      aelock: true
+      awblock: true
+      exposure_range_ns: [5000000, 5000000]
+      gain_range: [1.0, 4.0]
+      isp_digital_gain_range: [1.0, 1.0]
+      gates:
+        min_bbox_px: 58
+        min_bbox_area_ratio: 0.008
+  phase_rates:
+    search: {search_every: 1, verify_every: 15}
+    verify: {verify_every: 1, search_every: 15}
+
+# ------------------------------------------------------- verify gate / capture (no gripper)
+# Front bin capture (see configs/set1.yaml verify: for the mechanism). CAPTURE_READY is
+# granted only by the front (verify) cameras. Most keys are shared; the margin gates
+# differ by target type (set2 softmax is peaky, so its margins bind lower). capture_fsm
+# selects the active target's set overrides on top of this base.
+verify:
+  bin_width_m: 0.14
+  verify_k: 5
+  veto_m: 3
+  margin_factor: 0.7
+  verify_unknown_patience: 4
+  align_warn_min_px: 15
+  align_pair_max_age: 3
+  blind_handoff_bbox_px: 320
+  blind_handoff_bottom_px: 6
+  capture_push_limit: 6.0
+  set1:
+    verify_margin: 0.25
+    veto_margin: 0.35
+    verify_bbox_px_range: [64, 560]
+  set2:
+    verify_margin: 0.15
+    veto_margin: 0.30
+    verify_bbox_px_range: [80, 560]

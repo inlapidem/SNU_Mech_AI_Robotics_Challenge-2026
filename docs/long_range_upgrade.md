@@ -44,34 +44,43 @@
 
 재생성 절차 (Windows, robocopy 왕복 — WSL 경로 직접 접근은 대용량 I/O에서 느리고 불안정):
 
-```bat
-:: 0) 다면체 USD 확인! isaac\assets\usd\{cube,octahedron,dodecahedron,icosahedron}.usd
-::    이 4개가 없으면 set1은 즉시 에러(가드 있음). 예전 작업 폴더(C:\joon)에 있으면:
-::      robocopy C:\joon\isaac\assets\usd C:\joon_sim\isaac\assets\usd /E
-::    없으면 STL 4개를 복사한 뒤 변환:
-::      robocopy \\wsl.localhost\Ubuntu\home\user\joon\datasets C:\joon_sim\datasets 6C1.STL 8C1.STL 12C1_Fixed.STL 20C1.STL
-::      <isaac_python> isaac\convert_stl_to_usd.py
-::    변환 후 WSL로도 회수해 두기(재발 방지):
-::      robocopy C:\joon_sim\isaac\assets\usd \\wsl.localhost\Ubuntu\home\user\joon\isaac\assets\usd /E
+먼저 **`ISAAC_PY` = Isaac Sim에 딸린 python 경로**를 확인한다(시스템 python 아님 — 스크립트가
+`import omni`/`isaacsim` 사용). 런처 설치면 `%LOCALAPPDATA%\ov\pkg\isaac-sim-<버전>\python.bat`
+(찾기: `Get-ChildItem "$env:LOCALAPPDATA\ov\pkg" -Recurse -Filter python.bat`), 압축 설치면
+푼 폴더 루트의 `python.bat`(예 `C:\isaac-sim\python.bat`), pip 설치면 그 venv의 `python`.
+아래 예시는 `C:\isaac-sim\python.bat` 기준.
 
+```bat
 :: 1) WSL repo에서 생성에 필요한 부분만 Windows 작업 폴더로 복사 (PowerShell/cmd)
-robocopy \\wsl.localhost\Ubuntu\home\user\joon C:\joon_sim ^
+::    /XD 제외 목록에 isaac 없음 -> isaac\assets\usd\*.usd 4개가 같이 복사됨.
+robocopy \\wsl.localhost\Ubuntu-22.04\home\user\joon C:\joon_sim ^
     /E /MT:16 /XD .git yolo runs datasets runtime_logs _claude_history __pycache__ .claude
 
-:: 2) Isaac Sim python으로 생성 (수 시간; 창을 2개 띄워 순차 권장 - GPU 공유 주의)
+:: 0) 다면체 USD 확인 (통합/‌set1 생성기가 읽음). 위 복사로 넘어왔으면 변환 SKIP:
+dir C:\joon_sim\isaac\assets\usd\*.usd
+::   cube/octahedron/dodecahedron/icosahedron .usd 4개 보이면 다음(2)로.
+::   4개가 없을 때만 변환(STL은 datasets\ 라 /XD로 제외됨 -> 따로 복사 후):
+::     robocopy \\wsl.localhost\Ubuntu\home\user\joon\datasets C:\joon_sim\datasets 6C1.STL 8C1.STL 12C1_Fixed.STL 20C1.STL
+::     C:\isaac-sim\python.bat isaac\convert_stl_to_usd.py
+::     robocopy C:\joon_sim\isaac\assets\usd \\wsl.localhost\Ubuntu\home\user\joon\isaac\assets\usd /E
+
+:: 2) 통합(combined) 생성 - Isaac python으로. 먼저 50프레임 스모크 -> 눈 확인 -> 본생성.
 cd C:\joon_sim
-python sim\generate_set1_data.py --frames 9000 --config configs\set1.yaml
-python sim\generate_set2_data.py --frames 9000 --config configs\set2.yaml
-::   -> C:\joon_sim\datasets\set1_v2, set2_v2 에 생성됨 (dataset.root가 상대경로라 자동)
+C:\isaac-sim\python.bat sim\generate_combined_data.py --frames 50 --config configs\combined.yaml
+C:\isaac-sim\python.bat sim\generate_combined_data.py --frames 12000 --config configs\combined.yaml
+::   -> C:\joon_sim\datasets\combined_v3 에 생성됨 (dataset.root가 상대경로라 자동)
+::   (레거시 per-set이 필요하면 추가로:
+::     C:\isaac-sim\python.bat sim\generate_set1_data.py --frames 9000 --config configs\set1.yaml
+::     C:\isaac-sim\python.bat sim\generate_set2_data.py --frames 9000 --config configs\set2.yaml )
 
 :: 3) 결과를 WSL로 복사
-robocopy C:\joon_sim\datasets\set1_v2 \\wsl.localhost\Ubuntu\home\user\joon\datasets\set1_v2 /E /MT:16
-robocopy C:\joon_sim\datasets\set2_v2 \\wsl.localhost\Ubuntu\home\user\joon\datasets\set2_v2 /E /MT:16
+robocopy C:\joon_sim\datasets\combined_v3 ^
+    \\wsl.localhost\Ubuntu-22.04\home\user\joon\datasets\combined_v3 /E /MT:16
 ```
 
-- `python`은 Isaac Sim의 python (pip 설치면 해당 venv, 런처 설치면 `<isaac>\python.bat`). PyYAML 없으면 `python -m pip install pyyaml`.
+- `C:\isaac-sim\python.bat`(=ISAAC_PY)은 각자 설치 경로로 대체. PyYAML 없으면 `<ISAAC_PY> -m pip install pyyaml`.
 - 배포판 이름이 Ubuntu가 아니면 `\\wsl.localhost\<배포판>` 으로 조정 (`wsl -l -q`로 확인).
-- 시작 전 몇 프레임만(`--frames 50`) 돌려 `datasets/set*_v2/detector/images/train` 샘플을 눈으로 확인(우드 벽·스티커·테이프·원거리 뷰가 보이는지) 후 본 생성 권장.
+- 50프레임 스모크 후 `datasets\combined_v3\detector\images\train` 샘플을 눈으로 확인(다면체+과일큐브 혼재·바닥 안착, 큐브 upright+과일 보임, 골존 태극기 똑바로, 실사 우드, 다면체 색 변주) 후 본 생성.
 - robocopy 종료코드 0~7은 정상(1=복사됨). 8 이상만 오류.
 
 ### 학습 (WSL, yolo venv)
@@ -201,18 +210,91 @@ v2 대비 세 가지 사실감 업그레이드. 출력 루트는 `datasets/set{1
    물체가 벽에 파묻히지 않게 아레나 내부로 클리핑, 네거티브 프레임은 물체 완전 숨김.
 3. **스티커 정책 = 실제 대회장**: 태극기(`*taegukgi*` 파일)는 **골인(적재) 코너에만** —
    그 바닥(코너 0.55 m 이내)과 인접한 남/서 벽(코너 1.0 m 이내, 벽당 높이 30 cm 안).
-   나머지 스티커는 바닥에만, 아무 데나. 물체(세트 2 큐브)에는 과일 사진만 붙는 기존
-   구조 그대로. 네거티브 프레임의 절반은 골존 태극기를 조준(`negative_goal_frac`) —
-   벽면 태극기→apple 오탐 하드네거티브 공급.
+   프레임마다 바닥·벽 각각 최소 1장 보장. 나머지 스티커는 바닥에만, 아무 데나.
+   네거티브 프레임의 절반은 골존 태극기를 조준(`negative_goal_frac`) — 벽면
+   태극기→apple 오탐 하드네거티브 공급.
+4. **과일 외형 룰(07-15 추가)**: 실제 큐브는 **통과일 정상 형태**(까진/조각 낸 것 제외,
+   빨간 사과 등 정상색)만 붙는다. `configs/set2.yaml`의 `fruit_texture_allowlist`로
+   과일별 정규 이미지만 샘플링(깎인/조각/삽화 소스는 저장소에 남되 미사용).
+   `sim/fruit_texture_pool.py`가 로드/검증(누락·중복·경로 엔트리 거부). 큐브당 **한
+   과일 종류**만.
+5. **큐브 부착면 = 윗면 + 반대편 옆면 2개, upright(07-15)**: 실제 큐브는 바닥면으로
+   서고 과일이 윗면(pz)+반대편 옆면 한 쌍(px/nx)에 있어 **대체로 보인다**. `configs`
+   `cubes.fruit_face_names: [pz, px, nx]` + `upright_tilt_deg`(±2° 정착만),
+   `fruit_cube.resolve_fruit_face_ids`가 "윗면+반대편 옆면" 불변식 검증. 임의 시점의
+   ~76%에서 과일 보임(나머지 ±Y 빈 옆면 축 밴드는 물리적 한계 → analytic gate가 올바르게
+   비-과일 처리).
+
+**07-15 적대적 리뷰(15-에이전트 워크플로우)에서 확정·수정한 버그**:
+- **[HIGH] `fruit_cube.fruit_faces_world` 법선 역회전**: 과일면 법선을 `R*vec`(열벡터=역회전)로
+  돌려 중심·코너의 `.Transform()`(행벡터 정회전)과 불일치 → yaw 회전 큐브에서 옆면 법선
+  방위가 거울반전 → `fruit_visibility`가 특정 각도서 **흰 뒷면을 과일-보임으로 오판**(MC
+  실측 전체 뷰의 ~5.7%가 뒷면→과일 오라벨). `TransformDir`로 수정. (수정 후 upright 가시율
+  78.8→75.8%로 하락 = 허위 양성 제거 확인.)
+- **[LOW] 남벽 태극기 상하반전**: `X(-90)`→`X(90)*Z(180)` (법선 +Y·이미지위 +Z).
+- **[LOW] `_pick_texture` 빈 풀 크래시**: 표면별 풀이 비면 `rng.randint(0)` 크래시 →
+  궁극 폴백(전체 wood_files) 추가.
+- **[LOW] 배치 발자국 반경 과소**: 기울인 큐브 실제 발자국 0.71×edge인데 0.55~0.65 사용
+  → ~2.6% 프레임 수 mm 관통. 큐브 0.71, 정다면체 0.55로 수정(생성기 3종 전부).
+- **[LOW] `whiteface_unknown_boost` 死 키** 제거.
 
 재생성 절차는 v2와 동일(위 robocopy 왕복), 산출물 폴더만 `set{1,2}_v3`.
 `--frames 50` 사전 확인 시 체크리스트:
-- 다면체/큐브가 바닥에 붙어 있는지 (떠 있거나 파묻힘 없음)
-- 태극기가 검은 테이프 사각형이 있는 코너 주변(바닥+벽)에만 있는지
+- 다면체/큐브가 바닥에 붙어 있는지 (떠 있거나 파묻힘 없음), 큐브가 upright로 서고
+  윗면+옆면에 과일이 대체로 보이는지, 과일이 통과일 정상형인지
+- 태극기가 검은 테이프 사각형이 있는 코너 주변(바닥+벽)에만, 똑바로 서 있는지
 - 바닥/벽에 실사 우드 텍스처가 대부분 프레임에 보이는지
 - **다면체 색이 프레임마다 살짝 변하는지** — 색 랜덤화가 rep.get.prims 패턴
-  (`/World/Poly.*/Geom`)으로 바뀜. 만약 전 프레임 동일한 순백이면 randomizer가
-  경로 매칭에 실패한 것(폴백 흰 재질은 항상 적용되므로 데이터 자체는 유효).
+  (`/World/Poly.*/Pose/Geom` — 베이크드 메시 리팩터로 `/Pose/Geom`)으로 바뀜. 전 프레임
+  동일 순백이면 randomizer 경로 매칭 실패(폴백 흰 재질은 항상 적용 → 데이터는 유효).
+
+## 통합 인식 파이프라인 (07-15 결정, 역할 분담)
+
+경기 규정상 Set 1 다면체 + Set 2 과일 큐브가 **동시에** 한 경기장에 있고 경기도 동시
+진행이므로, 세트를 나누지 않고 **ONE 검출기 + ONE 분류기**로 통합한다(배포 분포와 정확히
+일치, Jetson 추론 절반). v3 합성 장면은 이미 두 종류가 공존하므로 자연스러운 확장.
+
+**역할 분담**: 통합은 두 갈래로 병렬 구축됐다가 합쳐졌다 — **`combined_*` = 통합 데이터/
+합성**, **`merged_*` = 통합 런타임/모델/배포**. taxonomy는 단일 소스
+`configs/combined_classes.py`(`merged_classes.py`는 이를 재-export하는 shim이라 런타임
+import 무변경).
+
+- **분류 체계** (`configs/combined_classes.py`): 검출기 단일 클래스 `object`(모든 수집 대상);
+  분류기 9클래스 `cube/octahedron/dodecahedron/icosahedron + apple/orange/banana/pineapple
+  + unknown`. **핵심**: 흰 큐브면은 `cube`로 라벨 — Set 1 큐브와 과일면이 안 보이는 Set 2
+  큐브는 픽셀이 동일하므로 같은 라벨이어야 오염이 없다(같은 픽셀 두 라벨 금지). 과일면이
+  보이면(analytic gate) 과일 클래스로. `unknown`은 이제 **신뢰 불가 크롭 전용**(작음/가림/
+  잘림/배경) — 크로스셋 unknown 주입 불필요(파이프라인 단순화). `set_of`/`targets_from_list`
+  헬퍼로 예측 클래스→소속 세트 유도(런타임 라우팅·`--target` 인터페이스).
+- **합성(combined)** `sim/generate_combined_data.py` + `configs/combined.yaml`(데이터생성
+  전용): 다면체(RestingPoly, per-shape semantics)+과일큐브(FruitCube, `fc<i>`, upright)를
+  한 씬에 섞어 배치, 모두 검출 positive, 9클래스 크롭. writer RNG 분리(writer_seed). 출력
+  `datasets/combined_v3`.
+- **런타임(merged, 사용자 구현 완료)** `runtime/merged_pipeline.py` + `configs/merged.yaml`:
+  검출기1+분류기1, 예측 클래스에서 **소속 세트 유도** 후 **기존 per-set 결정 정책
+  (`decision_policy`/`set2_decision_policy`)에 그대로 라우팅**, 공유+세트별 게이트
+  (`{**shared, **runtime[set]}`) — 과일 0.90/도형 0.60. 흰 큐브는 mission_fsm
+  `_maybe_confirm_cube`(다시점 빈면 확인)로 Set 1 큐브 확정.
+- **학습 배선**: 검출기 `configs/merged_detector.yaml`(combined_v3 primary + 실사 믹스;
+  **set2_v2는 다면체 무라벨이라 제외** — combined_v3가 대체). 분류기
+  `training/merge_classifier_merged.py`(combined_v3 primary + 실사 크롭) →
+  `train_merged_classifier.py`. 배포 `deployment/export_merged_onnx.py`/`build_merged_tensorrt.py`.
+- **WSL 검증(usd-core)**: 통합 taxonomy(흰큐브→cube, 도형→shape, 명확과일→과일, 불신뢰→
+  unknown)·크롭 thinning·config 배선·믹스 씬 조립(바닥 안착·아레나 내부·발자국 비겹침·과일
+  가시성)·merged_classes shim import 전부 통과.
+- **레거시 보존**: `configs/{classes,set2_classes}.py`, `generate_set{1,2}_data.py`,
+  `set{1,2}_v2` 데이터/모델은 그대로 유지(롤백 가능).
+
+### 통합 남은 작업
+1. Windows에서 `generate_combined_data.py --frames 12000` → `datasets/combined_v3`
+   (v3 체크리스트로 사전 확인).
+2. 검출기 학습 `train_merged_detector.py`(→`merged_detector.yaml`, combined_v3 primary,
+   imgsz 960) + 분류기 `merge_classifier_merged.py`→`train_merged_classifier.py`(9클래스).
+3. `export_merged_onnx.py` + TRT 빌드, Jetson `benchmark_latency.py`로 960 지연 확정.
+   런타임 통합(merged_pipeline)은 **구현 완료** — 아래는 옛 계획(참고):
+   단일클래스로 통합, **클래스군별 신뢰도 게이트**(과일 0.90 / 도형 0.60,
+   `combined_classes.{FRUIT,SHAPE}_CONF_GATE`), 흰 큐브는 접근-확인 정책
+   (`cube_target_min_confirmations`). ONNX export/TRT도 통합 모델 기준으로.
 
 ## 남은 일 (순서대로)
 

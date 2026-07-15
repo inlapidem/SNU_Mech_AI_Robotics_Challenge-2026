@@ -39,12 +39,14 @@ import numpy as np                                   # noqa: E402
 import omni.usd                                      # noqa: E402
 import omni.replicator.core as rep                   # noqa: E402
 from omni.replicator.core import Writer, AnnotatorRegistry  # noqa: E402
-from pxr import Usd, UsdGeom, UsdShade                 # noqa: E402
+from pxr import UsdGeom, UsdShade                      # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 from sim import arena_builder, robot_sensor_rig, domain_randomization as dr  # noqa: E402
-from sim.fruit_cube import FruitCube, cube_rest_z, _white_material  # noqa: E402
+from sim.fruit_cube import (FruitCube, cube_rest_z, _white_material,  # noqa: E402
+                            resolve_fruit_face_ids)
+from sim.fruit_texture_pool import load_fruit_texture_pool  # noqa: E402
 from sim.poly_assets import RestingPoly, load_polyhedron_geo  # noqa: E402
 
 try:
@@ -74,6 +76,10 @@ class Set1Writer(Writer):
         self.cfg = cfg
         self._frame = 0
         self._det = 0
+        self._clf_counts = {cls: 0 for cls in SHAPES + [cfg["classes"]["unknown"]]}
+        self._shape_records = 0
+        self._nonnegative_seen = 0
+        self._fatal_error = None
         self.ctx = {}                                  # per-frame metadata, set by the loop
         self.annotators = [
             AnnotatorRegistry.get_annotator("rgb"),
@@ -130,15 +136,15 @@ class Set1Writer(Writer):
     # -- main -------------------------------------------------------------------
     def write(self, data):
         try:
-            self._write(data)
+            self._write_impl(data)
         except Exception as e:
-            if self._frame < 5:
-                import traceback
-                print(f"[SET1] write err frame {self._frame}: {e}", file=sys.stderr)
-                traceback.print_exc()
+            import traceback
+            self._fatal_error = e
+            print(f"[SET1] write err frame {self._frame}: {e}", file=sys.stderr)
+            traceback.print_exc()
             self._frame += 1
 
-    def _write(self, data):
+    def _write_impl(self, data):
         rgb = data["rgb"][:, :, :3]
         if rgb.dtype != np.uint8:
             rgb = (np.clip(rgb, 0, 1) * 255).astype(np.uint8)
@@ -150,6 +156,9 @@ class Set1Writer(Writer):
 
         bbox = data["bounding_box_2d_tight"]
         records, id2lab = bbox["data"], bbox["info"]["idToLabels"]
+        if self._frame < 3:
+            print(f"[SET1] frame {self._frame}: raw_boxes={len(records)} "
+                  f"idToLabels={id2lab}", file=sys.stderr)
         split = "val" if (self._frame % round(1 / max(self.val_ratio, 1e-6))) == 0 else "train"
         stem = f"s1_{self._frame:06d}_{self.ctx.get('camera', 'cam')}"
 
@@ -183,6 +192,7 @@ class Set1Writer(Writer):
                 continue
 
             # ---- classifier: shape vs unknown ----
+            self._shape_records += 1
             reasons = []
             if min(bw, bh) < self.lab["min_box_px"]:
                 reasons.append("small")
@@ -201,12 +211,26 @@ class Set1Writer(Writer):
                 if crop is not None:
                     _save_png(os.path.join(self.dirs[f"clf/{split}/{target_cls}"],
                                            f"{stem}_o{k}_{ci}.png"), crop)
+                    self._clf_counts[target_cls] += 1
             objects.append({"class": name, "bbox": [round(v, 1) for v in box],
                             "visible": round(vis, 3), "label": target_cls,
                             "reason": "+".join(reasons) if reasons else "ok"})
 
+        if not self.ctx.get("negative"):
+            self._nonnegative_seen += 1
+            if self._nonnegative_seen >= 5 and self._shape_records == 0:
+                # Replicator may invoke ``_write`` directly and log callback
+                # exceptions without propagating them to the generation loop.
+                # Store the failure explicitly so ``main`` can stop after step().
+                self._fatal_error = RuntimeError(
+                    "no Set 1 polyhedron semantic boxes after 5 non-negative frames; "
+                    f"raw idToLabels={id2lab}")
+                return
+
         if self._frame < 5:
-            n_shape = sum(1 for o in objects if o["label"] != self.cfg["classes"]["unknown"])
+            n_shape = sum(1 for o in objects
+                          if o["class"] in SHAPES
+                          and o["label"] != self.cfg["classes"]["unknown"])
             cd = self.ctx.get("robot_to_region_m") or 0.0   # None on negative frames
             dbg = []
             for o in objects:
@@ -234,6 +258,7 @@ class Set1Writer(Writer):
             bx = int(RNG.uniform(0, self.W - bw)); by = int(RNG.uniform(0, self.H - bh))
             _save_png(os.path.join(self.dirs[f"clf/{split}/{self.cfg['classes']['unknown']}"],
                                    f"{stem}_bg.png"), rgb[by:by + bh, bx:bx + bw])
+            self._clf_counts[self.cfg["classes"]["unknown"]] += 1
 
         # ---- metadata ----
         meta = dict(self.ctx)
@@ -266,13 +291,37 @@ def _set_class(prim, value):
                              rep.get.prims(path_pattern=prim.GetPath().pathString))
 
 
-def _load_fruit_textures():
-    import glob
-    base = os.path.join(ROOT, "assets", "fruit_textures")
-    imgs = []
-    for ext in ("png", "jpg", "jpeg"):
-        imgs += glob.glob(os.path.join(base, "*", f"*.{ext}"))
-    return sorted(imgs)
+def _load_distractor_spec():
+    """Per-fruit image pool + real face layout for the Set 2 distractor cubes.
+
+    A Set 1 scene's fruit cubes ARE Set 2 cubes (both sets share the arena), so they
+    must look like the real thing: canonical whole-fruit images (Set 2's allowlist,
+    the single source of truth) with ONE fruit type per cube, on the top + opposite-
+    side layout, placed upright. These are detector positives only (no classifier
+    crop), but training/QC frames should still show the real object. Falls back to a
+    glob grouped by fruit sub-directory if configs/set2.yaml is unavailable, so Set 1
+    never hard-fails on Set 2 config. Returns ({fruit: [paths]}, face_ids, tilt)."""
+    default_faces = ["pz", "px", "nx"]
+    try:
+        with open(os.path.join(ROOT, "configs", "set2.yaml"), encoding="utf-8") as f:
+            s2 = yaml.safe_load(f)
+        from configs.set2_classes import FRUIT_CLASSES
+        pool = load_fruit_texture_pool(ROOT, s2, FRUIT_CLASSES)
+        face_names = s2.get("cubes", {}).get("fruit_face_names", default_faces)
+        tilt = s2.get("cubes", {}).get("upright_tilt_deg", [-2.0, 2.0])
+    except Exception as e:                      # keep Set 1 self-sufficient
+        print(f"[SET1] distractor spec fell back to glob ({e})", file=sys.stderr)
+        import glob
+        base = os.path.join(ROOT, "assets", "fruit_textures")
+        pool = {}
+        for d in sorted(glob.glob(os.path.join(base, "*"))):
+            if os.path.isdir(d):
+                imgs = sorted(g for ext in ("png", "jpg", "jpeg")
+                              for g in glob.glob(os.path.join(d, f"*.{ext}")))
+                if imgs:
+                    pool[os.path.basename(d)] = imgs
+        face_names, tilt = default_faces, [-2.0, 2.0]
+    return pool, resolve_fruit_face_ids(face_names), tuple(tilt)
 
 
 def _fruit_label_params(rng):
@@ -300,13 +349,17 @@ def build():
     # driven manually per frame; semantics 'fruitcube' -> detector positive only.
     fruit_cubes = []
     n_fc = int(CFG["objects"].get("fruit_cube_distractors", 2))
-    fc_textures = _load_fruit_textures() if n_fc else []
-    if n_fc and fc_textures:
-        fc_cfg = {"cubes": {"fruit_faces": 3, "body_material": CFG["objects"]["material"]}}
+    fc_pool, fc_face_ids, fc_tilt = _load_distractor_spec() if n_fc else ({}, [], (-2.0, 2.0))
+    fc_fruits = sorted(fc_pool)
+    if n_fc and fc_pool:
+        fc_cfg = {"cubes": {"fruit_faces": len(fc_face_ids),
+                            "body_material": CFG["objects"]["material"]}}
         for i in range(n_fc):
             fc = FruitCube(stage, f"/World/FruitCube_{i}", i, fc_cfg)
             _set_class(fc.body, "fruitcube")
             fruit_cubes.append(fc)
+        print(f"[SET1] {n_fc} fruit-cube distractors: fruits={fc_fruits}, "
+              f"faces={fc_face_ids}, upright (one fruit per cube)", file=sys.stderr)
     elif n_fc:
         print("[SET1] no fruit textures found - skipping fruit-cube distractors", file=sys.stderr)
     cam_prim = robot_sensor_rig.create_camera(stage, "/World/RobotCam", CFG["camera"])
@@ -315,8 +368,9 @@ def build():
     print(f"[SET1] camera focal={_fl} hAperture={_ha} -> HFOV={_m.degrees(2*_m.atan(_ha/(2*_fl))):.1f} deg",
           file=sys.stderr)
 
-    # White polyhedra: manually-driven USD references (the validated FruitCube
-    # pattern) with per-shape semantics. Each frame computes an EXACT face-down
+    # White polyhedra: manually-driven meshes baked from the converted USD assets,
+    # with per-shape semantics directly on each rendered Mesh. Each frame computes
+    # an EXACT face-down
     # resting pose from the mesh vertices (sim/poly_assets) - the old declarative
     # rep.modify.pose (fixed z band + random SO(3)) left solids part-buried in the
     # floor or hovering above it.
@@ -357,18 +411,20 @@ def build():
         lo = [c - m["color_jitter"] for c in m["base_color"]]
         hi = [c + m["color_jitter"] for c in m["base_color"]]
         with rep.trigger.on_frame(num_frames=args.frames):
-            with rep.get.prims(path_pattern="/World/Poly.*/Geom"):
+            with rep.get.prims(path_pattern="/World/Poly.*/Pose/Geom"):
                 rep.randomizer.color(colors=rep.distribution.uniform(lo, hi))
 
         writer = rep.writers.get("Set1Writer")
         writer.initialize(cfg=CFG)
         writer.attach([rp])
-    return stage, cam_prim, lights, writer, arena, fruit_cubes, fc_textures, polys
+    return (stage, cam_prim, lights, writer, arena, fruit_cubes, fc_pool, fc_fruits,
+            polys, fc_face_ids, fc_tilt)
 
 
 def main():
     import math
-    stage, cam_prim, lights, writer, arena, fruit_cubes, fc_textures, polys = build()
+    (stage, cam_prim, lights, writer, arena, fruit_cubes, fc_pool, fc_fruits, polys,
+     fc_face_ids, fc_tilt) = build()
     sub = CFG["render"]["rt_subframes"]
     rcfg = CFG["robot"]
     scfg = CFG.get("sampling", {})
@@ -412,23 +468,33 @@ def main():
             p["obj"].place(RNG, xy, size)
             placed.append((xy[0], xy[1], 0.55 * size))
 
-        # Set 2 distractor cubes: near the cluster, random fruit faces, resting flat.
+        if i == 0 and not negative:
+            for p in polys:
+                obj = p["obj"]
+                print(f"[SET1] stage mesh {obj.prim.GetPath()} "
+                      f"points={len(obj.geo['points'])} faces={len(obj.geo['face_counts'])} "
+                      f"vertex_min={tuple(round(v, 4) for v in obj.last_world_min)} "
+                      f"vertex_max={tuple(round(v, 4) for v in obj.last_world_max)}",
+                      file=sys.stderr)
+
+        # Set 2 distractor cubes: same real object as in Set 2 - UPRIGHT (fruit on the
+        # top + opposite-side layout, usually visible), canonical whole-fruit images.
+        # Detector positive only (fruitcube semantics -> no classifier crop).
         for fc in fruit_cubes:
             if negative or RNG.uniform() < 0.5:
                 UsdGeom.Imageable(fc.xform).MakeInvisible()
                 continue
             UsdGeom.Imageable(fc.xform).MakeVisible()
             edge = 0.08 + float(RNG.uniform(-0.005, 0.005))
-            euler = (90.0 * RNG.randint(0, 4) + RNG.uniform(-4, 4),
-                     90.0 * RNG.randint(0, 4) + RNG.uniform(-4, 4),
+            euler = (float(RNG.uniform(*fc_tilt)), float(RNG.uniform(*fc_tilt)),
                      float(RNG.uniform(0, 360)))
-            xy = dr.place_nonoverlapping(RNG, 0.65 * edge, placed, bounds)
+            xy = dr.place_nonoverlapping(RNG, 0.71 * edge, placed, bounds)
             fc.set_pose((xy[0], xy[1], cube_rest_z(euler, edge)), euler, edge)
-            placed.append((xy[0], xy[1], 0.65 * edge))
-            faces = list(RNG.choice(6, 3, replace=False))
-            imgs = [fc_textures[RNG.randint(len(fc_textures))] for _ in faces]
-            lps = [_fruit_label_params(RNG) for _ in faces]
-            fc.configure(faces, imgs, lps, [lp["tint"] for lp in lps])
+            placed.append((xy[0], xy[1], 0.71 * edge))
+            fruit = fc_fruits[RNG.randint(len(fc_fruits))]     # one fruit type per cube
+            imgs = [fc_pool[fruit][RNG.randint(len(fc_pool[fruit]))] for _ in fc_face_ids]
+            lps = [_fruit_label_params(RNG) for _ in fc_face_ids]
+            fc.configure(list(fc_face_ids), imgs, lps, [lp["tint"] for lp in lps])
 
         ez = rcfg["cam_height"] + jitter["height"]
         if negative:
@@ -475,8 +541,11 @@ def main():
             rep.orchestrator.step(rt_subframes=sub)
         except TypeError:
             rep.orchestrator.step()
+        if writer._fatal_error is not None:
+            raise RuntimeError("Set1Writer failed; see the traceback above") from writer._fatal_error
 
     print(f"[SET1] done: frames seen={writer._frame} detector images={writer._det}", file=sys.stderr)
+    print(f"[SET1] classifier crops={writer._clf_counts}", file=sys.stderr)
 
 
 if __name__ == "__main__":

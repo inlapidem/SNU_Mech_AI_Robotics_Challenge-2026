@@ -139,10 +139,12 @@ def _image_aspect(path, default):
         return default
 
 
-def _pick_texture(real_files, generic_files, rng, real_frac):
-    """Prefer a real venue photo with prob real_frac; fall back to whichever pool exists."""
+def _pick_texture(real_files, generic_files, rng, real_frac, fallback):
+    """Prefer a real venue photo with prob real_frac; fall back to whichever pool
+    exists, and finally to `fallback` (all wood files) so a surface whose specific
+    pool is empty (e.g. only same-surface-named photos present) never crashes."""
     use_real = real_files and (not generic_files or rng.uniform() < real_frac)
-    pool = real_files if use_real else generic_files
+    pool = (real_files if use_real else generic_files) or real_files or generic_files or fallback
     return pool[rng.randint(len(pool))]
 
 
@@ -289,11 +291,12 @@ def randomize_arena(arena, cfg, rng):
     if arena["floor_tex"] is not None and arena["wood_files"]:
         b_lo, b_hi = a.get("wood_brightness", [0.75, 1.15])
         rf = a.get("real_texture_frac", 0.7)
+        wood = arena["wood_files"]
         _set_tex(arena["floor_tex"],
-                 _pick_texture(arena["real_floor"], arena["generic_wood"], rng, rf),
+                 _pick_texture(arena["real_floor"], arena["generic_wood"], rng, rf, wood),
                  rng.uniform(b_lo, b_hi))
         _set_tex(arena["wall_tex"],
-                 _pick_texture(arena["real_wall"], arena["generic_wood"], rng, rf),
+                 _pick_texture(arena["real_wall"], arena["generic_wood"], rng, rf, wood),
                  rng.uniform(b_lo, b_hi))
     else:  # legacy solid-colour jitter
         for shader, base, jit in ((arena["floor_shader"], a["floor_color"], a["floor_color_jitter"]),
@@ -349,7 +352,10 @@ def randomize_arena(arena, cfg, rng):
                     along_lo = w / 2 + 0.05
                     along = rng.uniform(along_lo, max(wall_ext, along_lo + 0.05))
                     if rng.uniform() < 0.5:                # south wall (y=-hy), faces +Y
-                        rot = spin * Gf.Rotation(Gf.Vec3d(1, 0, 0), -90)
+                        # X(90)*Z(180): normal->+Y (into arena) AND image-top->+Z (upright).
+                        # A bare X(-90) faced +Y but hung the flag upside-down.
+                        rot = spin * Gf.Rotation(Gf.Vec3d(1, 0, 0), 90) * \
+                            Gf.Rotation(Gf.Vec3d(0, 0, 1), 180)
                         _set_quad_tf(entry, (-hx + along, -hy + eps, zc), rot, (w, hgt))
                     else:                                  # west wall (x=-hx), faces +X
                         rot = spin * x90 * Gf.Rotation(Gf.Vec3d(0, 0, 1), 90)

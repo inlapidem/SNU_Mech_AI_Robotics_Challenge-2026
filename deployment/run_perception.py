@@ -1,4 +1,12 @@
-"""Onboard perception entry point. Loads ONLY the selected set's models.
+"""Onboard perception entry point. ONE unified model for BOTH object sets.
+
+Both sets share the arena during a match, so a single detector + 9-class classifier
+(configs/merged.yaml, runtime/merged_pipeline.py) pursues objects from either set at
+once. Announce the target(s) with --target, up to one per set:
+
+    --target cube apple      # a Set 1 shape AND a Set 2 fruit, hunted together
+    --target apple           # a single object is fine too
+    --target dodecahedron
 
 RIG MODE (default): drives the full 3-layer sensor architecture from the config's
 `rig:` section -- 2x Nuroum V11 (USB, sides, role `search`) + 2x IMX219 (CSI, front,
@@ -7,16 +15,16 @@ role `verify`), fused by runtime/capture_fsm.py into the capture state machine
 RPLidar C1 is localization-only and contributes nothing here. Cameras that fail to
 open are skipped with a warning, so any subset works for bench tests.
 
-    # Jetson, real rig (USB 0/1 sides + CSI sensor-id 0/1 front, from configs/set2.yaml):
-    python deployment/run_perception.py --set set2 --target banana --show --phase SEARCH
+    # Jetson, real rig (USB 0/1 sides + CSI sensor-id 0/1 front, from configs/merged.yaml):
+    python deployment/run_perception.py --target cube apple --show --phase SEARCH
 
     # WSL / no Jetson: mock all four cameras with video files (fusion logic unchanged):
-    python deployment/run_perception.py --set set2 --target banana --show \
+    python deployment/run_perception.py --target cube apple --show \
         --cam side_left=capture/search.mp4  --cam side_right=capture/search.mp4 \
         --cam front_left=capture/verify_L.mp4 --cam front_right=capture/verify_R.mp4
 
     # Bench test with only one camera plugged in (the rest just warn):
-    python deployment/run_perception.py --set set1 --target dodecahedron --show \
+    python deployment/run_perception.py --target dodecahedron --show \
         --cam side_right=off --cam front_left=off --cam front_right=off
 
 Rig-mode keys (--show): q quit | p toggle SEARCH/VERIFY phase | l IR "seated"
@@ -24,21 +32,20 @@ Rig-mode keys (--show): q quit | p toggle SEARCH/VERIFY phase | l IR "seated"
 The same keys can be injected headlessly for tests via --ir-script "TICK:KEY,...".
 Phase switching is equally available to the navigator via CaptureFSM.set_phase().
 
-LEGACY DEBUG MODE: --source (either set) or --left/--right (set2) run the plain
-single/dual-camera pipeline without the rig/FSM, as before:
+LEGACY DEBUG MODE: --source or --left/--right run the plain single/dual-camera
+pipeline without the rig/FSM:
 
-    python deployment/run_perception.py --set set1 --target dodecahedron --source 0 --show
+    python deployment/run_perception.py --target dodecahedron --source 0 --show
 
-For Set 1: detect white polyhedra from afar, classify shape only when close/reliable,
-vote across frames, and announce TARGET_CONFIRMED conservatively.
-
-For Set 2: detect cube candidates from afar, classify the visible fruit only when close
-and the fruit is actually visible, never pick an 'unknown' cube, request a viewpoint
-change when a cube stays unknown, and confirm the target fruit across frames.
-
-In BOTH sets, capture authorization (CAPTURE_READY, ex-PICKUP_READY) exists only in
-rig mode and only from the verify (front) cameras + bin-alignment rule; ambiguous
-observations never lead to a capture (wrong capture = -40, miss = 0).
+Behaviour: detect any object from afar; classify only when close/reliable; for a
+SHAPE, vote across frames and announce TARGET_CONFIRMED conservatively (a bare white
+cube needs multi-view evidence, since a Set 2 fruit cube's blank side looks the same);
+for a FRUIT, classify only when the fruit face is actually visible, never pick an
+'unknown' cube, and request a viewpoint change when a cube stays unknown. Each
+detection carries a DERIVED set (shape->set1, fruit->set2), which the navigation layer
+keys on. Capture authorization (CAPTURE_READY) exists only in rig mode and only from
+the verify (front) cameras + bin-alignment rule; ambiguous observations never lead to
+a capture (wrong capture = -40, miss = 0).
 """
 
 import argparse
@@ -70,85 +77,45 @@ def _src(v):
     return int(v) if str(v).isdigit() else v
 
 
-def _check_target(cfg, set_name, target):
-    names = cfg["classes"]["shapes" if set_name == "set1" else "fruits"]
-    if target not in names:
-        raise SystemExit(f"--target must be one of {names}")
+def _build_pipeline(cfg, targets):
+    from runtime.merged_pipeline import MergedPipeline
+    return MergedPipeline(cfg, targets)
 
 
-def _build_pipeline(cfg, set_name, target):
-    if set_name == "set1":
-        from runtime.set1_pipeline import Set1Pipeline
-        return Set1Pipeline(cfg, target)
-    from runtime.set2_pipeline import Set2Pipeline
-    return Set2Pipeline(cfg, target)
+def _uncertain(r):
+    """Data-loop logger heuristic: an 'unknown' crop or a low-margin (< 0.2) call."""
+    return r["cls"] == "unknown" or (r["cls"] and r["margin"] < 0.2)
 
 
-# ------------------------------------------------------------------ legacy debug paths
-def run_set1_legacy(cfg, args):
+# ------------------------------------------------------------------ legacy debug path
+def run_legacy(cfg, targets, args):
+    """Plain single/dual-camera debug loop (no rig/FSM). --source = one 'cam0';
+    --left/--right = two cameras. One unified detector + 9-class classifier runs on
+    every camera. A cube that stays 'unknown' in one view can be identified by another,
+    and a persistent unknown raises a re-observe request the navigator should honour."""
     import cv2
     from runtime.logging import FailureLogger
 
-    pipe = _build_pipeline(cfg, "set1", args.target)
-    logger = FailureLogger(os.path.join(ROOT, "runtime_logs", "set1"), enabled=args.log)
-    print(f"[set1] target={args.target}; loaded detector + classifier. Press q to quit.")
+    pipe = _build_pipeline(cfg, targets)
+    logger = FailureLogger(os.path.join(ROOT, "runtime_logs", "merged"), enabled=args.log)
 
-    cap = cv2.VideoCapture(_src(args.source))
-    # Models assume the NUROUM V11 at 1280x720; force it (webcams default to 640x480,
-    # which breaks the pixel-based gates min_bbox_px / pickup_min_bbox_px). MJPG keeps
-    # USB bandwidth sane; BUFFERSIZE=1 avoids latency build-up.
-    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-    print(f"[set1] capture {int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))}x"
-          f"{int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))} "
-          f"(requested 1280x720 MJPG)")
-    while cap.isOpened():
-        ok, frame = cap.read()
-        if not ok:
-            break
-        for r in pipe.process_frame(frame):
-            x0, y0, x1, y1 = (int(v) for v in r["bbox"])
-            color = STATE_COLOR.get(r["state"], (200, 200, 200))
-            label = f"{r['cls'] or 'polyhedron'} {r['conf']:.2f} {r['state']}"
-            cv2.rectangle(frame, (x0, y0), (x1, y1), color, 2)
-            cv2.putText(frame, label, (x0, max(0, y0 - 6)),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
-            if r["info"].get("close_reconfirmed"):
-                print(f"TARGET_CONFIRMED (close re-confirm): {args.target} @ bbox "
-                      f"{r['bbox']}  info={r['info']}  "
-                      f"(capture needs the verify rig -- run without --source)")
-            if args.log and (r["cls"] == "unknown" or (r["cls"] and r["margin"] < cfg["runtime"]["margin_threshold"])):
-                logger.maybe_log(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), r, reason=r["cls"] or "lowmargin")
-        if args.show:
-            cv2.imshow("set1", frame)
-            if cv2.waitKey(1) & 0xFF == ord("q"):
-                break
-    cap.release()
-    cv2.destroyAllWindows()
-
-
-def run_set2_legacy(cfg, args):
-    """Plain dual/single-camera set2 debug loop (no rig/FSM), as before.
-
-    A cube 'unknown' in one camera can be identified by the other; a cube that stays
-    unknown raises a re-observe request the navigator should honour by moving."""
-    import cv2
-    from runtime.logging import FailureLogger
-
-    pipe = _build_pipeline(cfg, "set2", args.target)
-    logger = FailureLogger(os.path.join(ROOT, "runtime_logs", "set2"), enabled=args.log)
-
-    # Camera sources: prefer explicit --left/--right; else a single --source as 'left'.
+    # Camera sources: prefer explicit --left/--right; else a single --source as 'cam0'.
     cams = {}
     if args.left is not None:
         cams["left"] = cv2.VideoCapture(_src(args.left))
     if args.right is not None:
         cams["right"] = cv2.VideoCapture(_src(args.right))
     if not cams:
-        cams["left"] = cv2.VideoCapture(_src(args.source))
-    print(f"[set2] target={args.target}; cameras={list(cams)}; loaded detector + classifier.")
+        cams["cam0"] = cv2.VideoCapture(_src(args.source))
+    # Models assume the NUROUM V11 at 1280x720; force it (webcams default to 640x480,
+    # which breaks the pixel-based gates min_bbox_px / pickup_min_bbox_px). MJPG keeps
+    # USB bandwidth sane; BUFFERSIZE=1 avoids latency build-up.
+    for cap in cams.values():
+        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+    print(f"[merged] targets={targets}; cameras={list(cams)}; loaded detector + classifier.")
 
     while all(c.isOpened() for c in cams.values()):
         any_ok = False
@@ -160,25 +127,24 @@ def run_set2_legacy(cfg, args):
             for r in pipe.process_frame(frame, camera=cam_name):
                 x0, y0, x1, y1 = (int(v) for v in r["bbox"])
                 color = STATE_COLOR.get(r["state"], (200, 200, 200))
-                label = f"{cam_name[:1]} {r['cls'] or 'cube'} {r['conf']:.2f} {r['state']}"
+                label = f"{cam_name[:1]} {r['cls'] or 'object'} {r['conf']:.2f} {r['state']}"
                 cv2.rectangle(frame, (x0, y0), (x1, y1), color, 2)
                 cv2.putText(frame, label, (x0, max(0, y0 - 6)),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
                 if r["info"].get("close_reconfirmed"):
-                    print(f"TARGET_CONFIRMED (close re-confirm): {args.target} @ {cam_name} "
-                          f"bbox {r['bbox']} info={r['info']}  "
-                          f"(capture needs the verify rig -- run without --left/--right)")
-                if r["request_reobserve"]:
+                    print(f"TARGET_CONFIRMED (close re-confirm): {r['cls']} ({r['set']}) "
+                          f"@ {cam_name} bbox {r['bbox']}  "
+                          f"(capture needs the verify rig -- run without --source/--left/--right)")
+                if r.get("request_reobserve"):
                     print(f"RE-OBSERVE: track {r['track']} on {cam_name} stays unknown -> "
                           f"move to a new viewpoint. info={r['info']}")
                     # In a full system the navigator moves, then calls:
                     #   pipe.note_reobserved(cam_name, r['track'])
-                if args.log and (r["cls"] == "unknown"
-                                 or (r["cls"] and r["margin"] < cfg["runtime"]["margin_threshold"])):
+                if args.log and _uncertain(r):
                     logger.maybe_log(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), r,
                                      reason=r["cls"] or "lowmargin")
             if args.show:
-                cv2.imshow(f"set2-{cam_name}", frame)
+                cv2.imshow(f"merged-{cam_name}", frame)
         if args.show and (cv2.waitKey(1) & 0xFF == ord("q")):
             break
         if not any_ok:
@@ -278,19 +244,19 @@ def _handle_key(ch, fsm):
     return True
 
 
-def run_rig(cfg, args):
+def run_rig(cfg, targets, args):
     import cv2
     from deployment.rig import open_rig
     from runtime.capture_fsm import CaptureFSM, PHASE_SEARCH
     from runtime.logging import FailureLogger
 
     set_name = cfg["set"]
-    pipe = _build_pipeline(cfg, set_name, args.target)
+    pipe = _build_pipeline(cfg, targets)
     cams = open_rig(cfg["rig"], _parse_kv_list(args.cam, "cam"),
                     _parse_kv_list(args.role, "role"))
     for cam in cams.values():
         pipe.configure_camera(cam.name, cam.gates)
-    fsm = CaptureFSM(cfg, args.target)
+    fsm = CaptureFSM(cfg, targets)
     fsm.set_phase(args.phase)
     logger = FailureLogger(os.path.join(ROOT, "runtime_logs", set_name), enabled=args.log)
     bridge = None
@@ -377,8 +343,7 @@ def run_rig(cfg, args):
                 if cam.role == "search" and r.get("request_reobserve"):
                     print(f"RE-OBSERVE: track {r['track']} on {cam.name} stays unknown "
                           f"-> move to a new viewpoint. info={r['info']}")
-                if args.log and (r["cls"] == "unknown"
-                                 or (r["cls"] and r["margin"] < cfg["runtime"]["margin_threshold"])):
+                if args.log and _uncertain(r):
                     logger.maybe_log(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), r,
                                      reason=r["cls"] or "lowmargin")
 
@@ -431,12 +396,14 @@ def run_rig(cfg, args):
 
 def main():
     ap = argparse.ArgumentParser(
-        description="Rig mode by default (configs/<set>.yaml rig: section); "
+        description="Unified perception (configs/merged.yaml). Rig mode by default; "
                     "--source or --left/--right selects the legacy debug path.")
-    ap.add_argument("--set", dest="set_name", required=True, choices=["set1", "set2"])
-    ap.add_argument("--config", default=None)
-    ap.add_argument("--target", default="dodecahedron",
-                    help="announced target: set1 shape or set2 fruit")
+    ap.add_argument("--config", default=None,
+                    help="perception config (default configs/merged.yaml)")
+    ap.add_argument("--target", nargs="+", required=True, metavar="OBJECT",
+                    help="announced object(s), up to one per set, e.g. "
+                         "--target cube apple (shape + fruit). Both sets share the arena, "
+                         "so one unified model pursues them together.")
     # rig mode
     ap.add_argument("--cam", action="append", metavar="NAME=SPEC",
                     help="override a rig camera source: usb:N | csi:N | file:PATH | "
@@ -465,21 +432,19 @@ def main():
     ap.add_argument("--udp-cmd-port", type=int, default=5602)
     args = ap.parse_args()
 
-    cfg_path = args.config or os.path.join(ROOT, "configs", f"{args.set_name}.yaml")
+    from configs.merged_classes import targets_from_list
+
+    cfg_path = args.config or os.path.join(ROOT, "configs", "merged.yaml")
     cfg = yaml.safe_load(open(cfg_path, encoding="utf-8"))
-    _check_target(cfg, args.set_name, args.target)
+    try:
+        targets = targets_from_list(args.target)
+    except ValueError as e:
+        raise SystemExit(str(e))
 
     if args.source is not None or args.left is not None or args.right is not None:
-        if args.set_name == "set1":
-            if args.source is None:
-                raise SystemExit("set1 legacy mode needs --source")
-            run_set1_legacy(cfg, args)
-        else:
-            if args.source is None and args.left is None and args.right is None:
-                raise SystemExit("set2 legacy mode needs --source or --left/--right")
-            run_set2_legacy(cfg, args)
+        run_legacy(cfg, targets, args)
     else:
-        run_rig(cfg, args)
+        run_rig(cfg, targets, args)
 
 
 if __name__ == "__main__":

@@ -224,14 +224,18 @@ class ObjectMemory:
         """
         if not self.cube_hunt or ent["votes"]:
             return
+        # 새 룰(반대편 2면): set2 큐브의 무지 사각은 항상 180° 떨어진 두 50°
+        # 창뿐 → 그런 큐브의 blank 관측은 최소 130° 연속 갭을 남긴다. 따라서
+        # '모든 갭 ≤ 90°' 를 요구하면 set2 는 원리적으로 통과 불가(오인증 0).
+        # 단일 시점 분류 노이즈 방어로 최소 4섹터 + 갭≤90° 를 보수적으로 유지.
         occ = sorted(ent["blank_sectors"])
         if len(occ) < 4:
             return
         for i, s in enumerate(occ):
             nxt = occ[(i + 1) % len(occ)]
             gap = (nxt - s) % 16
-            if gap > 4:       # 빈 3섹터 초과 = 최악 관측 갭 112.5° 초과 —
-                return        # 분류기 과일면 가시한계(~60°)로 못 덮는 각이 생김
+            if gap > 4:       # 4섹터 = 90°. 초과 = set2 반대편-2면 가설 배제 실패
+                return
         ent["set"], ent["cls"] = "set1", "cube"
         ent["rank"] = max(ent["rank"], 3)
         if ent["status"] == "defer":

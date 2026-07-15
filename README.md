@@ -1,6 +1,11 @@
 # SNU-mech-AI-robotics-challenge
 서울대학교 학부생 AI 로봇 챌린지
 
+> **모델 구성**: 두 세트가 경기 중 아레나를 공유하므로 **통합 모델**(검출기 1 + 9클래스
+> 분류기 1)로 동시에 운용합니다 — [docs/unified_model.md](docs/unified_model.md).
+> 실행: `run_perception.py --target cube apple` (세트당 1개). 세트별 상세 문서는
+> [README_SET1.md](README_SET1.md) · [README_SET2.md](README_SET2.md) 참고.
+
 ---
 
 # Polyhedra detection (cube · octahedron · dodecahedron · icosahedron)

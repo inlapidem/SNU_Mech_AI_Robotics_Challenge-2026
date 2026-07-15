@@ -328,11 +328,15 @@ class FruitCube:
 
     def fruit_faces_world(self):
         """For each active fruit face: (world_center, world_normal, world_corners)."""
-        R = self._world.ExtractRotationMatrix()
         faces = []
         for f in self.active_faces:
             wc = self._world.Transform(_v(f["center"]))
-            wn = R * Gf.Vec3d(*f["normal"])                  # rotate normal (no translation)
+            # TransformDir applies the SAME row-vector rotation/scale as Transform()
+            # (used for center/corners) with no translation; normalize drops the
+            # uniform scale. Using `R * vec` here instead rotated the normal by R^T
+            # (the INVERSE) - a mirror-flip that made the visible-fruit gate accept
+            # a cube's white BACK face as fruit from certain azimuths.
+            wn = self._world.TransformDir(Gf.Vec3d(*f["normal"]))
             wn = _norm((wn[0], wn[1], wn[2]))
             corners = [self._world.Transform(c) for c in f["corners_local"]]
             faces.append((wc, wn, corners))

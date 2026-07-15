@@ -37,6 +37,9 @@ SHAPES = ["cube", "octa", "dodeca", "icosa"]
 FRUITS = ["apple", "orange", "banana", "pineapple"]
 DT = 0.05
 
+# 과일 배치 모델: "opposite2"(현행 룰: 윗면+반대편 옆2면) | "random3"(구 비교용)
+FRUIT_LAYOUT = "opposite2"
+
 # ------------------------------------------------------------------ 경기장 생성
 
 
@@ -55,11 +58,19 @@ def make_arena(rng):
             k += 1
     for fruit in FRUITS:
         for _ in range(3):
-            # 과일 사진은 6면 중 3면 (옆4 + 윗1 + 밑1에서 무작위) — 카메라가
-            # 낮아 윗면/밑면은 판독 불가, 옆면 과일만 보인다. 큐브 방향도 랜덤.
             yaw = rng.uniform(0, 2 * math.pi)
-            faces = rng.sample(range(6), 3)
-            normals = [yaw + f * math.pi / 2 for f in faces if f < 4]
+            if FRUIT_LAYOUT == "random3":
+                # 구 룰(비교용): 6면 중 3면 랜덤, 옆면만 판독. 커버리지 편차 큼.
+                faces = rng.sample(range(6), 3)
+                normals = [yaw + f * math.pi / 2 for f in faces if f < 4]
+            else:
+                # 룰(2026-07-15): 과일 사진은 윗면 + 옆면 '서로 반대편 2면' —
+                # 어느 방향에서 접근해도 웬만하면 과일이 보이도록 세팅. 카메라가
+                # 낮아 윗면은 판독 불가로 두고, 반대편 옆 2면(±180°)이 탐지 채널.
+                # 두 면이 반대편이라 옆면 가시 260°(72%), 무지 사각은 과일축 수직
+                # 방향 두 50° 창뿐. 큐브 방향(yaw)·과일축 선택은 랜덤.
+                axis = yaw + rng.choice([0.0, math.pi / 2])
+                normals = [axis, axis + math.pi]
             objs.append(dict(id=k, set="set2", cls=fruit, x=pts[k][0],
                              y=pts[k][1], payload=False, done=False,
                              fruit_normals=normals))
@@ -70,8 +81,11 @@ def make_arena(rng):
 def fruit_visible(obj, from_angle):
     """관측 방향(물체→로봇)에서 과일 옆면이 보이는가 — 면 법선 ±65° 가시.
 
-    무지 뷰가 시선 ±45° 내 법선의 면을 '무지'로 인증할 수 있으려면(내비게이터
-    4사분면 증명의 건전성) 가시 한계가 45° 보다 넓어야 한다: 65° > 45° ✓.
+    새 룰에서 옆 과일은 반대편 2면이라 가시 커버리지 260°. 무지 뷰가 시선
+    ±45° 내 법선의 면을 '무지'로 인증하려면(내비게이터 무지면 증명의 건전성)
+    가시 한계가 45°보다 넓어야 한다: 65° > 45° ✓. 반대편 2면 배치이므로
+    set2 큐브의 무지 사각은 항상 180° 떨어진 두 50° 창 → 그 두 창에만 갇힌
+    관측은 연속 갭 130°를 남겨 set1 오인증이 불가능하다(증명은 _maybe_confirm).
     """
     if obj["set"] != "set2":
         return True
@@ -460,6 +474,8 @@ def scenario_ir_dropout(verbose):
 
 
 def scenario_payload_lost(verbose):
+    # 단일 운반 유실 복구 경로를 검증하는 시나리오 → 더블 캐리 off 로 명시
+    # (더블 캐리 중 유실은 입구 물체가 즉시 재흡입돼 IR이 안 꺼지는 별개 경로).
     dropped = {"done": False}
 
     def tick(t, world, mission):
@@ -472,7 +488,8 @@ def scenario_payload_lost(verbose):
             obj["x"] += 0.20 * -math.sin(yaw)
             obj["y"] += 0.20 * math.cos(yaw)
             dropped["done"] = True
-    r = run_match(seed=102, hooks={"tick": tick}, verbose=verbose)
+    r = run_match(seed=102, hooks={"tick": tick}, verbose=verbose,
+                  params_override=dict(double_carry=False))
     lost = any("PAYLOAD_LOST" in e for _, e in r["events"])
     ok = dropped["done"] and lost and r["good"] >= 1 and r["bad"] == 0
     print(f"  유실 주입: {dropped['done']}  유실 감지: {lost}  "

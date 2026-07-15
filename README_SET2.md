@@ -54,7 +54,7 @@ assets/    fruit_textures/{apple,orange,banana,pineapple}/*.png   (real photos; 
 sim/       fruit_cube.py  make_fruit_textures.py  generate_set2_data.py     (+ shared arena/rig/DR)
 training/  train_set2_detector.py  train_set2_classifier.py
 runtime/   set2_pipeline.py  set2_decision_policy.py                        (+ shared tracking/logging)
-deployment/ run_perception.py --set set2  export_set2_onnx.py  build_set2_tensorrt.py
+deployment/ run_perception.py  export_set2_onnx.py  build_set2_tensorrt.py
 models/set2/ detector/best.pt  classifier/{best.pt,classes.json,temperature.json,confusion.txt}
 datasets/set2/ detector/{images,labels}/{train,val}  classifier/{train,val}/<class>  metadata/
 ```
@@ -115,18 +115,18 @@ yolo/bin/python training/train_set2_classifier.py --epochs 70  --imgsz 128 # -> 
 ## 3. Run onboard
 ```bash
 # Jetson 실기: 4캠 rig (Nuroum USB 0/1 + IMX219 CSI sensor-id 0/1, configs/set2.yaml rig: 사용)
-python deployment/run_perception.py --set set2 --target banana --show --phase SEARCH
+python deployment/run_perception.py --target banana --show --phase SEARCH
 
 # WSL/개발 PC mock: CSI가 없으니 4캠 전부 동영상 파일로 대체 (융합 로직 동일하게 동작)
-yolo/bin/python deployment/run_perception.py --set set2 --target banana --show \
+yolo/bin/python deployment/run_perception.py --target banana --show \
     --cam side_left=capture/search.mp4  --cam side_right=capture/search.mp4 \
     --cam front_left=capture/verify_L.mp4 --cam front_right=capture/verify_R.mp4
 
 # 벤치 테스트: 일부 카메라만 연결돼도 동작 (없는 캠은 경고 후 스킵), 소스/role CLI override
-python deployment/run_perception.py --set set2 --target banana --show --cam side_right=off
+python deployment/run_perception.py --target banana --show --cam side_right=off
 
 # 레거시 단일/듀얼 카메라 디버그 경로 (rig/FSM 없이 기존 파이프라인만)
-yolo/bin/python deployment/run_perception.py --set set2 --target banana --source 0 --show --log
+yolo/bin/python deployment/run_perception.py --target banana --source 0 --show --log
 ```
 rig 모드 키(`--show`): `p` SEARCH/VERIFY phase 토글 · `l` IR 안착 시뮬(`note_loaded(True)`)
 · `u` IR 빈 적재함 시뮬(`note_loaded(False)`) · `q` 종료. 같은 키를 `--ir-script "120:l,200:u"`
@@ -176,7 +176,7 @@ A vote counts as **target/other-fruit** only if it is calibrated-confident *and*
 yolo/bin/python deployment/export_set2_onnx.py        # dev box: portable ONNX
 # ON the Jetson (engines are device-specific):
 python deployment/build_set2_tensorrt.py --half       # detector + classifier FP16 engines
-python deployment/run_perception.py --set set2 --target <fruit> --show   # 4-cam rig
+python deployment/run_perception.py --target <fruit> --show   # 4-cam rig
 ```
 `run_perception.py` auto-uses `best.engine`/`best.onnx` when present (TensorRT EP → CUDA → CPU).
 전면 IMX219도 **같은 세트별 엔진을 그대로 공유**한다 (별도 빌드 없음).

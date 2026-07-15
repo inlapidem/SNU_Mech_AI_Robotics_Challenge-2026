@@ -77,17 +77,26 @@ def _normalize(usd_path: str) -> None:
     max_ext = max(size[0], size[1], size[2]) or 1.0
     s = TARGET_SIZE_M / max_ext
 
-    # Op order matters: list [Translate, Scale] applies translate first (most local), giving
-    # (p - center) * s  -> a clean scale-about-center. The reverse order mis-places the mesh.
+    # Use one matrix op so USD xform-op ordering cannot turn the intended
+    # (p - center) * s into p*s - center. The old separate Translate/Scale ops did
+    # exactly that on Isaac Sim 5.1, leaving a correctly-sized mesh tens of metres
+    # away from its local origin.
     xform = UsdGeom.Xformable(prim)
     xform.ClearXformOpOrder()
-    xform.AddTranslateOp().Set(-center)
-    xform.AddScaleOp().Set(Gf.Vec3f(s, s, s))
+    matrix = Gf.Matrix4d().SetTranslate(-center)
+    matrix = matrix * Gf.Matrix4d().SetScale(Gf.Vec3d(s, s, s))
+    xform.AddTransformOp().Set(matrix)
     stage.GetRootLayer().Save()
 
-    new = _extent(Usd.Stage.Open(usd_path), prim).GetSize()
+    new_stage = Usd.Stage.Open(usd_path)
+    new_prim = new_stage.GetDefaultPrim()
+    new_range = _extent(new_stage, new_prim)
+    new = new_range.GetSize()
+    new_center = new_range.GetMidpoint()
     print(f"  size before={tuple(round(v, 2) for v in size)} -> "
-          f"after={tuple(round(v, 3) for v in new)} (target {TARGET_SIZE_M} m)")
+          f"after={tuple(round(v, 3) for v in new)} "
+          f"center={tuple(round(v, 6) for v in new_center)} "
+          f"(target {TARGET_SIZE_M} m)")
 
 
 def main() -> None:

@@ -69,15 +69,15 @@ yolo/bin/python training/train_set1_classifier.py --epochs 60  --imgsz 128  # ->
 
 ```bash
 # Jetson 실기: 4캠 rig (Nuroum USB 0/1 = search + IMX219 CSI 0/1 = verify, configs/set1.yaml rig:)
-python deployment/run_perception.py --set set1 --target dodecahedron --show --phase SEARCH
+python deployment/run_perception.py --target dodecahedron --show --phase SEARCH
 
 # WSL/개발 PC mock: 4캠을 동영상 파일로 대체 (CSI 없이 융합 로직 테스트)
-yolo/bin/python deployment/run_perception.py --set set1 --target dodecahedron --show \
+yolo/bin/python deployment/run_perception.py --target dodecahedron --show \
     --cam side_left=capture/search.mp4  --cam side_right=capture/search.mp4 \
     --cam front_left=capture/verify_L.mp4 --cam front_right=capture/verify_R.mp4
 
 # 레거시 단일 카메라 디버그 (rig/FSM 없이)
-yolo/bin/python deployment/run_perception.py --set set1 --target dodecahedron --source 0 --show --log
+yolo/bin/python deployment/run_perception.py --target dodecahedron --source 0 --show --log
 ```
 
 rig 모드 키(`--show`): `p` phase 토글 · `l`/`u` IR 시뮬 · `q` 종료 (`--ir-script`로 헤드리스
@@ -110,7 +110,7 @@ Defaults in `configs/set1.yaml → runtime` (unit-tested): `conf_threshold 0.60`
 yolo/bin/python deployment/export_set1_onnx.py
 # ON the Jetson (engines are device-specific):
 python deployment/build_set1_tensorrt.py --half      # detector + classifier FP16 engines
-python deployment/run_perception.py --set set1 --target <shape> --show    # 4-cam rig
+python deployment/run_perception.py --target <shape> --show    # 4-cam rig
 ```
 
 전면 IMX219 도메인 갭 도구(`capture_front_crops.py` / `eval_front_domain_gap.py` /

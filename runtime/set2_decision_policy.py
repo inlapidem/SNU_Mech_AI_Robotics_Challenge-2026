@@ -48,12 +48,17 @@ class Set2DecisionPolicy:
     def _categorize(self, o):
         """One observation -> 'target' | 'other' | 'unknown' under the conf/margin gates.
 
-        A weak fruit prediction (conf below `unknown_conf_relax`) or a sub-margin call is
-        demoted to 'unknown' so a hesitant guess never counts as evidence."""
+        Only a FRUIT class is trusted here. In the unified label space a shape class --
+        especially 'cube', which is a blank/no-visible-fruit cube that may be THIS fruit
+        cube seen from a plain face -- counts as 'unknown' (re-observe from a new view),
+        NOT 'other' (reject): rejecting would blacklist a target fruit whose fruit faces
+        are simply hidden. This reproduces the old set2 behaviour where every non-fruit
+        view was 'unknown'. A weak (conf below `unknown_conf_relax`) or sub-margin fruit
+        call is likewise demoted to 'unknown' so a hesitant guess never counts."""
         conf_th, margin_th = self.c["conf_threshold"], self.c["margin_threshold"]
         relax = self.c["unknown_conf_relax"]
         cls = o["cls"]
-        if cls == "unknown" or cls is None or o["conf"] < relax:
+        if cls not in FRUITS or o["conf"] < relax:
             return "unknown"
         strong = o["conf"] >= conf_th and o["margin"] >= margin_th
         if not strong:

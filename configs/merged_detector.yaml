@@ -1,0 +1,33 @@
+# UNIFIED detector data: one class 'object' over BOTH sets' frames.
+#
+# Both sets label their single detector class as id 0 (Set 1 'polyhedron', Set 2
+# 'cube_candidate'), so listing both sets' image dirs here under names: {0: object}
+# reinterprets every box as a generic object WITHOUT any relabelling.
+#
+# PRIMARY unified synth = combined_v3 (sim/generate_combined_data.py): polyhedra AND
+# cubes co-present in every frame, ALL labelled 'object' -> the deployment distribution.
+# Generate with: python sim/generate_combined_data.py --frames 12000 --config configs/combined.yaml
+#
+# The other sources reinterpret each set's single detector class as id 0 without
+# relabelling. CAVEAT: the OLD set2 synth (set2_v2) leaves non-cube polyhedra UNLABELLED
+# (set2-only negatives) -> for a unified "detect every object" detector those are FALSE
+# NEGATIVES that suppress octa/dodeca/icosa recall, so it stays OUT. combined_v3 replaces
+# it (its polyhedra ARE 'object'). set1_v2 already labels polyhedra + fruit-cube
+# distractors as positives, so it is safe.
+path: /home/user/joon/datasets
+train:
+  - combined_v3/detector/images/train    # unified synth (both families, all 'object')
+  - set1_real/detector/images/train      # real polyhedra
+  - set1_autolabel/detector/images/train # real (auto-labelled video frames)
+  - set1_cam0714/detector/images/train   # real venue (0714)
+  - set2_real/detector/images/train      # real fruit cubes (cube_candidate boxes)
+  # Legacy per-set synth (set1_v2 / set1 / set2_v2 / set2) is intentionally OUT: combined_v3
+  # supersedes it and it can be deleted to free space. set2_v2 / set2 / set2_cam0714 ALSO
+  # left non-cube polyhedra UNLABELLED (false negatives), so they must never be added back.
+val:
+  - combined_v3/detector/images/val
+  - set1_real/detector/images/val
+  - set1_cam0714/detector/images/val
+  - set2_real/detector/images/val
+names:
+  0: object

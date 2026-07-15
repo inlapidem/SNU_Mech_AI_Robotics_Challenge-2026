@@ -100,6 +100,12 @@ class Set2Writer(Writer):
         self.cfg = cfg
         self._frame = 0
         self._det = 0
+        self._clf_counts = {cls: 0 for cls in FRUIT_CLASSES + [UNKNOWN]}
+        self._unknown_reasons = {}
+        self._fatal_error = None
+        # Crop retention/augmentation must not perturb the scene RNG. Otherwise a
+        # ratio-only config change also changes object poses, cameras and lighting.
+        self.rng = np.random.RandomState(cfg["dataset"].get("writer_seed", 1001))
         self.ctx = {}
         self.annotators = [
             AnnotatorRegistry.get_annotator("rgb"),
@@ -109,6 +115,20 @@ class Set2Writer(Writer):
         self.W, self.H = cfg["camera"]["width"], cfg["camera"]["height"]
         self.val_ratio = d["val_ratio"]
         self.lab = cfg["labeling"]
+        for reason, keep in self.lab.get("unknown_crop_keep", {}).items():
+            if not isinstance(keep, (int, float)) or not 0.0 <= keep <= 1.0:
+                raise ValueError(
+                    f"labeling.unknown_crop_keep.{reason} must be in [0, 1], got {keep}")
+        bg_keep = self.lab["background_unknown_frac"]
+        if not isinstance(bg_keep, (int, float)) or not 0.0 <= bg_keep <= 1.0:
+            raise ValueError(
+                f"labeling.background_unknown_frac must be in [0, 1], got {bg_keep}")
+        target = self.lab.get("unknown_target_frac", [0.0, 1.0])
+        if (not isinstance(target, list) or len(target) != 2
+                or not all(isinstance(v, (int, float)) for v in target)
+                or not 0.0 <= target[0] <= target[1] <= 1.0):
+            raise ValueError(
+                f"labeling.unknown_target_frac must be [min, max] in [0, 1], got {target}")
         self.min_bright = d["min_frame_brightness"]
         root = os.path.join(ROOT, d["root"])
         self.dirs = {}
@@ -151,6 +171,16 @@ class Set2Writer(Writer):
         x0, y0, x1, y1 = box
         return x0 <= m or y0 <= m or x1 >= self.W - m or y1 >= self.H - m
 
+    def _keep_unknown_crop(self, reason):
+        """Thin redundant unknown crops without changing labels or detector data."""
+        keep = self.lab.get("unknown_crop_keep", {}).get(reason, 1.0)
+        return self.rng.uniform() < keep
+
+    def _record_crop(self, label, reason):
+        self._clf_counts[label] += 1
+        if label == UNKNOWN:
+            self._unknown_reasons[reason] = self._unknown_reasons.get(reason, 0) + 1
+
     def _decide_label(self, meta, box, vis):
         """Visible-fruit-evidence label for one cube crop. Returns (label, reason).
 
@@ -180,21 +210,21 @@ class Set2Writer(Writer):
         clear = (facing >= 1.3 * L["min_fruit_face_facing"]
                  and ratio >= 1.5 * L["min_fruit_area_ratio"]
                  and fbox_min >= 1.4 * L["min_fruit_box_px"])
-        if clear or RNG.uniform() < L["hard_positive_keep"]:
+        if clear or self.rng.uniform() < L["hard_positive_keep"]:
             return meta["fruit"], "fruit_visible"
         return UNKNOWN, "borderline"
 
     def write(self, data):
         try:
-            self._write(data)
+            self._write_impl(data)
         except Exception as e:
-            if self._frame < 5:
-                import traceback
-                print(f"[SET2] write err frame {self._frame}: {e}", file=sys.stderr)
-                traceback.print_exc()
+            import traceback
+            self._fatal_error = e
+            print(f"[SET2] write err frame {self._frame}: {e}", file=sys.stderr)
+            traceback.print_exc()
             self._frame += 1
 
-    def _write(self, data):
+    def _write_impl(self, data):
         rgb = data["rgb"][:, :, :3]
         if rgb.dtype != np.uint8:
             rgb = (np.clip(rgb, 0, 1) * 255).astype(np.uint8)
@@ -229,11 +259,14 @@ class Set2Writer(Writer):
 
             if kind == "neg":
                 # Non-cube polyhedron: NOT a detector box (hard background negative);
-                # its crop is an explicit 'unknown' (non-fruit object).
-                crop = self._crop(rgb, box, RNG.uniform(0, 0.1), (0, 0))
-                if crop is not None:
-                    _save_png(os.path.join(self.dirs[f"clf/{split}/{UNKNOWN}"],
-                                           f"{stem}_neg{k}.png"), crop)
+                # keep it in the scene on every frame, but only retain a configured
+                # fraction of its repetitive classifier crops as 'unknown'.
+                if self._keep_unknown_crop("noncube"):
+                    crop = self._crop(rgb, box, self.rng.uniform(0, 0.1), (0, 0))
+                    if crop is not None:
+                        _save_png(os.path.join(self.dirs[f"clf/{split}/{UNKNOWN}"],
+                                               f"{stem}_neg{k}.png"), crop)
+                        self._record_crop(UNKNOWN, "noncube")
                 continue
 
             # ---- cube: detector positive (class 0), regardless of fruit visibility ----
@@ -243,15 +276,18 @@ class Set2Writer(Writer):
             meta = cubes.get(idx, {"fruit": None})
             label, reason = self._decide_label(meta, box, vis)
             valid = label != UNKNOWN
-            n_crops = self.lab["crops_per_object"] if valid else 1
+            n_crops = (self.lab["crops_per_object"] if valid else
+                       int(self._keep_unknown_crop(reason)))
             for ci in range(n_crops):
-                margin = RNG.uniform(*self.lab["crop_margin_frac"])
-                shift = (RNG.uniform(-1, 1) * self.lab["crop_shift_frac"],
-                         RNG.uniform(-1, 1) * self.lab["crop_shift_frac"]) if valid else (0, 0)
+                margin = self.rng.uniform(*self.lab["crop_margin_frac"])
+                shift = (self.rng.uniform(-1, 1) * self.lab["crop_shift_frac"],
+                         self.rng.uniform(-1, 1) * self.lab["crop_shift_frac"]) \
+                    if valid else (0, 0)
                 crop = self._crop(rgb, box, margin, shift)
                 if crop is not None:
                     _save_png(os.path.join(self.dirs[f"clf/{split}/{label}"],
                                            f"{stem}_o{k}_{ci}.png"), crop)
+                    self._record_crop(label, reason)
             objects.append({"cube": idx, "fruit": meta.get("fruit"),
                             "bbox": [round(v, 1) for v in box], "visible": round(vis, 3),
                             "label": label, "reason": reason,
@@ -274,11 +310,13 @@ class Set2Writer(Writer):
         with open(os.path.join(self.dirs[f"{self.det_sub}/labels/{split}"], stem + ".txt"), "w") as f:
             f.write("\n".join(det_lines) + ("\n" if det_lines else ""))
 
-        if RNG.uniform() < self.lab["background_unknown_frac"]:
-            s = int(RNG.uniform(self.lab["min_box_px"], self.lab["min_box_px"] * 3))
-            bx = int(RNG.uniform(0, self.W - s)); by = int(RNG.uniform(0, self.H - s))
+        if self.rng.uniform() < self.lab["background_unknown_frac"]:
+            s = int(self.rng.uniform(self.lab["min_box_px"], self.lab["min_box_px"] * 3))
+            bx = int(self.rng.uniform(0, self.W - s))
+            by = int(self.rng.uniform(0, self.H - s))
             _save_png(os.path.join(self.dirs[f"clf/{split}/{UNKNOWN}"], f"{stem}_bg.png"),
                       rgb[by:by + s, bx:bx + s])
+            self._record_crop(UNKNOWN, "background")
 
         meta = {k: v for k, v in self.ctx.items() if k != "cubes"}
         meta.update({"frame": self._frame, "split": split, "image": stem + ".png",
@@ -368,7 +406,7 @@ def build():
         i += 1
 
     # Non-cube negatives (octa/dodeca/icosa) if the Set 1 USDs are present: manually
-    # driven references (sim/poly_assets) resting EXACTLY on the floor like the real
+    # driven meshes baked from those USDs, resting EXACTLY on the floor like the real
     # Set 1 solids - the old declarative scatter (z 0.03-0.18) left them floating
     # mid-air. They appear as UNLABELLED hard negatives + 'unknown' crops.
     if CFG["cubes"].get("use_noncube_negatives", False):
@@ -408,7 +446,7 @@ def build():
             lo = [c - bm["color_jitter"] for c in bm["base_color"]]
             hi = [c + bm["color_jitter"] for c in bm["base_color"]]
             with rep.trigger.on_frame(num_frames=args.frames):
-                with rep.get.prims(path_pattern="/World/Neg.*/Geom"):
+                with rep.get.prims(path_pattern="/World/Neg.*/Pose/Geom"):
                     rep.randomizer.color(colors=rep.distribution.uniform(lo, hi))
         writer = rep.writers.get("Set2Writer")
         writer.initialize(cfg=CFG)
@@ -484,10 +522,10 @@ def main():
             euler = (float(RNG.uniform(tilt_lo, tilt_hi)),
                      float(RNG.uniform(tilt_lo, tilt_hi)),
                      float(RNG.uniform(0, 360)))
-            xy = dr.place_nonoverlapping(RNG, 0.65 * edge, placed, bounds)
+            xy = dr.place_nonoverlapping(RNG, 0.71 * edge, placed, bounds)   # cube diag
             UsdGeom.Imageable(fc.xform).MakeVisible()
             fc.set_pose((xy[0], xy[1], cube_rest_z(euler, edge)), euler, edge)
-            placed.append((xy[0], xy[1], 0.65 * edge))
+            placed.append((xy[0], xy[1], 0.71 * edge))
             if c["fruit"] is None:
                 fc.hide_labels()
             else:
@@ -567,8 +605,17 @@ def main():
             rep.orchestrator.step(rt_subframes=sub)
         except TypeError:
             rep.orchestrator.step()
+        if writer._fatal_error is not None:
+            raise RuntimeError("Set2Writer failed; see the traceback above") from writer._fatal_error
 
+    total_crops = sum(writer._clf_counts.values())
+    unknown_frac = writer._clf_counts[UNKNOWN] / max(total_crops, 1)
+    target_lo, target_hi = CFG["labeling"].get("unknown_target_frac", [0.0, 1.0])
+    target_state = "OK" if target_lo <= unknown_frac <= target_hi else "CHECK"
     print(f"[SET2] done: frames seen={writer._frame} detector images={writer._det}", file=sys.stderr)
+    print(f"[SET2] classifier crops={writer._clf_counts} unknown={unknown_frac:.1%} "
+          f"target={target_lo:.0%}-{target_hi:.0%} [{target_state}]", file=sys.stderr)
+    print(f"[SET2] saved unknown reasons={writer._unknown_reasons}", file=sys.stderr)
 
 
 if __name__ == "__main__":
