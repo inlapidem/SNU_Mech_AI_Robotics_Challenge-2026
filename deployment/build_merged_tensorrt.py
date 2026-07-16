@@ -16,18 +16,17 @@ import subprocess
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def build_detector(half):
+def build_detector(half, det_dir):
     from ultralytics import YOLO
     import yaml
     cfg = yaml.safe_load(open(os.path.join(ROOT, "configs", "merged.yaml"), encoding="utf-8"))
     sz = int(cfg["runtime"]["detector_imgsz"])   # match runtime inference size (shared key)
-    p = os.path.join(ROOT, "models", "merged", "detector", "best.pt")
+    p = os.path.join(det_dir, "best.pt")
     path = YOLO(p).export(format="engine", imgsz=sz, half=half, dynamic=False)
     print(f"detector engine (imgsz {sz}) ->", path)
 
 
-def build_classifier(half):
-    cdir = os.path.join(ROOT, "models", "merged", "classifier")
+def build_classifier(half, cdir):
     onnx = os.path.join(cdir, "best.onnx")
     if not os.path.isfile(onnx):
         raise SystemExit("Run export_merged_onnx.py first to produce classifier best.onnx")
@@ -44,6 +43,8 @@ def build_classifier(half):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--half", action="store_true", help="FP16 (recommended on Orin Nano)")
+    ap.add_argument("--detector-dir", default=os.path.join(ROOT, "models", "merged", "detector"))
+    ap.add_argument("--classifier-dir", default=os.path.join(ROOT, "models", "merged", "classifier"))
     args = ap.parse_args()
-    build_detector(args.half)
-    build_classifier(args.half)
+    build_detector(args.half, args.detector_dir)
+    build_classifier(args.half, args.classifier_dir)

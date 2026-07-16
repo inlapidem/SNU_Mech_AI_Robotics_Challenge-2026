@@ -1,31 +1,34 @@
 """Export the UNIFIED models to ONNX (portable; build TensorRT on the Jetson itself).
 
     yolo/bin/python deployment/export_merged_onnx.py
-Outputs:
-    models/merged/detector/best.onnx
-    models/merged/classifier/best.onnx
+    # export a specific (e.g. approved/backed-up) build while a retrain is in flight:
+    yolo/bin/python deployment/export_merged_onnx.py \
+        --classifier-dir models/merged/classifier_relabel_bak
+Outputs (best.onnx is written INTO each model dir):
+    <detector-dir>/best.onnx
+    <classifier-dir>/best.onnx
 """
 
+import argparse
 import json
 import os
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def export_detector():
+def export_detector(det_dir):
     from ultralytics import YOLO
     import yaml
     cfg = yaml.safe_load(open(os.path.join(ROOT, "configs", "merged.yaml"), encoding="utf-8"))
     sz = int(cfg["runtime"]["detector_imgsz"])   # match runtime inference size (shared key)
-    p = os.path.join(ROOT, "models", "merged", "detector", "best.pt")
+    p = os.path.join(det_dir, "best.pt")
     path = YOLO(p).export(format="onnx", imgsz=sz, opset=12, simplify=True, dynamic=False)
     print(f"detector ONNX (imgsz {sz}) ->", path)
 
 
-def export_classifier():
+def export_classifier(cdir):
     import torch
     from runtime.merged_pipeline import build_classifier_torch
-    cdir = os.path.join(ROOT, "models", "merged", "classifier")
     classes = json.load(open(os.path.join(cdir, "classes.json")))
     imgsz = json.load(open(os.path.join(cdir, "temperature.json")))["imgsz"]
     model = build_classifier_torch(len(classes))          # 9 classes
@@ -51,5 +54,12 @@ def export_classifier():
 if __name__ == "__main__":
     import sys
     sys.path.insert(0, ROOT)
-    export_detector()
-    export_classifier()
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--detector-dir", default=os.path.join(ROOT, "models", "merged", "detector"))
+    ap.add_argument("--classifier-dir", default=os.path.join(ROOT, "models", "merged", "classifier"))
+    ap.add_argument("--only", choices=["detector", "classifier", "both"], default="both")
+    args = ap.parse_args()
+    if args.only in ("detector", "both"):
+        export_detector(args.detector_dir)
+    if args.only in ("classifier", "both"):
+        export_classifier(args.classifier_dir)
