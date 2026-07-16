@@ -154,8 +154,15 @@ class DiffDriveController:
         v, w = self._limit(0.0, w_des, dt)
         return v, w, False
 
-    def go_to(self, pose, goal_xy, dt, final_yaw=None, speed_cap=None):
-        """목표점 주행 (회전-후-직진 + 근접 감속). returns (v, w, done)"""
+    def go_to(self, pose, goal_xy, dt, final_yaw=None, speed_cap=None,
+              flyby=False):
+        """목표점 주행 (회전-후-직진 + 근접 감속). returns (v, w, done)
+
+        flyby=True: 이 목표점은 경로 중간 통과점 — 근접 감속을 생략해 순항을
+        유지하고, 예각 방향전환은 제자리 회전 대신 곡선(arc)으로 돈다. 호출부는
+        통과점을 pos_tol 이 아니라 룩어헤드 거리에서 미리 넘겨(pop) 코너를 돌며
+        다음 통과점으로 이어 붙인다. 급회전(>90°, 경로 되꺾임)만 제자리 회전.
+        """
         c = self.cfg
         x, y, yaw = pose
         dx, dy = goal_xy[0] - x, goal_xy[1] - y
@@ -169,7 +176,8 @@ class DiffDriveController:
 
         heading = math.atan2(dy, dx)
         herr = wrap_angle(heading - yaw)
-        if abs(herr) > math.radians(c.turn_in_place_deg):
+        tip = math.radians(90.0 if flyby else c.turn_in_place_deg)
+        if abs(herr) > tip:
             w_des = max(-c.max_w, min(c.max_w, c.kp_ang * herr))
             if abs(w_des) < c.min_w:
                 w_des = math.copysign(c.min_w, w_des)
@@ -177,8 +185,11 @@ class DiffDriveController:
             return v, w, False
 
         cap = c.max_v if speed_cap is None else min(c.max_v, speed_cap)
-        v_des = min(cap, c.kp_lin * dist,
-                    cap * max(0.25, min(1.0, dist / c.decel_dist)))
+        if flyby:
+            v_des = cap                       # 통과점: 근접 감속 없이 순항 유지
+        else:
+            v_des = min(cap, c.kp_lin * dist,
+                        cap * max(0.25, min(1.0, dist / c.decel_dist)))
         v_des = max(c.min_v, v_des)
         # 방향 오차가 클수록 감속 (곡률 완화)
         v_des *= max(0.2, math.cos(herr))
@@ -208,6 +219,10 @@ class GridPlanner:
         self.geom = geom
         self.cell = cell
         self.inflate = robot_radius + obj_radius + extra_margin
+        # soft 장애물(분류 완료된 비타깃)용 축소 반경: 이 반경 밖으로만 지나면
+        # 정면 포획(lat<CAPTURE_LAT) 없이 옆으로 밀어내며 통과 = 밀집 틈 관통.
+        # 기본은 inflate 와 동일(soft 효과 없음) — 미션이 plow 켤 때만 축소.
+        self.soft_inflate = self.inflate
         self.wall_margin = robot_radius + 0.02
         self.nx = int(round(geom.arena_w / cell))
         self.ny = int(round(geom.arena_h / cell))
@@ -220,7 +235,7 @@ class GridPlanner:
     def _to_xy(self, c):
         return ((c[0] + 0.5) * self.cell, (c[1] + 0.5) * self.cell)
 
-    def _blocked(self, cx, cy, obstacles, keepouts):
+    def _blocked(self, cx, cy, obstacles, keepouts, soft=()):
         x, y = (cx + 0.5) * self.cell, (cy + 0.5) * self.cell
         if not self.geom.in_arena(x, y, self.wall_margin):
             return True
@@ -230,9 +245,13 @@ class GridPlanner:
         for ox, oy in obstacles:
             if (x - ox) ** 2 + (y - oy) ** 2 < self.inflate ** 2:
                 return True
+        si2 = self.soft_inflate ** 2
+        for ox, oy in soft:
+            if (x - ox) ** 2 + (y - oy) ** 2 < si2:
+                return True
         return False
 
-    def _los_free(self, p0, p1, obstacles, keepouts):
+    def _los_free(self, p0, p1, obstacles, keepouts, soft=()):
         d = math.hypot(p1[0] - p0[0], p1[1] - p0[1])
         n = max(2, int(d / (self.cell * 0.5)))
         for i in range(n + 1):
@@ -240,29 +259,32 @@ class GridPlanner:
             x = p0[0] + t * (p1[0] - p0[0])
             y = p0[1] + t * (p1[1] - p0[1])
             c = self._to_cell(x, y)
-            if self._blocked(c[0], c[1], obstacles, keepouts):
+            if self._blocked(c[0], c[1], obstacles, keepouts, soft):
                 return False
         return True
 
-    def plan(self, start_xy, goal_xy, obstacles, keepouts=()):
+    def plan(self, start_xy, goal_xy, obstacles, keepouts=(), soft=()):
         """A* → 웨이포인트 목록 (goal 포함, start 제외). 실패 시 None.
 
-        obstacles: [(x,y), ...] — 회피할 물체 중심들 (목표 물체는 빼고 넣을 것)
+        obstacles: [(x,y), ...] — 하드 회피 물체 중심들 (목표 물체는 빼고 넣을 것)
         keepouts:  [Rect, ...]  — 진입 금지 구역 (예: 하역 전 보관함)
+        soft:      [(x,y), ...] — 축소 반경(soft_inflate)으로만 피하는 물체 (분류 완료
+                                  비타깃): 밀집 틈을 비집고 지나가며 옆으로 밀어낸다.
         """
         start = self._to_cell(*start_xy)
         goal = self._to_cell(*goal_xy)
 
         # 목표/출발 셀이 팽창 반경에 걸려 막혀 있으면 그 근처 물체는 무시하고 연다
         # (접근 목표는 물체 바로 앞이므로 당연히 걸린다).
-        obs_goal = [o for o in obstacles
-                    if (o[0] - goal_xy[0]) ** 2 + (o[1] - goal_xy[1]) ** 2
-                    > self.inflate ** 2 * 0.9]
-        obs = [o for o in obs_goal
-               if (o[0] - start_xy[0]) ** 2 + (o[1] - start_xy[1]) ** 2
-               > self.inflate ** 2 * 0.9]
+        def _far(lst, ref, r2):
+            return [o for o in lst
+                    if (o[0] - ref[0]) ** 2 + (o[1] - ref[1]) ** 2 > r2]
+        i2 = self.inflate ** 2 * 0.9
+        s2 = self.soft_inflate ** 2 * 0.9
+        obs = _far(_far(obstacles, goal_xy, i2), start_xy, i2)
+        soft = _far(_far(soft, goal_xy, s2), start_xy, s2)
 
-        if self._blocked(goal[0], goal[1], obs, keepouts):
+        if self._blocked(goal[0], goal[1], obs, keepouts, soft):
             # 목표 셀이 막혔으면(장애물 밀집·가상 장애물 축적) 근처의 열린
             # 셀로 완화 — None 을 돌려주면 호출부가 직선 폴백으로 장애물을
             # 관통하므로(재스쿱 루프) 완화가 훨씬 안전하다.
@@ -275,7 +297,7 @@ class GridPlanner:
                         c = (goal[0] + dx, goal[1] + dy)
                         if not (0 <= c[0] < self.nx and 0 <= c[1] < self.ny):
                             continue
-                        if not self._blocked(c[0], c[1], obs, keepouts):
+                        if not self._blocked(c[0], c[1], obs, keepouts, soft):
                             found = c
                             break
                     if found:
@@ -305,7 +327,7 @@ class GridPlanner:
                     nb = (cur[0] + dx, cur[1] + dy)
                     if not (0 <= nb[0] < self.nx and 0 <= nb[1] < self.ny):
                         continue
-                    if self._blocked(nb[0], nb[1], obs, keepouts):
+                    if self._blocked(nb[0], nb[1], obs, keepouts, soft):
                         continue
                     step = math.hypot(dx, dy) * self.cell
                     ng = g[cur] + step
@@ -332,7 +354,7 @@ class GridPlanner:
         i = 0
         while i < len(pts):
             j = len(pts) - 1
-            while j > i and not self._los_free(cur, pts[j], obs, keepouts):
+            while j > i and not self._los_free(cur, pts[j], obs, keepouts, soft):
                 j -= 1
             out.append(pts[j])
             cur = pts[j]

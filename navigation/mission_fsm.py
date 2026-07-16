@@ -24,10 +24,50 @@ IR 적재 여부, 위치추정 건강도. 출력: (v, w, dbg). dbg["percep_cmds"
 """
 
 import math
+import os
+import sys
 from dataclasses import dataclass, field
 
 from nav_core import (ArenaGeometry, ControllerConfig, DiffDriveController,
                       GridPlanner, Rect, StallDetector, wrap_angle)
+
+# ---- 클래스 -> set 유도 (통합 엔진 taxonomy 단일 소스) -----------------------
+# 통합 검출기(1개)+9클래스 분류기(1개) 체제에서 관측은 클래스만 신뢰 가능하고
+# 'set' 은 클래스에서 유도한다. 'cube' 는 set1 큐브와 '과일 숨은 set2 큐브'가
+# 픽셀 동일이라 원리적으로 모호 → set=None 으로 두고 다시점 인증(_maybe_confirm
+# _cube)에 위임한다. (configs.combined_classes.CLASS_TO_SET 는 cube->set1 로
+# 라우팅하지만 그건 정책 라우팅용이지 확정이 아님 — 여기서는 확정 관점이라 None.)
+# 정본이 import 되면 그 이름 공간을 쓰고, 순수 시뮬레이션이면 내장 별칭으로 폴백.
+_CUBE_ALIASES = {"cube", "white_cube", "whitecube"}
+
+
+def _build_cls_set():
+    m = {}
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from configs.combined_classes import CLASS_TO_SET  # 순수 파이썬, 안전
+        m.update({k: v for k, v in CLASS_TO_SET.items()})
+    except Exception:
+        pass
+    # 축약형 별칭(sim) + 정본 전체 이름 모두 수용
+    m.setdefault("octa", "set1"); m.setdefault("octahedron", "set1")
+    m.setdefault("dodeca", "set1"); m.setdefault("dodecahedron", "set1")
+    m.setdefault("icosa", "set1"); m.setdefault("icosahedron", "set1")
+    for f in ("apple", "orange", "banana", "pineapple"):
+        m.setdefault(f, "set2")
+    return m
+
+
+_CLS_SET = _build_cls_set()
+
+
+def derive_set(cls):
+    """예측 클래스명 -> 소유 set('set1'|'set2') 또는 None. 'cube'/'unknown'/미상은
+    None (cube 는 다시점 인증 전까지 소유 set 미정)."""
+    if cls in _CUBE_ALIASES:
+        return None
+    return _CLS_SET.get(cls)
+
 
 # ---- 미션 상태 --------------------------------------------------------------
 IDLE = "IDLE"
@@ -38,6 +78,7 @@ CAPTURE = "CAPTURE"               # blind push: 방향 고정 저속 전진, IR 
 RETREAT = "RETREAT"               # 후진 이탈 (거부/실패/스탈 후)
 TRANSPORT = "TRANSPORT"           # 적재 상태로 보관함 접근 지점까지
 DEPOSIT_SHED = "DEPOSIT_SHED"     # 하역 직전 제자리 회전 — 밀항 물체 털어내기
+DEPOSIT_REALIGN = "DEPOSIT_REALIGN"  # 정렬: 제자리 회전 대신 후진-호로 -x 정렬
 DEPOSIT_PUSH = "DEPOSIT_PUSH"     # 보관함 안으로 밀어넣기
 DEPOSIT_RELEASE = "DEPOSIT_RELEASE"  # 후진+위글로 물체 분리
 PARK = "PARK"                     # 종료 대기
@@ -60,30 +101,71 @@ DEFAULT_PARAMS = dict(
     match_duration_s=180.0,
     # --- 속도/기하 (실측 후 조정) ---
     cruise_v=0.15, approach_v=0.10, push_v=0.06, reverse_v=0.10,
-    robot_radius=0.22,          # 외접 반경 (실측)
-    payload_offset=0.26,        # 로봇 중심 -> 빈에 안착한 물체 중심 [m] (실측)
+    robot_radius=0.22,          # 계획 팽창 반경 (robot.stl 외접 ~0.23)
+    # 경로 중간 통과점 룩어헤드 [m]: 이 거리 안에 들면 감속 없이 다음 통과점으로
+    # 넘겨 코너를 곡선으로 돈다 (순항 지속시간↑). 최종 목표점만 정밀 감속·정지.
+    # ⚠ 클수록 코너를 크게 잘라 매핑 물체를 스쿱에 걸 위험↑. 스윕(2026-07-16):
+    # 0.16 이 순항이득 대비 오포획 churn 최소 균형 (0.10 과도감속/0.30 과도절단).
+    flyby_enable=True,
+    flyby_lookahead=0.16,
+    # 주행 중(GOTO/TOUR) 경로 주기 재계획 [s]: 정적 경로가 '나중에 매핑된' 물체를
+    # 향해 달려 스쿱에 거는 churn 을 줄인다. 0 이면 비활성(경로 소진 시에만 계획).
+    replan_period_s=1.0,
+    # robot.stl/3MF 실측(2026-07-16): 몸체 34×31cm(바퀴 포함 폭 38), 구동바퀴 트랙
+    # 347mm, 베이스 340×310, 바스켓 내폭 147·깊이 140mm(개구부=앞), IR 센서는
+    # 내벽에서 50mm 양쪽. 물체 선단이 IR 에 닿을 때 적재 확정 → 물체중심이 회전
+    # 중심에서 ~70mm 앞 → payload_offset 0.07 (구 0.26은 임의값, 0.10은 초기 추정).
+    payload_offset=0.07,        # 로봇 중심 -> 스쿱에 담긴 물체 중심 [m] (3MF 실측)
     # --- 탐색 ---
     # 배치 격자(50cm)의 행 사이 중간선을 달린다 — 몸체가 물체와 안 닿고
     # 측면캠이 양옆 행을 1.5m 안에서 훑는다. 격자 원점이 다르면 실측 후 조정.
     tour_lanes_y=(1.0, 3.0),
     tour_margin_x=0.7,          # 레인 좌우 끝 여유
     # --- 접근/포획 ---
-    standoff_dist=0.60,         # 물체 앞 정지 지점 (verify 시작 거리)
+    standoff_dist=0.60,         # 물체 앞 정지 지점 (verify 시작 거리).
+                                # ⚠ 0.50 단축은 기각(2026-07-16): 48시드 평균 +2.3
+                                # 이지만 시나리오 C(seed102)에서 접근 경로가 바뀌며
+                                # 의도치 않은 스쿱→배출→재스쿱 무한루프(경기 0점)
+                                # 유발 — 평균 이득 뒤에 파국 실패 모드가 숨어 있었음.
     approach_stop_short=0.35,   # READY 없이는 물체 앞 이 거리까지만 전진.
                                 # 포켓(payload_offset 0.26)보다 충분히 길어야
                                 # 위치 오차에도 승인 없는 스쿱이 안 생긴다.
     approach_range_guard=0.32,  # verify 관측 거리가 이보다 가까운데 READY 가
                                 # 없으면 즉시 중단 (이동거리 기준의 이중 안전)
+    # 포켓(0.10)이 verify 블라인드(0.28) 안쪽이라 blind push 는 짧아야 성공한다.
+    # READY 가 떠도 이 거리보다 멀면 시각 조향으로 계속 접근한 뒤, 이 안에 들면
+    # 마지막 짧은 구간만 blind push (실 스쿱은 깔때기가 소량 오정렬 흡수).
+    blind_push_range=0.40,
     approach_timeout_s=14.0,
     capture_push_max=0.45,      # blind push 최대 전진 거리
     capture_push_limit_s=6.0,   # configs/*.yaml verify.capture_push_limit 와 일치
     retreat_dist=0.30,
     micro_adjust_dist=0.15, micro_adjust_yaw_deg=35.0,  # 과일면이 다른 45° 섹터에
                                                         # 있을 수 있어 크게 돈다
+    # 무지면 재관측 방식: "legacy"(후진+고정 35° 지터로 0.60m 재대기, 구동작) |
+    # "smart"(가까운 그림면 각도로 직접 재대기 — blank_sectors 회피, 되돌림 최소) |
+    # "defer"(그 과일 보류하고 다른 목표로; 재선택 시 blank-aware 로 그림면 접근).
+    # ⚠ 스윕(2026-07-16, 32시드×3): 셋 다 점수 노이즈 내 동률(방황시간이 하역
+    # 수를 거의 안 바꿈), 오픽업 동일(bothcube seed2 는 face_aware 무관 기존건).
+    # ⚠ defer·smart 둘 다 시나리오 C(유실 회수) 깨짐 → 기각. 방황 감소는
+    #   face_aware_standoff(첫 접근을 그림면으로) 가 안전하게 담당. legacy 유지.
+    micro_adjust_mode="legacy",
+    micro_review_radius=0.50,   # smart 재관측 대기 반경(무지면 접근보다 가깝게)
+    # 접근각 선택 시 과일 무지면 섹터를 회피(관측된 blank_sectors) — 방황 감소.
+    face_aware_standoff=True,
     max_tries_per_object=2,     # 접근 실패 허용 횟수 (초과 시 블랙리스트)
     ir_lost_patience_s=0.8,     # 운반 중 IR 순간 끊김 허용
+    # 접근 중 IR 안착이 뜨면(타깃이 포켓 사거리 안일 때) 블라인드 푸시 단계를
+    # 안 기다리고 즉시 적재 확정. 원거리 이물질 IR 은 근접 게이트로 걸러 배출.
+    ir_capture_on_approach=True,
+    # ⚠ 확정 타깃 무지면 즉시 푸시(confident_capture)는 기각(2026-07-16): 전방
+    # 면확인을 건너뛰면 타깃 근처의 비타깃을 블라인드로 담아 오픽업(−2×가치).
+    # 면가시성 확인은 '정렬'이자 '정체 확인'이라 생략 불가. 대신 무지면 접근을
+    # 애초에 피한다(아래 face-aware standoff) + 필요 시 궤도를 blind창(50°) 넘게.
+    confident_capture=False,
     # --- 2개 운반 (더블 캐리): 빈 안쪽 1개(IR 확인) + 입구에 1개 더 물고 운반 ---
-    double_carry=True,          # A 포획 후 근처 확정 타깃 B를 입구에 물고 같이 하역
+    double_carry=False,         # ⚠ robot.stl 스쿱은 U자 1물체용 → 더블캐리 off
+                                # (2번째 슬롯 물리 미확인. True 로 A/B 검증은 가능)
     pair_max_dist=1.5,          # A 포획 지점에서 B 후보 최대 거리
     pair_max_turn_deg=70.0,     # B에서 보관함 방향으로 꺾이는 각 상한 (커브 완만해야
                                 # 입구의 B가 안 빠짐)
@@ -98,6 +180,28 @@ DEFAULT_PARAMS = dict(
     shed_spin=True,
     shed_spin_angle_deg=330.0,
     shed_spin_w=1.1,            # carry_w_max/미끄럼 임계보다 확실히 크게
+    # ⚠ 셰드는 매 단일 하역마다 ~5s(330° @1.1rad/s + 재정렬)를 먹는다. 밀항이
+    # 실제로 붙으려면 운반 중 입구 슬롯이 매핑된 물체를 스쳐야 하고, 그마저도
+    # 운반 회전에서 대부분 자연 이탈한다(계측: shed OFF 100경기 하역단계 생존 0,
+    # 오픽업 0). shed_gate=True 는 '위험 있을 때만' 셰드: 운반 중 전방 입구
+    # 슬롯 근처를 지난 매핑 물체가 있었을 때만 돈다 → 명목 경기는 스핀 생략.
+    shed_gate=True,
+    stowaway_ride_offset=0.35,  # 입구(2번째 슬롯) 전방 거리 [m] (World.FRONT_OFF)
+    stowaway_ride_radius=0.08,  # 이 안으로 매핑 물체가 들어오면 밀항 위험 플래그.
+                                # sim 포획창(축 9cm/횡 5cm)+메모리 노이즈 여유.
+                                # 24시드 스윕: 0.08 이 발동 9/24(vs 0.13 14/24),
+                                # 점수 소폭↑, 오픽업 0 유지.
+    # 하역 정렬 방식: "rotate"(도착점에서 제자리 회전으로 -x 정렬, 기본/최속) |
+    # "reapproach"(후진-호로 정렬) | "push_through"(정렬 생략, 바로 밀어넣기).
+    # ⚠ 스윕 검증(2026-07-16): rotate 가 최선. reapproach 는 적재 중 후진이
+    # 앞이 열린 빈에서 적재물을 흘려 점수 폭락(both 30.6→16.9). push_through 는
+    # 하역 레인(y=0.30)이 남벽 8cm 앞이라 비정렬 진입이 벽을 긁어 벽충돌 폭증
+    # (708+/16경기)+오픽업 발생. → 벽 근접 기하에서 정렬은 필수. 토글은 실기
+    # 기하(레인이 벽에서 멀면 push_through 재검토)용으로 남겨둠.
+    deposit_align="rotate",
+    realign_tol_deg=12.0,       # 이 각오차 이하이면 정렬 완료로 보고 바로 밀어넣기
+    realign_backup_dist=0.45,   # 후진-호 최대 후진 거리(그 안에 못 맞추면 푸시가 보정)
+    realign_reverse_v=0.10,
     # --- 하역 ---
     deposit_approach_x=0.95,    # 보관함 진입 직전 정렬 지점 x (진행방향 -x)
     deposit_lane_y=0.30,        # 진입 레인 y — 도착오차+요오차로 벽쪽 드리프트해도
@@ -106,23 +210,52 @@ DEFAULT_PARAMS = dict(
                                         # 서쪽 벽 쪽으로 밀려 쌓임 (벽이 백스톱)
     deposit_push_v=0.10,        # 하역 진입 속도 — 검증 끝난 구간이라 포획 푸시보다
                                 # 빨라도 됨 (트립당 고정 오버헤드 절감)
+    # 빠른 하역: 보관함 안쪽 모서리의 3mm 문턱이 물체를 잡아준다면(bin_lip) 오버런
+    # 스필 걱정이 없어 벽 근처 감속을 생략하고 끝까지 빠르게 민다. ⚠ 턱이 없으면
+    # 오버런으로 물체가 벽 타고 스필 위험 → 실기 턱 확인 후 켤 것.
+    deposit_fast=False,
+    deposit_fast_v=0.16,
     release_reverse_dist=0.40,
     release_reverse_v=0.12,
     release_wiggle_w=0.5, release_wiggle_period_s=0.6,
     # --- 목표 선택 / 시간 예산 ---
+    # 방문 순서 정책: value_time(가치/시간 탐욕, 기본) | nearest | value_first |
+    #   pair_aware. ⚠ 파라미터 탐색(2026-07-15) 결과 대안 정책 전부 무이득~손해
+    #   (nearest/value_first 동률, pair_aware 는 더블캐리↑지만 점수↓) → value_time 유지.
+    target_policy="value_time",
+    pair_boost=1.5,             # pair_aware 전용 (미채택)
     value_set1=10.0, value_set2=20.0,
     value_unknown=4.0,          # 미확인 후보를 조사하러 갈 기대 가치
     unknown_gate="full_tour",   # 미확인 조사 허용 시점: full_tour(투어 1바퀴 후) |
                                 # first_lane(첫 레인 후) | always(즉시)
-    eff_speed=0.11,             # 왕복 예상시간 계산용 유효 속도 (회전 포함)
+    # --- 비타깃 관통(plow): 분류 완료 비타깃을 축소 반경으로 비집고 통과해 경로
+    #     직선화. ⚠ 파라미터 탐색(2026-07-15) 결과 sim 무이득(현행 직선폴백이 이미
+    #     암묵 관통, 분류 밀도가 낮아 직선화 여지 적음) → 기본 off. 실기서 분류 밀도가
+    #     높으면 재검토용. 미확인·큐브·타깃은 하드 유지(면 가림·오포획 방지). ---
+    plow=False,
+    plow_soft_inflate=0.20,     # 이 반경 밖으로만 지나면 정면 포획 없이 옆으로 밀어냄
+    # eff_speed = 왕복 예상시간(시간 컷오프) 계산용 유효 속도. ⚠ cruise_v 에 비례해
+    # 교정할 것 — 실측 규칙 eff_speed ≈ 0.73×cruise_v (0.15→0.11, 0.20→0.15, 0.30→0.22).
+    # 너무 낮으면 과보수(트립 덜 시작), 높으면 버저 직전 미배달·오픽업. cruise 올리면 같이 올리고 오픽업 재검증.
+    eff_speed=0.11,             # cruise_v=0.15 기준 교정값 (0.73×0.15)
     t_approach_est=10.0, t_capture_est=6.0, t_deposit_est=11.0,
     endgame_margin_s=8.0,       # 이 여유가 없으면 새 목표를 시작하지 않음
+    # 엔드게임 헤일메리: 시간 컷오프에 걸려 '아무 할 일이 없는' 막판에, 완주가
+    # 어려워 보여도 open 확정 타깃을 시도한다. 채점은 종료 시점 보관함 안 물체만
+    # 세고 적재만 한 상태는 감점 0 → 기대손실 0, 기대이득 양수. verify 게이트는
+    # 그대로 지나므로 오픽업 위험 불변 (트립 수 비례 위험만 존재 — 48시드 추적
+    # 결과 추가 오픽업 1건이 같은 트립의 +20 으로 자체 상쇄). 스윕(2026-07-16,
+    # 48시드 페어드): 단독 +5.2, standoff 0.50 과 조합 +6.5 (both+bothcube 합),
+    # 벽충돌 0 → 기본 on. 종료 시 적재 상태(holding)가 늘어나는 것은 정상.
+    hail_mary=True,
     # --- 위치추정 건강도 대응 ---
     loc_degraded_scale=0.4,     # 연속 거부 5~12회: 감속
     # --- 조향 ---
     steering_gain=1.2, steering_sign=-1.0,  # 오프셋 +(우측) -> w 음수(우회전)
-    memory_merge_dist=0.22,     # 이 거리 안 관측은 같은 물체로 병합
-                                # (배치 간격 50cm 의 절반 미만이어야 안 섞임)
+    memory_merge_dist=0.28,     # 이 거리 안 관측은 같은 물체로 병합 (파라미터 탐색
+                                # 2026-07-15: 0.22→0.28 이 팬텀 중복↓ → both +2.0/
+                                # bothcube +2.5, 오픽업0, 큐브 오인증 1건 해소; 배치
+                                # 간격 50cm 절반 미만이라 서로 다른 물체는 안 섞임)
     memory_max_range=2.2,       # 이보다 먼 관측은 위치 오차가 커서 기억 안 함
 )
 
@@ -194,17 +327,24 @@ class ObjectMemory:
                 ent["y"] = (1 - a) * ent["y"] + a * y
                 ent["last_seen"] = t
             ent["rank"] = max(ent["rank"], rank)
-            if s.get("cls") == "cube":
-                # 무지면 큐브 관측: 라벨 투표가 아니라 관측 방위 섹터(16분할)를
-                # 누적한다 — 확정 규칙은 _maybe_confirm_cube 참조.
+            cls = s.get("cls")
+            if cls == "cube" or cls in _CUBE_ALIASES:
+                # 무지면 큐브: 통합 엔진은 set_of("cube")="set1" 로 라우팅해
+                # {cls:"cube", set:"set1", state:"TARGET_CONFIRMED"} 로 넘겨줄 수
+                # 있지만, 이 set 은 라우팅용일 뿐 '확정'이 아니다(과일 숨은 set2
+                # 큐브와 픽셀 동일). 그래서 incoming set 을 신뢰하지 않고, 라벨
+                # 투표도 하지 않으며, 오직 관측 방위 섹터(16분할)만 누적한다 —
+                # 확정은 다시점 무지면 증명(_maybe_confirm_cube)만이 부여한다.
                 view = math.atan2(pose[1] - ent["y"], pose[0] - ent["x"])
                 sec = int((view + math.pi) / (2 * math.pi) * 16) % 16
                 ent["blank_sectors"].add(sec)
                 self._maybe_confirm_cube(ent)
-            elif s.get("cls"):
-                # 라벨은 투표 + 히스테리시스: 인접 물체 관측이 병합 반경에
-                # 섞여도 확정 라벨이 한두 프레임에 뒤집히지 않게 한다.
-                key = (s.get("set"), s["cls"])
+            elif cls:
+                # set 은 incoming 라벨이 아니라 클래스에서 유도한다(통합 엔진의
+                # set_of 와 동일 철학; per-set 라벨 없이도 견고). cube 외
+                # 클래스는 set 이 명확하다.
+                sset = derive_set(cls)
+                key = (sset, cls)
                 ent["votes"][key] = ent["votes"].get(key, 0) + 1
                 cur = (ent.get("set"), ent.get("cls"))
                 best = max(ent["votes"], key=ent["votes"].get)
@@ -275,6 +415,9 @@ class MissionFSM:
         ctrl_cfg = ControllerConfig(max_v=self.p["cruise_v"])
         self.ctrl = DiffDriveController(ctrl_cfg)
         self.planner = GridPlanner(self.geom, robot_radius=self.p["robot_radius"])
+        if self.p.get("plow"):
+            # 분류 완료 비타깃을 축소 반경으로 비집고 통과 (밀집 틈 관통, 옆으로 밀어냄)
+            self.planner.soft_inflate = self.p["plow_soft_inflate"]
         self.stall = StallDetector()
         # cube 공지 경기: 다시점 무지면 증명이 필요 — 외곽 일주 투어 + 섹터 누적
         self.cube_hunt = (self.targets or {}).get("set1") == "cube"
@@ -289,13 +432,19 @@ class MissionFSM:
         self._tour_idx = 0
         self._tour_wps = self._build_tour()
         self._tour_route = []
+        self._tour_goal = None                 # 현재 레인 목표점 (주기 재계획용)
         self._tour_pass_done = False           # 1바퀴 끝나야 미확인 조사 허용
         self._unintended_ir_since = None
         self._last_time_check = -1.0
+        self._hail = False          # 현재 목표가 헤일메리(시간 컷오프 무시)인지
         self._recovering = False    # 운반 중 유실물 회수 모드 (재검증 생략)
         self._shed = None
+        self._realign = None        # 후진-호 재정렬 진행 상태
+        self._stowaway_risk = False  # 이번 운반에서 밀항이 붙었을 가능성
         self._vr_hist = []          # verify_range 최근 샘플 (중앙값 필터용)
         self._route = []
+        self._route_t0 = -1.0                   # 현재 경로 계획 시각 (주기 재계획용)
+        self._goto_goal = None                  # GOTO 최종 목표점(standoff) — 재계획 시 재사용
         self._target = None                    # 현재 접근/포획 중인 memory 객체
         self._payload_obj = None               # 빈 안쪽에 안착(IR 확인)된 객체
         self._front_obj = None                 # 입구에 물고 가는 2번째 객체 (무확인)
@@ -348,6 +497,11 @@ class MissionFSM:
         # 들어옴. 무엇인지 모르니 즉시 후진 배출 (오픽업 감점 원천 차단).
         # 예외 1: 유실물 회수 중이면 그 물체는 이미 검증된 타깃 — 재적재로 처리.
         # 예외 2: 더블 캐리로 A 를 적재한 채 B 로 가는 중이면 IR 켜짐이 정상.
+        # 예외 3: 접근(APPROACH) 중 IR = 조준하던 타깃이 포켓에 안착 → 즉시 적재
+        #   확정. IR 은 안착의 최종 근거이므로 "뜨는 순간 포켓 확정"으로 다룬다
+        #   (블라인드 푸시 단계를 안 기다림 — CAPTURE 상태 푸시는 IR 이 아직 안
+        #   뜬 경우의 폴백으로만 남는다). GOTO/TOUR/PARK 는 조준 상태가 아니라
+        #   여기서 IR 이 뜨면 경로상 이물질이므로 배출을 유지한다.
         if ir_loaded and self._payload_obj is None and \
                 self.state in (TOUR, GOTO, APPROACH, PARK):
             if self._recovering and self._target is not None:
@@ -358,10 +512,26 @@ class MissionFSM:
                 self._target = None
                 self._recovering = False
                 self._unintended_ir_since = None
+                self._stowaway_risk = False   # 회수한 적재 — 위험 추적 새로 시작
                 self._plan_to_deposit(pose)
                 self._set_state(TRANSPORT, t)
                 v, w = self.ctrl._limit(0.0, 0.0, dt)
                 return v, w, self._dbg()
+            if (self.p["ir_capture_on_approach"]
+                    and self.state == APPROACH and self._target is not None):
+                # IR 안착이 조준 타깃인지 근접으로 귀속한다: 타깃 추정 위치가
+                # 포켓 사거리 안이면 그놈이 담긴 것 → 즉시 확정. 타깃이 아직 먼데
+                # IR 이 뜨면 경로를 가로지른 이물질이므로 아래 배출 경로로 넘긴다
+                # (실기도 '타깃 추정거리 ≈ 0' 여부로 동일 판정 가능). 이 게이트가
+                # seed101 류의 원거리 이물질 오픽업을 막는다.
+                dtgt = math.hypot(self._target["x"] - pose[0],
+                                  self._target["y"] - pose[1])
+                if dtgt < self.p["payload_offset"] + 0.14:
+                    self._events.append("IR_CAPTURE_ON_APPROACH")
+                    v, w = self._on_captured(t, dt, pose)
+                    return v, w, self._dbg()
+            # GOTO/TOUR/PARK(및 원거리 이물질) 중 IR = 스쿱이 이물질을 담음
+            # (조준 타깃이 아님) — 배출한다 (오픽업 원천 차단).
             if self._unintended_ir_since is None:
                 self._unintended_ir_since = t
             elif t - self._unintended_ir_since > 0.4:
@@ -389,7 +559,10 @@ class MissionFSM:
 
         # 진행 중 시간 재검사: 지금 위치 기준으로 남은 여정을 끝낼 수 없으면 포기.
         # A 적재 중(B 사냥)이면 B 만 포기하고 하역은 반드시 간다.
+        # 헤일메리 목표는 애초에 시간 컷오프를 무시하고 시작한 것 — 재검사하면
+        # 1초마다 다시 abort 되어 무한루프이므로 건너뛴다.
         if (self.state in (GOTO, APPROACH) and self._target is not None
+                and not self._hail
                 and t - self._last_time_check > 1.0):
             self._last_time_check = t
             tgt = self._target
@@ -413,6 +586,7 @@ class MissionFSM:
             APPROACH: self._st_approach, CAPTURE: self._st_capture,
             RETREAT: self._st_retreat, TRANSPORT: self._st_transport,
             DEPOSIT_SHED: self._st_deposit_shed,
+            DEPOSIT_REALIGN: self._st_deposit_realign,
             DEPOSIT_PUSH: self._st_deposit_push,
             DEPOSIT_RELEASE: self._st_deposit_release,
             PARK: self._st_park,
@@ -456,16 +630,40 @@ class MissionFSM:
             return self.ctrl._limit(self._prev_v, 0.0, dt)
 
         if self.remaining(t) < self.p["endgame_margin_s"]:
-            self._set_state(PARK, t)
-            return self.ctrl._limit(0.0, 0.0, dt)
+            # 헤일메리: open 확정 타깃이 남아 있으면 PARK 하지 않는다 —
+            # _select_target 2차 스캔이 다음 틱에 잡는다 (명시적 안전장치).
+            if not (self.p["hail_mary"] and any(
+                    o["status"] == "open" and self._is_definite_target(o)
+                    for o in self.memory.objects)):
+                self._set_state(PARK, t)
+                return self.ctrl._limit(0.0, 0.0, dt)
 
         if not self._tour_route:
             wp = self._tour_wps[self._tour_idx % len(self._tour_wps)]
-            route = self.planner.plan((pose[0], pose[1]), wp,
-                                      self.memory.obstacles(),
-                                      [self.geom.storage])
+            hard, soft = self._split_obstacles()
+            route = self.planner.plan((pose[0], pose[1]), wp, hard,
+                                      [self.geom.storage], soft)
             self._tour_route = route if route else [wp]
-        v, w, done = self.ctrl.go_to(pose, self._tour_route[0], dt)
+            self._tour_goal = wp
+            self._route_t0 = None
+        # 주기 재계획: 같은 레인 목표로 A* 갱신 (나중에 매핑된 물체 회피)
+        if self._route_t0 is None:
+            self._route_t0 = t
+        elif (self.p["replan_period_s"] > 0 and self._tour_goal is not None
+              and t - self._route_t0 > self.p["replan_period_s"]):
+            hard, soft = self._split_obstacles()
+            route = self.planner.plan((pose[0], pose[1]), self._tour_goal, hard,
+                                      [self.geom.storage], soft)
+            if route:
+                self._tour_route = route
+            self._route_t0 = t
+        wp = self._tour_route[0]
+        if self.p["flyby_enable"] and len(self._tour_route) > 1:  # 통과점 fly-by
+            v, w, _ = self.ctrl.go_to(pose, wp, dt, flyby=True)
+            if math.hypot(wp[0] - pose[0], wp[1] - pose[1]) < self.p["flyby_lookahead"]:
+                self._tour_route.pop(0)
+            return v, w
+        v, w, done = self.ctrl.go_to(pose, wp, dt)
         if done:
             self._tour_route.pop(0)
             if not self._tour_route:
@@ -494,15 +692,34 @@ class MissionFSM:
         return False
 
     def _st_goto(self, t, dt, pose, percep, ir):
+        p = self.p
         if self._visit_complete(t):
             return self.ctrl._limit(self._prev_v, 0.0, dt)
         if not self._route:
             self._enter_approach(t, pose)
             return self.ctrl._limit(self._prev_v, 0.0, dt)
+        # 주기 재계획: 정적 경로가 '나중에 매핑된' 물체를 향해 달려 스쿱에 거는
+        # churn 을 줄인다. 같은 standoff 로만 A* 재실행(접근각 유지). standoff
+        # 근처(0.5×)에서는 곧 APPROACH 로 넘어가므로 갱신 생략(스래싱 방지).
+        if self._route_t0 is None:
+            self._route_t0 = t
+        elif (p["replan_period_s"] > 0 and self._goto_goal is not None
+              and t - self._route_t0 > p["replan_period_s"]
+              and math.hypot(self._goto_goal[0] - pose[0],
+                             self._goto_goal[1] - pose[1])
+              > p["standoff_dist"] * 0.5):
+            self._replan_to(pose, self._goto_goal,
+                            exclude_id=self._target["id"] if self._target else None)
+            self._route_t0 = t
         wp = self._route[0]
         last = len(self._route) == 1
+        if p["flyby_enable"] and not last:   # 중간 통과점 — 감속 없이 fly-by
+            v, w, _ = self.ctrl.go_to(pose, wp, dt, flyby=True)
+            if math.hypot(wp[0] - pose[0], wp[1] - pose[1]) < p["flyby_lookahead"]:
+                self._route.pop(0)
+            return v, w
         v, w, done = self.ctrl.go_to(pose, wp, dt,
-                                     final_yaw=self._face_target(pose) if last else None)
+                                     final_yaw=self._face_target(pose))
         if done:
             self._route.pop(0)
             if not self._route:
@@ -558,12 +775,25 @@ class MissionFSM:
                 self._events.append("VETO->RETREAT")
                 self._begin_retreat(pose, p["retreat_dist"], then=TOUR)
             return self.ctrl._limit(0.0, 0.0, dt)
-        # 유실물 회수: 분류는 이미 끝난 물체 — 조향 정렬만 되면 바로 push.
-        # unknown(과일면 안 보임)으로 인한 MICRO_ADJUST 도 무시한다.
-        if self._recovering:
+        # 이미 다시점으로 확정(definite)된 타깃이거나 유실물 회수 중이면, 분류는
+        # 끝났다 — 전방캠이 과일 무지면을 봐서 MICRO_ADJUST 가 떠도 재관측 궤도가
+        # 불필요하다(무엇인지·어디인지 이미 알고, standoff 계획이 회랑도 비웠다).
+        # 조향 정렬되면 바로 밀어넣는다. set2 과일은 옆면 2개(반대편)에만 그림이
+        # 있어 무지면 접근이 흔한데, 확정된 과일까지 궤도를 돌면 트립당 ~10s×N 을
+        # 허비한다. 미확정 타깃만 아래 MICRO_ADJUST 로 각도를 바꿔 면을 찾는다.
+        # (cube 공지 경기는 무지면에도 READY 가 뜨는 별도 경로라 여기서 제외.)
+        confident = (self._recovering
+                     or (p["confident_capture"] and not self.cube_hunt
+                         and self._target is not None
+                         and self._is_definite_target(self._target)))
+        if confident:
+            # 회수물은 관대한 게이트(0.5)로 유지; 새로 확정된 무지면 과일은 정상
+            # 포획과 동일한 blind_push_range(0.40) 안에서 정렬됐을 때만 민다 —
+            # 더 멀리서 밀면 블라인드 구간이 길어 소량 오정렬에도 놓친다.
+            push_gate = 0.5 if self._recovering else p["blind_push_range"]
             if (percep.steering and percep.steering.get("aligned") and
                     percep.verify_range is not None and
-                    percep.verify_range < 0.5):
+                    percep.verify_range < push_gate):
                 self._push = dict(start=(pose[0], pose[1]), yaw_lock=pose[2],
                                   t0=t)
                 self._set_state(CAPTURE, t)
@@ -576,14 +806,30 @@ class MissionFSM:
             if self._target["tries"] > p["max_tries_per_object"]:
                 self._blacklist(self._target, "unknown_persist")
                 self._begin_retreat(pose, p["retreat_dist"], then=TOUR)
-            else:
-                self._events.append("MICRO_ADJUST")
+                return self.ctrl._limit(0.0, 0.0, dt)
+            self._events.append("MICRO_ADJUST")
+            mode = p["micro_adjust_mode"]
+            if mode == "defer":
+                # 이 과일은 보류하고 다른 목표로 간다 — 무지 섹터가 방금 기록됐으니
+                # 재선택되면 _plan_to_standoff(blank-aware)가 그림면으로 접근한다.
+                # (재접근각이 달라 방황 없이 한 번에 담긴다; 안 되면 tries 누적→블랙)
+                self._target["status"] = "open"
+                self._target = None
+                self._set_state(TOUR, t)
+            elif mode == "smart":
+                # 되돌리지 않고(작은 후진만) 가까운 그림면 각도로 직접 재대기.
+                self._begin_retreat(pose, p["micro_adjust_dist"], then=GOTO,
+                                    replan_standoff=p["micro_review_radius"])
+            else:  # legacy: 후진 + 고정 지터로 0.60m 재대기
                 self._begin_retreat(pose, p["micro_adjust_dist"], then=GOTO,
                                     yaw_jitter=math.radians(
                                         p["micro_adjust_yaw_deg"]) *
                                     (1 if self._target["tries"] % 2 else -1))
             return self.ctrl._limit(0.0, 0.0, dt)
-        if armed and percep.fsm_state in (FSM_CAPTURE_READY, FSM_BLIND_CAPTURE):
+        _close = (percep.verify_range is None
+                  or percep.verify_range < p["blind_push_range"])
+        if (armed and percep.fsm_state in (FSM_CAPTURE_READY, FSM_BLIND_CAPTURE)
+                and _close):
             # cube 공지 경기의 READY 는 '무지면 큐브'라는 뜻일 뿐이다 (실물
             # set1 분류기도 무지면 세트2 큐브를 'cube'로 본다). 포획 허가는
             # 내비게이터의 다시점 인증이 최종 결정: 미인증 항목이면 READY 무시
@@ -677,6 +923,32 @@ class MissionFSM:
         v_des = p["approach_v"] if dist > 0.15 else p["push_v"]
         return self.ctrl._limit(v_des, max(-0.8, min(0.8, w_des)), dt)
 
+    def _on_captured(self, t, dt, pose):
+        """1차 포획 성공 → 적재 확정. blind push 성공 또는 스쿱이 접근 중 담은 경우
+        모두 이 경로. (전방 스쿱은 verify 블라인드 안쪽에서 담기므로 APPROACH 중
+        IR 이 켜질 수 있고, 그건 정상 포획이다.)"""
+        p = self.p
+        self._cmds.append(dict(cmd="note_loaded", loaded=True))
+        self._target["status"] = "captured"
+        self._payload_obj = self._target
+        self._target = None
+        self._recovering = False
+        self._stowaway_risk = False
+        self._unintended_ir_since = None
+        self._events.append("LOADED")
+        self._ir_lost_since = None
+        b = self._select_second(t, pose) if p["double_carry"] else None
+        if b is not None:
+            b["status"] = "active"
+            self._target = b
+            self._events.append(f"SECOND_TARGET({b['id']})")
+            self._plan_to_standoff(pose, b)
+            self._set_state(GOTO, t)
+        else:
+            self._plan_to_deposit(pose)
+            self._set_state(TRANSPORT, t)
+        return self.ctrl._limit(0.0, 0.0, dt)
+
     def _st_capture(self, t, dt, pose, percep, ir):
         p = self.p
         if self._payload_obj is not None:      # A 적재 상태 → 2차 포획 로직
@@ -698,25 +970,7 @@ class MissionFSM:
             self._begin_retreat(pose, 0.35, then=TOUR)
             return self.ctrl._limit(0.0, 0.0, dt)
         if ir:   # 안착 성공 (1차 포획)
-            self._cmds.append(dict(cmd="note_loaded", loaded=True))
-            self._target["status"] = "captured"
-            self._payload_obj = self._target
-            self._target = None
-            self._recovering = False
-            self._events.append("LOADED")
-            self._ir_lost_since = None
-            # 더블 캐리: 근처의 확정 타깃을 입구에 물고 같이 하역
-            b = self._select_second(t, pose)
-            if b is not None:
-                b["status"] = "active"
-                self._target = b
-                self._events.append(f"SECOND_TARGET({b['id']})")
-                self._plan_to_standoff(pose, b)
-                self._set_state(GOTO, t)
-            else:
-                self._plan_to_deposit(pose)
-                self._set_state(TRANSPORT, t)
-            return self.ctrl._limit(0.0, 0.0, dt)
+            return self._on_captured(t, dt, pose)
 
         pushed = math.hypot(pose[0] - self._push["start"][0],
                             pose[1] - self._push["start"][1])
@@ -827,7 +1081,8 @@ class MissionFSM:
                     sx, sy = self._clamp_into_arena(sx, sy)
                     self._route = [(sx, sy)]
                 else:
-                    self._plan_to_standoff(pose, self._target)
+                    self._plan_to_standoff(pose, self._target,
+                                           radius=r.get("replan_standoff"))
                 self._set_state(GOTO, t)
             elif then in (TOUR, GOTO, TRANSPORT):
                 if then == TRANSPORT:
@@ -844,6 +1099,19 @@ class MissionFSM:
 
     def _st_transport(self, t, dt, pose, percep, ir):
         p = self.p
+        # 밀항 위험 추적: 전진 중 입구(2번째) 슬롯 근처를 매핑된 물체가 스치면
+        # 그 물체가 몰래 붙었을 수 있다. 센서로 직접 못 보지만(입구는 정면,
+        # search 캠은 ±90°) 지도(memory)로 '스쳤는지'는 추론할 수 있다.
+        if self._prev_v > 0.01 and not self._stowaway_risk:
+            fx = pose[0] + p["stowaway_ride_offset"] * math.cos(pose[2])
+            fy = pose[1] + p["stowaway_ride_offset"] * math.sin(pose[2])
+            bid = self._front_obj["id"] if self._front_obj else None
+            for o in self.memory.objects:
+                if o["status"] in ("deposited", "captured") or o["id"] == bid:
+                    continue
+                if math.hypot(o["x"] - fx, o["y"] - fy) < p["stowaway_ride_radius"]:
+                    self._stowaway_risk = True
+                    break
         # 운반 중 IR 유실 → 짧게 참았다가 회수 시도
         if not ir:
             if self._ir_lost_since is None:
@@ -872,20 +1140,36 @@ class MissionFSM:
             self._ir_lost_since = None
 
         if not self._route:
-            # 하역 정렬 지점 도착. 의도한 B 가 없으면 먼저 밀항 물체 털기.
-            if self.p["shed_spin"] and self._front_obj is None:
+            # 하역 정렬 지점 도착. 의도한 B 가 없고 '밀항 위험'이 있을 때만 셰드
+            # (shed_gate=False 면 구동작처럼 항상). 위험 없으면 스핀 생략.
+            need_shed = (p["shed_spin"] and self._front_obj is None
+                         and (not p["shed_gate"] or self._stowaway_risk))
+            if need_shed:
                 self._shed = dict(accum=0.0,
-                                  goal=math.radians(self.p["shed_spin_angle_deg"]))
+                                  goal=math.radians(p["shed_spin_angle_deg"]))
                 self._events.append("SHED_SPIN")
                 self._set_state(DEPOSIT_SHED, t)
+            elif (p["deposit_align"] == "reapproach"
+                  and abs(wrap_angle(math.pi - pose[2]))
+                  > math.radians(p["realign_tol_deg"])):
+                self._realign = dict(back0=(pose[0], pose[1]))
+                self._events.append("REALIGN_REAPPROACH")
+                self._set_state(DEPOSIT_REALIGN, t)
             else:
                 self._set_state(DEPOSIT_PUSH, t)
             return self.ctrl._limit(0.0, 0.0, dt)
         wp = self._route[0]
         last = len(self._route) == 1
-        # 마지막(정렬) 지점에서는 -x 방향(보관함 쪽)을 보게 정렬
-        v, w, done = self.ctrl.go_to(pose, wp, dt,
-                                     final_yaw=math.pi if last else None)
+        if p["flyby_enable"] and not last:   # 중간 통과점 — 감속 없이 fly-by
+            v, w, _ = self.ctrl.go_to(pose, wp, dt, flyby=True)
+            if math.hypot(wp[0] - pose[0], wp[1] - pose[1]) < p["flyby_lookahead"]:
+                self._route.pop(0)
+            return v, w
+        # rotate 모드: 마지막 지점에서 제자리 회전으로 -x 정렬.
+        # reapproach 모드: 위치만 맞추고(도착 heading 자유) 후진-호로 정렬.
+        final_yaw = (math.pi if (last and p["deposit_align"] == "rotate")
+                     else None)
+        v, w, done = self.ctrl.go_to(pose, wp, dt, final_yaw=final_yaw)
         if done:
             self._route.pop(0)
         return v, w
@@ -909,6 +1193,30 @@ class MissionFSM:
             self._set_state(DEPOSIT_PUSH, t)
         return v, w
 
+    def _st_deposit_realign(self, t, dt, pose, percep, ir):
+        """제자리 회전 대신 후진-호로 heading 을 보관함(-x)에 맞춘 뒤 밀어넣기.
+
+        차동구동은 제자리 선회가 가장 빠르지만, 선회는 (a) 입구 물체 B 를
+        원심으로 떨어뜨리고 (b) 벽/적재물 근처에서 몸체를 휘두른다. 후진하며
+        조향하면 heading 을 바꾸면서 보관함에서 물러나 재접근 활주로를 번다.
+        정렬이 덜 되어도 이어지는 DEPOSIT_PUSH 가 hold_yaw 로 마저 보정한다.
+        """
+        p = self.p
+        if not ir:                       # A 까지 빠짐 → 운반 유실 플로우로
+            self._realign = None
+            self._set_state(TRANSPORT, t)
+            return self.ctrl._limit(0.0, 0.0, dt)
+        herr = wrap_angle(math.pi - pose[2])
+        backed = math.hypot(pose[0] - self._realign["back0"][0],
+                            pose[1] - self._realign["back0"][1])
+        if abs(herr) > math.radians(p["realign_tol_deg"]) and \
+                backed < p["realign_backup_dist"]:
+            w_des = max(-0.6, min(0.6, 1.8 * herr))
+            return self.ctrl._limit(-p["realign_reverse_v"], w_des, dt)
+        self._realign = None
+        self._set_state(DEPOSIT_PUSH, t)
+        return self.ctrl._limit(0.0, 0.0, dt)
+
     def _st_deposit_push(self, t, dt, pose, percep, ir):
         p = self.p
         if self._front_obj is not None:
@@ -922,8 +1230,11 @@ class MissionFSM:
             self._set_state(DEPOSIT_RELEASE, t)
             return self.ctrl._limit(0.0, 0.0, dt)
         herr = wrap_angle(math.pi - pose[2])
-        # 보관함 근처(잔여 15cm)에서는 감속 — 정지 오버런으로 물체가 벽을 타는 것 방지
-        v_dep = p["deposit_push_v"] if pose[0] > stop_x + 0.15 else p["push_v"]
+        if p["deposit_fast"]:
+            v_dep = p["deposit_fast_v"]          # 턱이 잡아주므로 감속 없이 끝까지
+        else:
+            # 보관함 근처(잔여 15cm)에서는 감속 — 정지 오버런으로 물체가 벽을 타는 것 방지
+            v_dep = p["deposit_push_v"] if pose[0] > stop_x + 0.15 else p["push_v"]
         return self.ctrl.straight(v_dep, dt, hold_yaw_err=herr)
 
     def _st_deposit_release(self, t, dt, pose, percep, ir):
@@ -973,6 +1284,7 @@ class MissionFSM:
                 self._cmds.append(dict(cmd="set_phase", phase="VERIFY"))
             if s == TOUR:
                 self._tour_route = []   # 위치가 바뀌었으니 레인 경로 재계획
+                self._hail = False      # 헤일메리 표시는 목표 단위 — 투어 복귀 시 해제
 
     def _enter_approach(self, t, pose):
         # 유실물 회수도 APPROACH 를 거친다: 전방캠 조향 서보로 실물에 재정렬해야
@@ -983,9 +1295,11 @@ class MissionFSM:
         self._vr_hist = []
         self._set_state(APPROACH, t)
 
-    def _begin_retreat(self, pose, dist, then, yaw_jitter=0.0):
+    def _begin_retreat(self, pose, dist, then, yaw_jitter=0.0,
+                       replan_standoff=None):
         self._retreat = dict(start=(pose[0], pose[1]), dist=dist, then=then,
-                             yaw_jitter=yaw_jitter, align=None)
+                             yaw_jitter=yaw_jitter, align=None,
+                             replan_standoff=replan_standoff)
         # 후진 방향이 벽이면 그대로 후진 불가 (즉시 종료 → 전진 → 재스쿱
         # 무한루프). 먼저 기수를 경기장 중심 반대로 돌려 후진로를 연다.
         bx = pose[0] - 0.25 * math.cos(pose[2])
@@ -1026,15 +1340,18 @@ class MissionFSM:
                 wps += [(x0, y), (x1, y)]
         return wps
 
-    def _plan_to_standoff(self, pose, target):
+    def _plan_to_standoff(self, pose, target, radius=None):
         """접근 각도 선택: verify 캠 시야에 다른 물체가 겹치지 않는 방향을 고른다.
 
         (전방캠은 시야각 안 '가장 가까운' 물체를 검증하므로, 접근 축 근처에 남이
         있으면 엉뚱한 물체를 검증하거나 승인 없이 스쳐 담을 위험이 있다.)
+
+        radius: 대기 반경(기본 standoff_dist). 재관측 시 더 가깝게 지정 가능.
         """
-        d = self.p["standoff_dist"]
+        d = radius if radius else self.p["standoff_dist"]
         base = math.atan2(pose[1] - target["y"], pose[0] - target["x"])
-        obstacles = self.memory.obstacles(exclude_id=target["id"])
+        hard, soft = self._split_obstacles(exclude_id=target["id"])
+        obstacles = hard + soft         # corridor_block 판정용 (전부 — 접근 회랑은 엄격)
         keep = [self.geom.storage]
         # cube 인증 보완 방문: 아직 무지 확인이 안 된 각도(최대 갭의 중앙)에서
         # '보기만' 하면 된다 — 각도를 정확히 지키고(회랑 회피 불필요, 포획 안
@@ -1047,8 +1364,10 @@ class MissionFSM:
             sx, sy = self._clamp_into_arena(target["x"] + 1.0 * math.cos(base),
                                             target["y"] + 1.0 * math.sin(base))
             route = self.planner.plan((pose[0], pose[1]), (sx, sy),
-                                      obstacles, keep)
+                                      hard, keep, soft)
             self._route = route if route else [(sx, sy)]
+            self._goto_goal = (sx, sy)
+            self._route_t0 = None
             return
 
         def corridor_block(ang):
@@ -1068,6 +1387,21 @@ class MissionFSM:
                         n += 1
             return n
 
+        # 무지면 회피: set2 과일은 옆 2면(반대편)에만 그림이 있어, 관측된 무지면
+        # 섹터(blank_sectors)로 접근하면 전방캠 unknown→MICRO_ADJUST(방황)한다.
+        # 그 섹터(및 인접, 무지창 50°≈2.2섹터)로의 접근각을 벌점 처리해 그림면
+        # 쪽으로 접근한다. 첫 접근엔 blank_sectors 가 비어 영향 없음(무해).
+        tgt_blank = (target.get("blank_sectors")
+                     if (self.p["face_aware_standoff"]
+                         and target.get("set") == "set2") else None)
+
+        def blank_pen(ang):
+            if not tgt_blank:
+                return 0
+            sec = int((ang + math.pi) / (2 * math.pi) * 16) % 16
+            return 1 if any((sec - b) % 16 in (0, 1, 15)
+                            for b in tgt_blank) else 0
+
         best, best_cost = None, None
         for i, off in enumerate((0.0, 0.6, -0.6, 1.2, -1.2, 1.9, -1.9, math.pi)):
             ang = base + off
@@ -1076,19 +1410,32 @@ class MissionFSM:
             sx, sy = self._clamp_into_arena(sx, sy)
             if self.geom.sticker_zone.contains(sx, sy):
                 continue
-            cost = corridor_block(ang) * 10 + i
+            cost = corridor_block(ang) * 10 + blank_pen(ang) * 5 + i
             if best_cost is None or cost < best_cost:
                 best, best_cost = (sx, sy), cost
             if cost == 0:
                 break
         sx, sy = best if best else self._clamp_into_arena(
             target["x"] + d * math.cos(base), target["y"] + d * math.sin(base))
-        route = self.planner.plan((pose[0], pose[1]), (sx, sy), obstacles, keep)
+        route = self.planner.plan((pose[0], pose[1]), (sx, sy), hard, keep, soft)
         self._route = route if route else [(sx, sy)]
+        self._goto_goal = (sx, sy)
+        self._route_t0 = None
+
+    def _replan_to(self, pose, goal, exclude_id=None):
+        """같은 목표점으로 A* 만 재실행해 새로 매핑된 물체를 회피 (접근 각도는
+        재선택하지 않음 — standoff 지점 유지). 실패하면 기존 경로를 둔다."""
+        hard, soft = self._split_obstacles(exclude_id=exclude_id)
+        route = self.planner.plan((pose[0], pose[1]), goal, hard,
+                                  [self.geom.storage], soft)
+        if route:
+            self._route = route
 
     def _plan_to_deposit(self, pose):
         p = self.p
         goal = (p["deposit_approach_x"], p["deposit_lane_y"])
+        # 하역 트립: 보관함 근처에서 비타깃을 경계로 밀어넣으면 −40 이므로 plow 를
+        # 하역 경로에는 적용하지 않는다 (전부 하드 회피).
         obstacles = self.memory.obstacles(
             exclude_id=self._target["id"] if self._target else None)
         route = self.planner.plan((pose[0], pose[1]), goal, obstacles, ())
@@ -1127,6 +1474,29 @@ class MissionFSM:
         return obj["rank"] >= 3 and (self._matches_target(obj, "set1") or
                                      self._matches_target(obj, "set2"))
 
+    def _is_soft_obstacle(self, o):
+        """plow 대상: 분류 완료(rank>=3)된 확정 비타깃만. 미확인(면 가릴라)·
+        큐브(set 미상 — set2 과일큐브 타깃일 수 있음)·양세트 타깃은 하드 유지."""
+        cls = o.get("cls")
+        if o["rank"] < 3 or not cls or cls in _CUBE_ALIASES:
+            return False
+        return not self._is_definite_target(o)
+
+    def _split_obstacles(self, exclude_id=None):
+        """(hard, soft): plow 켜지면 확정 비타깃을 soft(축소 반경 관통)로 분리.
+        plow off 면 soft=[] 이라 기존과 동일."""
+        hard, soft = [], []
+        plow = self.p.get("plow")
+        for o in self.memory.objects:
+            if o["status"] in ("deposited", "captured") or o["id"] == exclude_id:
+                continue
+            pt = (o["x"], o["y"])
+            if plow and self._is_soft_obstacle(o):
+                soft.append(pt)
+            else:
+                hard.append(pt)
+        return hard, soft
+
     def _est_trip_time(self, pose, obj):
         p = self.p
         d1 = math.hypot(obj["x"] - pose[0], obj["y"] - pose[1])
@@ -1135,9 +1505,28 @@ class MissionFSM:
         return (d1 + d2) / p["eff_speed"] + p["t_approach_est"] + \
             p["t_capture_est"] + p["t_deposit_est"]
 
+    def _has_pair(self, a):
+        """A 근처(pair_max_dist)에 보관함 방향 커브가 완만한 확정 타깃 B 존재?
+        (있으면 A 포획 후 더블캐리로 한 트립에 2개 가능)."""
+        if not self.p["double_carry"]:
+            return False
+        dep = (self.p["deposit_approach_x"], self.p["deposit_lane_y"])
+        for o in self.memory.objects:
+            if o is a or o["status"] != "open" or not self._is_definite_target(o):
+                continue
+            if math.hypot(o["x"] - a["x"], o["y"] - a["y"]) > self.p["pair_max_dist"]:
+                continue
+            a1 = math.atan2(o["y"] - a["y"], o["x"] - a["x"])
+            a2 = math.atan2(dep[1] - o["y"], dep[0] - o["x"])
+            if abs(wrap_angle(a2 - a1)) <= math.radians(self.p["pair_max_turn_deg"]):
+                return True
+        return False
+
     def _select_target(self, t, pose):
-        """가치/시간 탐욕 + 시간 컷오프. 확정 타깃 > 미확인 후보."""
-        best, best_score = None, 0.0
+        """방문 순서 정책(target_policy)에 따른 목표 선택 + 시간 컷오프.
+        확정 타깃 > 미확인 후보. 기본은 가치/시간 탐욕(value_time)."""
+        policy = self.p.get("target_policy", "value_time")
+        best, best_score = None, -1e18
         rem = self.remaining(t)
         for o in self.memory.objects:
             if o["status"] not in ("open",):
@@ -1164,9 +1553,32 @@ class MissionFSM:
             if trip > rem - self.p["endgame_margin_s"]:
                 continue
             val = self._value(o) if definite else self.p["value_unknown"]
-            score = val / trip
+            if policy == "nearest":
+                score = 1.0 / trip                       # 최단 왕복 (가치 무시)
+            elif policy == "value_first":
+                score = val * 1000.0 - trip               # 가치 우선, 시간 타이브레이크
+            elif policy == "pair_aware":
+                score = val / trip
+                if definite and self._has_pair(o):
+                    score *= self.p["pair_boost"]          # 더블캐리 가능 A 우대
+            else:                                         # value_time (기본)
+                score = val / trip
             if score > best_score:
                 best, best_score = o, score
+        if best is None and self.p["hail_mary"] and rem > 6.0:
+            # 엔드게임 헤일메리 2차 스캔: 시간 컷오프만 무시하고 open 확정
+            # 타깃(_is_definite_target) 중 val/trip 최대를 시도한다. rank/
+            # blacklist/비타깃 제외 등 다른 필터는 그대로 — 미확인 후보는
+            # 대상이 아니다. 종료 시 적재만 해도 감점 0 이므로 기대손실 0.
+            for o in self.memory.objects:
+                if o["status"] != "open" or not self._is_definite_target(o):
+                    continue
+                trip = self._est_trip_time(pose, o)
+                score = self._value(o) / trip
+                if score > best_score:
+                    best, best_score = o, score
+            if best is not None:
+                self._hail = True
         return best
 
     def _blacklist(self, obj, reason):

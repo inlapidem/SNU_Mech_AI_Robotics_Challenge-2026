@@ -1,0 +1,15 @@
+# Real-only validation split for the unified detector, to measure deployment-domain
+# recall (the merged_detector.yaml val mixes combined_v3 synth + real, which can inflate
+# the numbers). Same single class 'object'. Use with:
+#   yolo/bin/python -c "from ultralytics import YOLO; \
+#     YOLO('models/merged/detector/best.pt').val(data='configs/merged_detector_realval.yaml', \
+#     imgsz=960, conf=0.10)"
+path: /home/user/joon/datasets
+train:
+  - set1_real/detector/images/train        # placeholder (val-only use); not trained here
+val:
+  - set1_real/detector/images/val           # real polyhedra
+  - set1_cam0714/detector/images/val        # real venue (0714)
+  - set2_real/detector/images/val           # real fruit cubes
+names:
+  0: object

@@ -1,0 +1,26 @@
+confusion matrix (rows=true, cols=pred)
+	apple	banana	cube	dodecahedron	icosahedron	octahedron	orange	pineapple	unknown
+apple	354	0	0	0	0	0	0	0	0
+banana	0	329	0	0	0	0	0	0	1
+cube	0	0	324	0	0	1	0	0	20
+dodecahedron	0	0	0	44	0	1	0	0	0
+icosahedron	0	0	0	0	33	1	0	0	0
+octahedron	0	0	0	1	3	38	0	0	0
+orange	0	0	0	0	0	0	331	0	1
+pineapple	0	0	0	0	0	0	0	354	2
+unknown	16	22	4	0	0	0	34	24	372
+apple          precision=0.957 recall=1.000
+banana         precision=0.937 recall=0.997
+cube           precision=0.988 recall=0.939
+dodecahedron   precision=0.978 recall=0.978
+icosahedron    precision=0.917 recall=0.971
+octahedron     precision=0.927 recall=0.905
+orange         precision=0.907 recall=0.997
+pineapple      precision=0.937 recall=0.994
+unknown        precision=0.939 recall=0.788
+--- shape gate conf>=0.6 margin>=0.2 | fruit gate conf>=0.9 margin>=0.1 ---
+unknown_leak_to_fruit = 88/472 = 0.1864   <-- drives -40, push to 0
+unknown_leak_to_shape = 3/472 = 0.0064
+fruit_confusion (wrong fruit accepted) = 0/1443 = 0.0000
+shape_confusion (wrong shape accepted) = 7/447 = 0.0157
+dodeca<->icosa confusion rate = 0/79 = 0.000

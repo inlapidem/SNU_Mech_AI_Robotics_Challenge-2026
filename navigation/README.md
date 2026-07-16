@@ -13,7 +13,7 @@
   형태(안 깎인·정상 색)라 어느 방향에서 접근해도 웬만하면 과일이 보인다. 시뮬은
   옆 반대편 2면(±65° 가시=커버리지 260%)으로 모델링 — `FRUIT_LAYOUT` 로 구 룰
   (random3)과 A/B 가능. 이 배치가 세트2 탐지를 크게 쉽게 하고 cube 인증을
-  건전하게 만든다(아래 9번).
+  건전하게 만든다(아래 10번).
 - **경기는 총 3분 한 번** — 그 안에 세트1 목표 형상 4개(+10×4=40) 와 세트2 목표
   과일 3개(+20×3=60) 를 모두 노린다 (합산 만점 100, 동점 시 완료 시간 순).
 - 스타트존 우하단 40cm, 보관함 좌하단 40cm (태극기 스티커, 두 면에 3mm 테두리).
@@ -55,11 +55,37 @@
    실패해도 A 하역은 보장(B 는 abandon). **주의**: capture_fsm 이 1물체 에피소드
    모델이라 실물 적용에는 '적재 상태 2번째 VERIFY 에피소드' 지원 필요 (인지 측
    후속 작업).
-8. **밀항 물체 방지** (`shed_spin`): 운반 중 입구에 스스로 붙은 정체불명 물체가
-   보관함까지 따라 들어가면 조용히 −40 (센서로 감지 불가 — 시뮬레이션에서 실제
-   발생 확인). 하역 진입 직전, 의도한 B 가 없으면 제자리 고속 회전(1.1rad/s,
-   330°)으로 털어낸다. A 는 빈 옆벽·뒷벽에 갇혀 안전.
-9. **cube 공지 경기** (`target_set1: cube` → cube_hunt 모드 자동):
+8. **밀항 물체 방지** (`shed_spin`+`shed_gate`): 운반 중 입구에 스스로 붙은
+   정체불명 물체가 보관함까지 따라 들어가면 조용히 −40. 하역 진입 직전, 의도한
+   B 가 없고 **이번 운반에서 입구 슬롯이 매핑된 물체를 실제로 스쳤을 때만**
+   제자리 고속 회전(1.1rad/s, 330°)으로 털어낸다(위험 게이트 `shed_gate`, 반경
+   `stowaway_ride_radius=0.08`). A 는 빈 옆벽·뒷벽에 갇혀 안전.
+   - ⚠ **게이트 근거(계측 2026-07-16)**: 셰드를 꺼도 밀항은 운반 회전에서 대부분
+     자연 이탈해 100경기 하역단계 생존 0·오픽업 0. 무조건 돌던 구동작(단일 하역
+     마다 ~5s)을 위험 게이트로 바꿔 명목 경기는 스핀 생략 → both +1~2·bothcube
+     +5점, 오픽업·벽충돌 0 유지. 완전 제거(`shed_spin=False`)도 sim 상 동일
+     안전이나, 실기 입구 마찰 불확실성 때문에 **게이트를 기본**으로 둔다.
+   - **하역 정렬**(`deposit_align`): 도착점 제자리 회전(`rotate`, 기본)이 최선.
+     후진 재접근(`reapproach`)은 앞이 열린 빈에서 후진이 적재물을 흘려 점수 폭락
+     (both 30.6→16.9), 정렬 생략 관통(`push_through`)은 레인이 남벽 8cm 앞이라
+     비정렬 진입이 벽충돌 폭증(708+/16경기)+오픽업 → **벽 근접 기하에서 정렬 필수**.
+     두 대안은 실기 기하 재검토용 토글로만 남겨둠(검증 2026-07-16).
+9. **엔드게임 헤일메리** (`hail_mary`, 기본 on): 채점은 종료 시점 보관함 안 물체만
+   세므로 **버저 때 적재만 한 상태는 감점 0**. 시간 컷오프 때문에 아무 목표도
+   시작할 수 없는 막판에는 PARK 로 시간을 버리는 대신, 컷오프를 무시하고 open
+   확정 타깃(val/trip 최대)을 시도한다 — 완주하면 +10/+20, 못 하면 0 (기대손실 0).
+   verify 게이트는 그대로 지나므로 오픽업 방어 불변(트립 수 비례 위험만 존재).
+   헤일메리 목표는 TIME_ABORT 재검사를 건너뛴다(아니면 1초마다 재중단 루프).
+   스윕(2026-07-16, 48시드 페어드 @0.15): **+5.2**(both+bothcube 합 68.8→74.0),
+   벽충돌 0, 시나리오 E2 로 회귀 가드. 같은 스윕에서 기각된 것들:
+   `standoff_dist` 0.50 단축(평균 +2.3 이나 seed102 재스쿱 무한루프 0점 —
+   평균 뒤의 파국 실패 모드), 미확인 조기조사(first_lane −1.7/always −5.8/
+   근거리 probe −2.5 — full_tour 재확인), 투어 1레인 축소(+0.6 노이즈),
+   하역 가속 계열(벽충돌/스필 동반), retreat 단축(조합에서 bothcube 벽 74회).
+   ⚠ 개별 승자도 조합하면 상쇄되는 카오스 상호작용 확인 — 파라미터 채택은
+   메커니즘 있는 것만, 확증은 48시드+ 그리고 시나리오 스위트 필수.
+
+10. **cube 공지 경기** (`target_set1: cube` → cube_hunt 모드 자동):
    - 무지면 큐브는 단일 시점으로 세트1/세트2 구분이 원리적으로 불가 (실물
      분류기도 무지면 세트2 큐브를 'cube'로 본다). **위치 기반 다시점 인증**으로
      해결: 물체별 무지면 관측의 방위 섹터(16분할)를 누적, 연속 갭 ≤ 90° + 과일
@@ -79,23 +105,51 @@
 |---|---|
 | `nav_core.py` | ROS-free: 자세 제어기, A*(10cm 격자+시선단축), 구역, 스탈 감지, 단안거리 |
 | `mission_fsm.py` | ROS-free: 미션 상태기계 + 물체 기억 + 목표 선택/시간 예산 |
-| `sim_mission.py` | WSL 검증: 3분 경기 전체 시뮬레이션, 시나리오 6종 |
+| `sim_mission.py` | WSL 검증: 3분 경기 전체 시뮬레이션, 시나리오 8종(A~H) |
+| `replay_mission.py` | 리플레이: 경기를 기록해 위에서 본 인터랙티브 HTML 뷰어 생성 |
 | `navigator_node.py` | ROS 2 노드: 토픽/UDP 입출력 + 20Hz 제어 루프 (로직 없음) |
 | `params.yaml` | 노드 파라미터 (실측값으로 갱신할 것) |
 
-미션 상태: `TOUR → GOTO → APPROACH → CAPTURE → TRANSPORT → DEPOSIT_PUSH →
-DEPOSIT_RELEASE → (반복) → PARK/DONE`, 이탈은 `RETREAT` 경유.
+미션 상태: `TOUR → GOTO → APPROACH → CAPTURE → TRANSPORT →
+[DEPOSIT_SHED (밀항 위험 시)] → DEPOSIT_PUSH → DEPOSIT_RELEASE → (반복) →
+PARK/DONE`, 이탈은 `RETREAT` 경유. (`deposit_align="reapproach"` 시 정렬은
+`DEPOSIT_REALIGN` 경유 — 기본 아님.)
+
+## 통합 엔진(merged) 호환성
+
+인지가 per-set 2개 검출기/분류기에서 **검출기 1개 + 9클래스 분류기 1개**로 병합되면
+(runtime/merged_pipeline.py, configs/combined_classes.py 정본), 관측이 실어 보내는
+`set` 라벨의 의미가 바뀐다: `set_of("cube") = "set1"` 은 **라우팅용**이지 확정이
+아니다 (set1 큐브와 과일 숨은 set2 큐브는 픽셀 동일). 통합 설계도 다시점 확인을
+`mission_fsm._maybe_confirm_cube` 에 위임한다. 그래서 내비게이션은:
+
+- **관측의 `set` 을 신뢰하지 않고 `cls` 에서 유도**한다 (`mission_fsm.derive_set`,
+  정본 `combined_classes.CLASS_TO_SET` 를 import — 없으면 내장 별칭으로 폴백).
+  축약형(`octa`)·정본 전체 이름(`octahedron`) 모두 수용.
+- **`cube` 는 어느 set 도 아니다**(derive_set→None). 통합 엔진이 `{cls:"cube",
+  set:"set1", state:"TARGET_CONFIRMED"}` 로 넘겨도 그 set/state 를 무시하고, 오직
+  다시점 무지면 인증(`_maybe_confirm_cube`)만이 set1 큐브로 확정한다 → cube 타깃
+  경기에서 set2 큐브를 확정 타깃으로 오인해 −40 나는 것을 막는다.
+- 검증: `sim_mission.CUBE_SIGHTING_SET`("set1"=통합계약 vs None=구 per-set) 토글로
+  A/B. **두 방출이 결과 완전 동일** + 전 모드 오픽업 0 → incoming set 을 실제로
+  무시함이 증명됨. 목표 이름은 params.yaml 에서 정본과 일치시킬 것(`icosahedron`).
 
 ## WSL 검증
 
 ```bash
-yolo/bin/python navigation/sim_mission.py            # 6개 시나리오 PASS 확인
+yolo/bin/python navigation/sim_mission.py            # 8개 시나리오 PASS 확인
 yolo/bin/python navigation/sim_mission.py --seeds 20 # 명목 시드 확대
+
+# 리플레이: 경기를 위에서 본 인터랙티브 HTML 로 (브라우저로 열기)
+yolo/bin/python navigation/replay_mission.py --seed 5 --mode both
+yolo/bin/python navigation/replay_mission.py --scan 0 14 --mode both  # 좋은 경기 고르기
 ```
 
 시나리오: A 명목(멀티시드: 오픽업 0·벽충돌 0 필수), B IR 순간끊김 무시,
-C 운반 중 유실→회수, D 포획 빗맞음→재시도, E 잔여 60초 시간 컷오프,
-F 위치추정 열화 시 감속/정지.
+C 운반 중 유실→회수, D 포획 빗맞음→재시도, E 잔여 60초 시간 컷오프(hail off),
+E2 헤일메리(기본 on — 막판 시도가 안전하고 컷오프-only 대비 점수 하락 없음),
+F 위치추정 열화 시 감속/정지, G 더블 캐리(A+B 동시 하역), H 더블 슬립
+(입구 물체 이탈 시 A 하역 보장).
 
 현재 결과 (2026-07-14, 12시드): **전 시나리오(8종) PASS, 전 콤보 오픽업 0·벽충돌 0.**
 

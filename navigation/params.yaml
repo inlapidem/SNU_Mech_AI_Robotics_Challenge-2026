@@ -8,7 +8,9 @@
     match_duration_s: 180.0
     auto_start_delay_s: -1.0        # -1 = /mission_start 토픽 대기
     # --- 경기 직전 공지 후 설정 (1분 세팅 시간에!) ---
-    target_set1: ''                 # cube | octa | dodeca | icosa
+    # ⚠ 이름은 통합 엔진 정본(configs/combined_classes.py)과 정확히 일치해야 함 —
+    #   인지가 보내는 cls 와 문자열이 같아야 매칭된다.
+    target_set1: ''                 # cube | octahedron | dodecahedron | icosahedron
     target_set2: ''                 # apple | orange | banana | pineapple
     # --- 인지 UDP 브리지 (run_perception.py --udp 와 포트 일치) ---
     udp_event_port: 5601
@@ -20,11 +22,26 @@
     cam_yaws_deg: [90.0, -90.0, 3.0, -3.0]
     cam_hfovs_deg: [90.0, 90.0, 62.0, 62.0]   # nuroum 90, IMX219 62
     # --- 미션 오버라이드 (전체 키는 mission_fsm.DEFAULT_PARAMS 참조) ---
-    mission.cruise_v: 0.15
-    mission.approach_v: 0.10
+    # ⭐ 파라미터 탐색(2026-07-15, 6계열×60시드): 최대 레버는 순항속도다.
+    #   sim 에서 cruise_v 0.20→0.30 + eff_speed 교정만으로 both +8.5/bothcube +7.1
+    #   (오픽업0). 실기 지침: cruise_v 를 모터가 신뢰성 있게 낼 수 있는 최대치로 올리고
+    #   (max_wheel_speed 실측), eff_speed 를 아래 규칙으로 반드시 같이 교정할 것.
+    mission.cruise_v: 0.15          # ⚠ 실기 실측 최대치로 올릴 것 (클수록 점수↑, sim 최적 0.30)
+    mission.eff_speed: 0.11         # ⚠ = 0.73×cruise_v 로 교정 (0.15→0.11, 0.20→0.15, 0.30→0.22)
+                                    #   시간 컷오프 계산용. 낮으면 과보수, 높으면 미배달·오픽업 → 올린 뒤 오픽업 재검증
+    mission.carry_v_max: 0.12       # 운반 속도 상한 (cruise 올리면 0.14 까지 상향 여지)
+    mission.approach_v: 0.10        # 최종 접근은 느리게 유지 = 픽업 신뢰도 (sim 최적 0.08)
     mission.push_v: 0.06
     mission.robot_radius: 0.22
-    mission.payload_offset: 0.26
-    mission.standoff_dist: 0.60
+    mission.payload_offset: 0.07   # 3MF 실측(2026-07-16): 물체중심 축앞 ~70mm.
+                                   # (구 0.26 은 임의값 — DEFAULT 를 덮어쓰는 사고 방지)
+    mission.standoff_dist: 0.60    # ⚠ 0.50 단축 기각(2026-07-16): 평균 +2.3 뒤에
+                                   # seed102 재스쿱 무한루프(0점) — 파국 실패 모드
     mission.steering_sign: -1.0     # 픽셀 오프셋 +(우측) → 우회전(w<0). 실차 확인!
     mission.endgame_margin_s: 8.0
+    # hail_mary (기본 true, mission_fsm.DEFAULT_PARAMS): 막판에 시작할 수 있는
+    # 목표가 없으면 시간 컷오프를 무시하고 확정 타깃을 시도 — 종료 시 적재만 한
+    # 상태는 감점 0 이라 기대손실 0 (48시드 +5.2, standoff 0.50 과 조합 +6.5).
+    # 끄려면: mission.hail_mary: false
+    # memory_merge_dist 는 DEFAULT 0.28 로 이미 반영됨(파라미터 탐색 채택분, 오버라이드 불필요).
+    # steering_gain 은 sim 에서 1.5 가 중립~미세+였으나 실차 오실레이션 위험 → 벤치에서 튜닝.

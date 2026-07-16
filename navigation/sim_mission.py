@@ -15,7 +15,9 @@ IR 안착 센서, 보관함 하역. 미션 로직(mission_fsm)이 실제 코드 
   B ir-dropout   운반 중 IR 순간 끊김(0.4s) — 오탐 하역중단 없이 완주
   C payload-lost 운반 중 실제 유실 1회 — 재탐색/재포획 복구
   D capture-miss 첫 푸시 실패(빗맞음) — 재시도 로직
-  E endgame      잔여 60초 시작 — 시간 컷오프: 종료 시 적재 상태로 방치 금지
+  E endgame      잔여 60초 시작 — 시간 컷오프(hail_mary off): 종료 시 적재 방치 금지
+  E2 hail-mary   같은 60초, hail_mary on(기본) — 막판 컷오프 무시 시도가 안전하고
+                 컷오프-only 대비 점수가 안 떨어지는지 (종료 적재는 감점 0 이라 허용)
   F loc-degraded 20~35초 위치추정 불량 — 정지 대기 후 재개, 완주
 """
 
@@ -39,6 +41,12 @@ DT = 0.05
 
 # 과일 배치 모델: "opposite2"(현행 룰: 윗면+반대편 옆2면) | "random3"(구 비교용)
 FRUIT_LAYOUT = "opposite2"
+
+# 무지면 큐브 관측이 싣고 오는 set 라벨. 통합 엔진(merged_pipeline)은 set_of("cube")
+# ="set1" 로 라우팅하므로 실전 계약은 "set1". 내비게이션은 이 라벨을 무시하고
+# 클래스로부터 set 을 재유도해야 정상 — None(구 per-set 방출)과 결과가 동일해야
+# 한다. "set1" 로 두는 것이 통합 엔진 최악 입력 재현.
+CUBE_SIGHTING_SET = "set1"
 
 # ------------------------------------------------------------------ 경기장 생성
 
@@ -168,8 +176,16 @@ class SimPerception:
                     elif o["set"] == "set2" and fruit_visible(o, ang):
                         cls, sset = o["cls"], "set2"   # 과일면이 이쪽을 향함
                     else:
-                        # 큐브류 무지면 뷰: 세트 구분 불가 — 방위 섹터 증거만
-                        cls, state = "cube", "CUBE_BLANK_VIEW"
+                        # 큐브류 무지면 뷰: 통합 엔진은 set_of("cube")="set1" 로
+                        # 라우팅하므로 set="set1" 을 실어 보내고, cube 타깃 경기면
+                        # set1 정책이 votes 후 TARGET_CONFIRMED 까지 낼 수 있다
+                        # (최악 입력). 내비게이션이 이 set/state 를 무시하고 다시점
+                        # 인증만 신뢰하는지가 통합 견고성의 핵심 — sim 이 그 최악
+                        # 입력을 재현한다.
+                        cls, sset = "cube", CUBE_SIGHTING_SET
+                        state = "CUBE_BLANK_VIEW"
+                        if self.targets.get("set1") == "cube" and h >= 5:
+                            state = "TARGET_CONFIRMED"
                     if cls != "cube":
                         state = ("TARGET_CONFIRMED" if self._is_target(o)
                                  else "NON_TARGET")
@@ -217,7 +233,7 @@ class SimPerception:
                     v_state = ("TARGET_CONFIRMED" if self._is_target(o)
                                else "NON_TARGET")
                 else:
-                    v_cls, v_set, v_state = "cube", None, "CUBE_BLANK_VIEW"
+                    v_cls, v_set, v_state = "cube", CUBE_SIGHTING_SET, "CUBE_BLANK_VIEW"
                 sightings.append(dict(
                     set=v_set, cls=v_cls, state=v_state,
                     bearing=b + rng.gauss(0, 0.01),
@@ -271,16 +287,33 @@ class SimPerception:
 # ------------------------------------------------------------------ 물리 세계
 
 class World:
-    BODY_R = 0.17         # 충돌용 (내접 반경 근사; 경로계획 팽창은 0.22)
+    BODY_R = 0.17         # 충돌용 원 근사 (robot.stl 34×31cm; 내접~0.155/외접~0.23)
     OBJ_R = 0.05
-    POCKET = 0.26         # 로봇 중심 -> 빈 포켓(안착 지점) 거리
-    FRONT_OFF = 0.35      # 로봇 중심 -> 입구에 문 2번째 물체 중심
+    POCKET = 0.07         # 로봇 중심 -> 스쿱 안착점 (3MF: 바스켓 깊이140·IR 내벽50mm)
+    FRONT_OFF = 0.35      # 로봇 중심 -> 입구에 문 2번째 물체 중심 (더블캐리 off 시 미사용)
     CAPTURE_LAT = 0.05    # 포획 허용 횡오차 (깔때기 날개 포함)
+    # 전방 스쿱 개구부: 포켓(0.10)이 BODY_R(0.17) 안이라, 몸체 원으로 치면 물체가
+    # 포획 전에 밀려난다. 실제론 앞이 뚫린 U채널이므로 이 콘 안의 물체는 몸체
+    # 밀침에서 제외(개구부로 진입 → 포획 대상). 채널 반폭 ~0.06, 전방 도달 ~0.24.
+    SCOOP_HALF = 0.06
+    SCOOP_REACH = 0.24
+    # --- 적재구역 혼잡 모델 ---
+    STORE_X = 0.45        # 이 x 안쪽에서 물체를 놓으면 '하역'으로 간주 (경기장 유실과 구분)
+    STORE_Y = 0.55
+    STORE_MAX = 0.36      # 경계 완전 내부 상한 (score 와 일치); 이보다 밖이면 스필=미채점
+    PILE_PITCH = 0.09     # 8cm 물체가 x축으로 쌓일 때 중심 간격
+    COL_DY = 0.11         # 같은 y-컬럼으로 볼 횡거리 (이 안이면 x축으로 서로 막음)
 
-    def __init__(self, objs, geom: ArenaGeometry, rng, slip_w=0.5):
+    def __init__(self, objs, geom: ArenaGeometry, rng, slip_w=0.5,
+                 bin_lip=False, lip_x=0.39, lip_y=0.39):
         self.objs = objs
         self.geom = geom
         self.rng = rng
+        # 3D 프린트 문턱(3mm×10mm): 보관함 안쪽 두 모서리(경기장 향, 바깥 벽 제외)
+        # 에만 있어 넘어 들어온 물체가 밖으로 못 나간다. lip_x/lip_y = 턱 안쪽 면.
+        self.bin_lip = bin_lip
+        self.lip_x = lip_x
+        self.lip_y = lip_y
         self.pose = [3.8, 0.2, math.radians(90)]   # 스타트존, +y 방향
         self.payload = None
         self.front = None                           # 입구에 문 2번째 물체
@@ -314,7 +347,7 @@ class World:
         # 적재물은 빈 안에서 로봇과 함께 이동. 후진하면 바닥 마찰로 분리.
         if self.payload is not None:
             if v < -0.01:
-                self.payload["payload"] = False
+                self._release_obj(self.payload)
                 self.payload = None
             else:
                 self.payload["x"], self.payload["y"] = px, py
@@ -322,7 +355,7 @@ class World:
         # 입구 물체: 구속이 없어 후진·급회전·적재물 상실 시 그 자리에 떨어진다
         if self.front is not None:
             if v < -0.01 or abs(w) > self.slip_w or self.payload is None:
-                self.front["payload"] = False
+                self._release_obj(self.front)
                 self.front = None
                 self.front_slips += 1
             else:
@@ -334,10 +367,9 @@ class World:
                 continue
             dx, dy = o["x"] - x2, o["y"] - y2
             d = math.hypot(dx, dy)
-            lat = abs(-math.sin(yaw2) * (o["x"] - x2)
-                      + math.cos(yaw2) * (o["y"] - y2))
-            ahead = math.cos(yaw2) * (o["x"] - x2) + \
-                math.sin(yaw2) * (o["y"] - y2)
+            lat_s = -math.sin(yaw2) * dx + math.cos(yaw2) * dy   # 부호 있는 횡오차
+            lat = abs(lat_s)
+            ahead = math.cos(yaw2) * dx + math.sin(yaw2) * dy
             # 1차 포획: 전진 중 + 포켓 근처 + 축방향 정렬
             if self.payload is None and v > 0.01:
                 if abs(ahead - self.POCKET) < 0.10 and lat < self.CAPTURE_LAT:
@@ -350,6 +382,15 @@ class World:
                     o["payload"] = True
                     self.front = o
                     continue
+            # 전방 스쿱 개구부: 몸체(원)로 안 밀고, 깔때기 날개가 물체를 중심축으로
+            # 유도한다(포켓이 verify 블라인드 안쪽이라 블라인드 푸시의 소량 오정렬을
+            # 깔때기가 흡수 — 실제 스쿱의 물리). 정렬되면 위 1차 포획이 담는다.
+            if 0.0 < ahead < self.SCOOP_REACH and lat < self.SCOOP_HALF:
+                if self.payload is None and v > 0.01:
+                    k = 0.25                       # 스텝당 횡오차 수렴률(깔때기)
+                    o["x"] += k * lat_s * math.sin(yaw2)
+                    o["y"] -= k * lat_s * math.cos(yaw2)
+                continue
             # 몸체 밀침 (포획 실패 시 물체가 밀려남)
             if d < self.BODY_R + self.OBJ_R:
                 push = (self.BODY_R + self.OBJ_R - d) + 0.005
@@ -360,6 +401,36 @@ class World:
                 self.disturbed += 1
 
         self.ir = self.payload is not None and t >= self.ir_forced_off_until
+
+    # ---------------- 적재구역 혼잡/다지기 ----------------
+
+    def _release_obj(self, o):
+        """적재물을 놓을 때: 보관함 안이면 '하역'으로 파일링, 아니면 그 자리 유실."""
+        o["payload"] = False
+        if o["x"] < self.STORE_X and o["y"] < self.STORE_Y:
+            self._pile(o)
+
+    def _pile(self, o):
+        """x축 스택 혼잡: 같은 y-컬럼에 이미 쌓인 하역물의 입구쪽(+x) 면에 막혀
+        쌓인다. 뒤(−x)는 벽이 백스톱. 입구 상한(STORE_MAX=0.36)을 넘으면 스필
+        (경계 밖 → score 에서 미채점). 8cm 물체가 좁은 레인으로만 들어오므로
+        x축 적층이 지배적 — depth 를 벌리거나(현 방식) 막판 다지기로 해소."""
+        col = [s for s in self.objs if s is not o and s.get("stored")
+               and abs(s["y"] - o["y"]) < self.COL_DY]
+        if self.bin_lip:
+            # 턱이 개구부(안쪽 모서리)를 막아 물체가 밖(+x/+y)으로 못 넘어간다 →
+            # 넘어 들어온 물체는 턱 안쪽에 걸리고, 혼잡분은 더 안쪽(−x)으로 쌓인다.
+            o["x"] = min(o["x"], self.lip_x - self.OBJ_R)
+            if col:
+                back = min(s["x"] for s in col)         # 이미 쌓인 것 중 가장 안쪽
+                o["x"] = min(o["x"], back - self.PILE_PITCH)
+            o["x"] = max(o["x"], self.OBJ_R + 0.02)     # 서벽 백스톱
+            o["y"] = min(o["y"], self.lip_y - self.OBJ_R)
+        elif col:
+            front = max(s["x"] for s in col)
+            o["x"] = max(o["x"], front + self.PILE_PITCH)
+        o["stored"] = True
+        o["done"] = True          # 인지/충돌 루프에서 제외
 
     def drop_payload(self):
         if self.payload is not None:
@@ -431,7 +502,11 @@ def run_match(seed, targets=None, duration=180.0, hooks=None, verbose=False,
             break
 
     pts, good, bad = world.score(targets)
-    return dict(points=pts, good=good, bad=bad, wall_hits=world.wall_hits,
+    stored = [o for o in world.objs if o.get("stored")]
+    spilled = sum(1 for o in stored if not (0.04 <= o["x"] <= 0.36
+                                            and 0.04 <= o["y"] <= 0.36))
+    return dict(points=pts, good=good, bad=bad, n_stored=len(stored),
+                spilled=spilled, wall_hits=world.wall_hits,
                 wall_hit_at=world.wall_hit_at, disturbed=world.disturbed,
                 front_slips=world.front_slips, events=events,
                 end_state=mission.state,
@@ -523,10 +598,28 @@ def scenario_capture_miss(verbose):
 
 
 def scenario_endgame(verbose):
-    r = run_match(seed=104, duration=60.0, verbose=verbose)
+    # 시간 컷오프 로직 자체의 회귀 검증 — hail_mary(기본 on)는 컷오프를 의도적으로
+    # 무시하는 기능이므로 여기서는 끄고 '적재 상태 방치 금지' 불변식을 지킨다.
+    r = run_match(seed=104, duration=60.0, verbose=verbose,
+                  params_override=dict(hail_mary=False))
     ok = (not r["holding"]) and r["bad"] == 0 and r["wall_hits"] == 0
     print(f"  종료 상태 {r['end_state']}  적재물 방치: {r['holding']}  "
           f"하역 {r['good']}")
+    return ok
+
+
+def scenario_hail_mary(verbose):
+    """엔드게임 헤일메리(기본 on): 컷오프로 할 일이 없는 막판에 확정 타깃을
+    시도한다. 종료 시 적재 상태는 감점 0 이라 허용(holding 게이트 없음) —
+    안전(오픽업·벽충돌 0)과 '컷오프-only 대비 점수 하락 없음'만 게이트."""
+    r0 = run_match(seed=104, duration=60.0,
+                   params_override=dict(hail_mary=False))
+    r = run_match(seed=104, duration=60.0, verbose=verbose)
+    ok = (r["bad"] == 0 and r["wall_hits"] == 0
+          and r["points"] >= r0["points"])
+    print(f"  하역 {r['good']} vs 컷오프-only {r0['good']}  "
+          f"점수 {r['points']:+.0f} vs {r0['points']:+.0f}  "
+          f"종료 적재: {r['holding']}  오픽업 {r['bad']}")
     return ok
 
 
@@ -564,7 +657,8 @@ def scenario_double_carry(verbose):
             _adjacent_pair_setup(world)
             done["setup"] = True
     r = run_match(seed=106, targets={"set2": "apple"},
-                  hooks={"tick": tick}, verbose=verbose)
+                  hooks={"tick": tick}, verbose=verbose,
+                  params_override=dict(double_carry=True))   # 옵션 기능 회귀 검증
     second = any("SECOND_CAPTURED" in e for _, e in r["events"])
     ok = second and r["good"] >= 2 and r["bad"] == 0 and r["wall_hits"] == 0
     print(f"  2차 포획: {second}  하역 {r['good']}  오픽업 {r['bad']}  "
@@ -582,7 +676,8 @@ def scenario_double_slip(verbose):
             done["setup"] = True
     r = run_match(seed=106, targets={"set2": "apple"},
                   hooks={"tick": tick}, verbose=verbose,
-                  world_kw=dict(slip_w=0.15))
+                  world_kw=dict(slip_w=0.15),
+                  params_override=dict(double_carry=True))   # 옵션 기능 회귀 검증
     ok = r["good"] >= 1 and r["bad"] == 0 and r["wall_hits"] == 0
     print(f"  이탈 {r['front_slips']}회  하역 {r['good']}  오픽업 {r['bad']}")
     return ok
@@ -613,6 +708,7 @@ def main():
         ("C payload-lost", lambda: scenario_payload_lost(args.verbose)),
         ("D capture-miss", lambda: scenario_capture_miss(args.verbose)),
         ("E endgame", lambda: scenario_endgame(args.verbose)),
+        ("E2 hail-mary", lambda: scenario_hail_mary(args.verbose)),
         ("F loc-degraded", lambda: scenario_loc_degraded(args.verbose)),
         ("G double-carry", lambda: scenario_double_carry(args.verbose)),
         ("H double-slip", lambda: scenario_double_slip(args.verbose)),

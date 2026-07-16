@@ -30,7 +30,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
-from configs.merged_classes import CLASSIFIER_CLASSES  # noqa: E402
+from configs.merged_classes import CLASSIFIER_CLASSES, UNKNOWN  # noqa: E402
 
 # (tag, classifier-root) pairs. Missing roots are skipped, so this works while
 # combined_v3 is still synthesizing. Synthetic is capped per class; real is oversampled.
@@ -41,6 +41,11 @@ from configs.merged_classes import CLASSIFIER_CLASSES  # noqa: E402
 # combined_v3 + the real roots below -- the legacy synth dirs can be deleted to free space.
 SYN_ROOTS = [("cmb", "combined_v3")]
 REAL_ROOTS = [("s1real", "set1_real"), ("s2real", "set2_real")]
+# Background hard-negative roots: real venue crops that the classifier must reject.
+# They contribute to 'unknown' ONLY (each has just an unknown/ folder). venue_bg
+# (scratchpad/harvest_venue_bg.py) targets the retrained model's smooth-surface->cube
+# failure with real cam0714 arena backgrounds at detector scale.
+BG_ROOTS = [("venuebg", "venue_bg")]
 OUT = os.path.join(ROOT, "datasets", "merged", "classifier")
 
 
@@ -81,6 +86,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--repeat", type=int, default=8,
                     help="oversample factor for real train crops")
+    ap.add_argument("--bg-repeat", type=int, default=2,
+                    help="oversample factor for background hard-negatives (unknown only)")
     ap.add_argument("--syn-cap", type=int, default=3000,
                     help="max synthetic crops per class (keeps real from being drowned)")
     ap.add_argument("--out-dir", default=OUT)
@@ -116,12 +123,19 @@ def main():
         for k in range(args.repeat):
             for tag, f in real:
                 link(f, os.path.join(out, "train", c, f"{tag}_r{k}_{os.path.basename(f)}"))
-        # val = REAL only (deployment domain)
+        # background hard-negatives -> 'unknown' only, with their own oversample factor
+        bg = [(tag, f) for tag, root in BG_ROOTS for f in crops(root, "train", c)] if c == UNKNOWN else []
+        for k in range(args.bg_repeat):
+            for tag, f in bg:
+                link(f, os.path.join(out, "train", c, f"{tag}_r{k}_{os.path.basename(f)}"))
+        # val = REAL only (deployment domain); venue backgrounds are held-out real too
         realv = [(tag, f) for tag, root in REAL_ROOTS for f in real_crops(root, "val", c)]
+        if c == UNKNOWN:
+            realv += [(tag, f) for tag, root in BG_ROOTS for f in crops(root, "val", c)]
         for tag, f in realv:
             link(f, os.path.join(out, "val", c, f"{tag}_{os.path.basename(f)}"))
 
-        n_tr = len(syn) + len(real) * args.repeat
+        n_tr = len(syn) + len(real) * args.repeat + len(bg) * args.bg_repeat
         tot_tr += n_tr
         tot_val += len(realv)
         flag = "  <-- EMPTY" if n_tr == 0 else ""

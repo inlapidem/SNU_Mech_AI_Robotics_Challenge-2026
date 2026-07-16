@@ -661,9 +661,16 @@ def process(source, dets, layouts, cfg, k_for, out_dir, rng, qc_n,
                 fw = allq[:, 0].max() - allq[:, 0].min()
                 fh = allq[:, 1].max() - allq[:, 1].min()
                 fbox_ok = min(fw, fh) >= lab["min_fruit_box_px"]
-            is_fruit = (min(box[2] - box[0], box[3] - box[1]) >= lab["min_box_px"]
-                        and trunc <= lab["max_truncation_px"]
-                        and best_facing >= lab["min_fruit_face_facing"]
+            # The fruit label must depend on the FRUIT FACE's visibility (facing, area
+            # ratio, and absolute fruit-box size via fbox_ok), NOT on the cube's overall
+            # geometry. Cube-geometry gates (min_box_px, max_truncation_px) wrongly drop
+            # readable fruit to 'unknown' when the cube is merely far or clipped by the
+            # frame edge -- yet its fruit face is fully visible and identifiable (verified
+            # by montage: 922/966 such crops were edge-truncated cubes with a clear fruit
+            # face). fbox_ok already guards absolute fruit legibility, so those two cube
+            # gates are excluded here; a truncated/small cube with a legible fruit face is
+            # a valid fruit crop.
+            is_fruit = (best_facing >= lab["min_fruit_face_facing"]
                         and fruit_px / box_area >= lab["min_fruit_area_ratio"]
                         and fbox_ok)
             label = fruit if is_fruit else cfg["classes"]["unknown"]

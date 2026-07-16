@@ -10,8 +10,14 @@
 # 실행 (Jetson — motor_bridge / sllidar / wall_localizer / run_perception 먼저):
 #   source /opt/ros/humble/setup.bash
 #   python3 navigation/navigator_node.py --ros-args --params-file navigation/params.yaml \
-#       -p target_set1:=icosa -p target_set2:=apple      # 경기 직전 공지 반영
+#       -p target_set1:=icosahedron -p target_set2:=apple   # 경기 직전 공지 반영
 #   ros2 topic pub --once /mission_start std_msgs/msg/Empty {}   # 경기 시작 신호
+#
+# 목표 이름 공간(통합 엔진): target_set1 ∈ {cube, octahedron, dodecahedron,
+#   icosahedron}, target_set2 ∈ {apple, orange, banana, pineapple}. 인지가 보내는
+#   cls 와 반드시 같은 이름이어야 매칭된다(configs/combined_classes.py 정본).
+#   mission 은 관측의 'set' 라벨을 신뢰하지 않고 cls 에서 set 을 유도하며, 'cube'
+#   는 set2(과일 숨은 큐브)일 수 있어 다시점 인증 전까지 어느 set 도 아니다.
 #
 # 미션 로직은 전부 mission_fsm.py (ROS 없음, sim_mission.py 로 검증) — 이 노드는
 # 토픽/UDP 입출력과 20Hz 제어 루프만 담당한다.
@@ -164,7 +170,9 @@ class NavigatorNode(Node):
             if role == 'verify' and (verify_range is None or rng < verify_range):
                 verify_range = rng
                 verify_bearing = bearing
-            sightings.append(dict(set=r.get('set'), cls=r.get('cls'),
+            # set 은 보내지 않는다 — mission 이 cls 에서 유도한다(통합 엔진 철학:
+            # cube 의 set 은 라우팅용일 뿐 확정 아님). cls 만 신뢰.
+            sightings.append(dict(cls=r.get('cls'),
                                   state=r.get('state', 'SEARCHING'),
                                   bearing=bearing, range=rng))
         self.percep = PerceptionFrame(
