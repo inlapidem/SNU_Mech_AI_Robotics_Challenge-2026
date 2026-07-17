@@ -304,8 +304,14 @@ class World:
     PILE_PITCH = 0.09     # 8cm 물체가 x축으로 쌓일 때 중심 간격
     COL_DY = 0.11         # 같은 y-컬럼으로 볼 횡거리 (이 안이면 x축으로 서로 막음)
 
+    # 적재 파일 물리: "legacy"(x축 전용 스택, 구 모델 — 기존 기준선 재현용) |
+    # "chain"(릴리즈 방향 축 적층 + 벽/코너 백스톱 + 사슬 압축 — 방향 일반화.
+    # 대각 하역(deposit_mode=diag) 평가는 반드시 chain 으로: legacy 는 x축
+    # 가정이라 대각 파일을 잘못 모델링한다). 클래스 속성이라 전역 토글 가능.
+    PILE_MODE = "legacy"
+
     def __init__(self, objs, geom: ArenaGeometry, rng, slip_w=0.5,
-                 bin_lip=False, lip_x=0.39, lip_y=0.39):
+                 bin_lip=False, lip_x=0.39, lip_y=0.39, pile_mode=None):
         self.objs = objs
         self.geom = geom
         self.rng = rng
@@ -314,6 +320,7 @@ class World:
         self.bin_lip = bin_lip
         self.lip_x = lip_x
         self.lip_y = lip_y
+        self.pile_mode = pile_mode or World.PILE_MODE
         self.pose = [3.8, 0.2, math.radians(90)]   # 스타트존, +y 방향
         self.payload = None
         self.front = None                           # 입구에 문 2번째 물체
@@ -347,7 +354,7 @@ class World:
         # 적재물은 빈 안에서 로봇과 함께 이동. 후진하면 바닥 마찰로 분리.
         if self.payload is not None:
             if v < -0.01:
-                self._release_obj(self.payload)
+                self._release_obj(self.payload, yaw2)
                 self.payload = None
             else:
                 self.payload["x"], self.payload["y"] = px, py
@@ -355,7 +362,7 @@ class World:
         # 입구 물체: 구속이 없어 후진·급회전·적재물 상실 시 그 자리에 떨어진다
         if self.front is not None:
             if v < -0.01 or abs(w) > self.slip_w or self.payload is None:
-                self._release_obj(self.front)
+                self._release_obj(self.front, yaw2)
                 self.front = None
                 self.front_slips += 1
             else:
@@ -404,11 +411,67 @@ class World:
 
     # ---------------- 적재구역 혼잡/다지기 ----------------
 
-    def _release_obj(self, o):
-        """적재물을 놓을 때: 보관함 안이면 '하역'으로 파일링, 아니면 그 자리 유실."""
+    def _release_obj(self, o, yaw=math.pi):
+        """적재물을 놓을 때: 보관함 안이면 '하역'으로 파일링, 아니면 그 자리 유실.
+
+        yaw = 릴리즈 순간 로봇 heading = 푸시 방향 (chain 파일 모델이 사용)."""
         o["payload"] = False
         if o["x"] < self.STORE_X and o["y"] < self.STORE_Y:
-            self._pile(o)
+            if self.pile_mode == "chain" and not self.bin_lip:
+                self._pile_chain(o, yaw)
+            else:
+                self._pile(o)
+
+    def _pile_chain(self, o, yaw):
+        """방향 일반화 파일 물리: 릴리즈 축(d̂=heading)으로 같은 컬럼(횡거리
+        <COL_DY)의 하역물을 사슬로 본다. 새 물체는 릴리즈 지점에 서고, 겹치는
+        사슬은 벽(코너) 쪽으로 압축된다(각 물체는 벽 여유 OBJ_R+1cm 까지만).
+        벽이 못 받아주면 새 물체가 파일 전면(+PITCH 간격)으로 밀려난다.
+        lane(-x 푸시)에선 서벽 백스톱, diag(코너향)에선 두 벽이 백스톱이라
+        압축 여지가 커진다 — 대각 하역의 용량 이점이 이 물리에서 나온다."""
+        dx, dy = math.cos(yaw), math.sin(yaw)
+        m0 = self.OBJ_R + 0.01
+
+        def smax(px, py):
+            """(px,py)가 d̂ 방향으로 벽에 닿기까지 추가로 밀릴 수 있는 거리."""
+            best = float("inf")
+            if dx < -1e-6:
+                best = min(best, (px - m0) / -dx)
+            elif dx > 1e-6:
+                best = min(best, (self.geom.arena_w - m0 - px) / dx)
+            if dy < -1e-6:
+                best = min(best, (py - m0) / -dy)
+            elif dy > 1e-6:
+                best = min(best, (self.geom.arena_h - m0 - py) / dy)
+            return max(0.0, best)
+
+        col = []                      # (o 기준 깊이 ahead, 객체)
+        for s in self.objs:
+            if s is o or not s.get("stored"):
+                continue
+            rx, ry = s["x"] - o["x"], s["y"] - o["y"]
+            lat = abs(-dy * rx + dx * ry)
+            ahead = dx * rx + dy * ry
+            if lat < self.COL_DY and ahead > -0.5 * self.PILE_PITCH:
+                col.append([ahead, s])
+        # 얕은 것(새 물체에 가까운 것)부터: j번째는 새 물체보다 j*PITCH 깊어야 함
+        col.sort(key=lambda x: x[0])
+        deficit = 0.0                 # 사슬이 못 받아줘서 새 물체가 물러날 거리
+        for j, (ahead, s) in enumerate(col, start=1):
+            need = j * self.PILE_PITCH - deficit    # o 최종 위치 기준 필요 깊이
+            if ahead < need:
+                push = need - ahead
+                absorb = min(push, smax(s["x"], s["y"]))
+                s["x"] += absorb * dx
+                s["y"] += absorb * dy
+                deficit += push - absorb
+        if deficit > 0:               # 파일 전면으로 후퇴 (−d̂ 방향)
+            o["x"] -= deficit * dx
+            o["y"] -= deficit * dy
+        o["x"] = min(self.geom.arena_w - m0, max(m0, o["x"]))
+        o["y"] = min(self.geom.arena_h - m0, max(m0, o["y"]))
+        o["stored"] = True
+        o["done"] = True
 
     def _pile(self, o):
         """x축 스택 혼잡: 같은 y-컬럼에 이미 쌓인 하역물의 입구쪽(+x) 면에 막혀

@@ -137,8 +137,14 @@ DEFAULT_PARAMS = dict(
     # 마지막 짧은 구간만 blind push (실 스쿱은 깔때기가 소량 오정렬 흡수).
     blind_push_range=0.40,
     approach_timeout_s=14.0,
-    capture_push_max=0.45,      # blind push 최대 전진 거리
-    capture_push_limit_s=6.0,   # configs/*.yaml verify.capture_push_limit 와 일치
+    # ⭐ 포획 푸시 예산(2026-07-17 다양화 배터리): 검출 미스(p=0.25/0.45, 실기
+    # 원거리 recall 현실역)에서 CAPTURE 진입의 76~89%가 verify 프레임 미스
+    # (range=None) 상태 → 36~40%가 0.45m 밖에서 블라인드 푸시 시작 → 빗맞음 →
+    # 재시도 소진 블랙리스트가 진짜 타깃 사살(경기당 27~31점). 0.45/6s→0.62/11s
+    # 확대만으로 det계열 +10~17, 전 18계열 페어드 +2.0, 0점경기 71→39, 명목 Δ0,
+    # 오픽업·벽충돌 불변, 시나리오 9/9 PASS. (tries/timeout 연장은 열등)
+    capture_push_max=0.62,      # blind push 최대 전진 거리
+    capture_push_limit_s=11.0,  # configs/*.yaml verify.capture_push_limit 와 일치
     retreat_dist=0.30,
     micro_adjust_dist=0.15, micro_adjust_yaw_deg=35.0,  # 과일면이 다른 45° 섹터에
                                                         # 있을 수 있어 크게 돈다
@@ -154,6 +160,11 @@ DEFAULT_PARAMS = dict(
     # 접근각 선택 시 과일 무지면 섹터를 회피(관측된 blank_sectors) — 방황 감소.
     face_aware_standoff=True,
     max_tries_per_object=2,     # 접근 실패 허용 횟수 (초과 시 블랙리스트)
+    # 재스쿱 루프브레이커(2026-07-17): 같은 지점(0.45m) 반복 배출이면 추격 중이던
+    # 타깃에 tries 벌점 → 소진 시 블랙리스트로 경로 자체를 바꾼다. 배터리에서
+    # 같은물체 5회+ 재스쿱 루프 183건(최악 경기 0점) 관측 — 루프 감지 시에만
+    # 발동하므로 명목 경기는 영향 없음.
+    uc_loop_break=True,
     ir_lost_patience_s=0.8,     # 운반 중 IR 순간 끊김 허용
     # 접근 중 IR 안착이 뜨면(타깃이 포켓 사거리 안일 때) 블라인드 푸시 단계를
     # 안 기다리고 즉시 적재 확정. 원거리 이물질 IR 은 근접 게이트로 걸러 배출.
@@ -208,6 +219,37 @@ DEFAULT_PARAMS = dict(
                                 # 남벽과 안 닿고, 물체(반폭 4cm)는 경계 안(0.36)에 듦
     deposit_depths=(0.12, 0.22, 0.31),  # 물체 중심 목표 x — 하역마다 순환, 겹치면
                                         # 서쪽 벽 쪽으로 밀려 쌓임 (벽이 백스톱)
+    # 하역 푸시 중 로봇 중심 x 하한(2026-07-17): 최심 슬롯 0.12+포켓 0.07=0.19 는
+    # 몸체(반경~0.17) 벽여유가 2cm 뿐이라 자세오차만큼 서벽을 민다(자세노이즈
+    # 배터리서 벽충돌 에피소드 243/243 이 이 지점). 0.205 클램프 = 여유 3.5cm:
+    # 실기 위치오차(σ1.3~1.8cm)에서 하역 벽충돌 완전 0 + 점수 +0.5~1.1. 물체는
+    # 0.135 에 놓여도 후속 하역이 벽쪽으로 밀어 백스톱 유지(스필 부작용 없음 —
+    # depths 튜플 자체를 올리는 방식은 스필 증가로 기각).
+    deposit_wall_clear=0.205,
+    # --- 대각(코너향) 하역 진입 (2026-07-17, 사용자 제안) ---
+    # lane: 현행 — y=0.30 레인에서 서향(-x) 푸시. diag: 좌하 코너(보관함)를 향해
+    # 대각(-135°)으로 진입·푸시. 이점: ① 최심 슬롯에서 양벽 여유 5cm(레인은 서벽
+    # 3.5cm 클램프가 한계) ② 파일 백스톱이 '코너 두 벽'이라 후속 하역이 파일을
+    # 코너로 압축 → 실질 용량 3→5 (x예산 0.32m 대신 대각 0.45m) ③ 남벽을 끼고
+    # 기는 진입 레인이 사라져 접근 중 벽 마진도 커짐. 평가는 반드시 sim
+    # World.PILE_MODE="chain"(방향성 파일 물리)으로 — legacy 는 x축 전용 모델.
+    # ⚠ diag A/B(2026-07-17, chain 물리 7계열+c30): 벽행 13→4·스필 31→6 으로
+    # 기하 이점은 실증됐으나 **오픽업 6→27 (c30 0→9)** — 대각 푸시 회랑
+    # (0.81,0.81)→(0.22,0.22)이 격자점(0.5,0.75)을 0.18m 로 관통, 푸시 중 스쿱
+    # 입구에 걸린 비타깃이 셰드 방어선(푸시 전 실행) 뒤라 그대로 하역됨(-2x).
+    # → veer 로 대체: lane 의 검증된 회랑(격자 비관통)·셰드 타이밍을 유지하고
+    # 푸시 heading 만 남쪽 ~6.5° 기울여 릴리즈 y 0.30→0.21 (스필 지배모드인
+    # 북측 y오버슛의 경계 여유 1.4σ→5σ) + 파일에 남향 성분(코너 백스톱).
+    # veer A/B(chain 물리, 7계열 448): +0.51, 오픽업 6→3, 스필 31→17, 9시나리오
+    # PASS → 기본. ⚠ cruise 0.30 투영에선 veer 가 벽행 11→35 로 퇴행(도착
+    # 산포가 남벽 여유를 잠식) — cruise 상향 시 deposit_mode 재검증 필수
+    # (lane 폴백 가능). diag 는 위 오픽업 사유로 기각(토글은 실험용 유지).
+    deposit_mode="veer",
+    deposit_veer_deg=6.5,       # veer: 서향 푸시의 남쪽 기울기 [deg]
+    deposit_diag_dists=(0.24, 0.33, 0.42),  # diag: 물체 중심 코너 대각거리 u=(x+y)/√2
+                                            # (축좌표 0.17/0.23/0.30 — 채점 0.04~0.36 내)
+    deposit_diag_clear=0.31,    # diag: 로봇 중심 대각거리 하한 = (0.17+여유5cm)×√2
+    deposit_diag_approach=1.15, # diag: 진입 정렬 지점 대각거리 (≈ (0.81, 0.81))
     deposit_push_v=0.10,        # 하역 진입 속도 — 검증 끝난 구간이라 포획 푸시보다
                                 # 빨라도 됨 (트립당 고정 오버헤드 절감)
     # 빠른 하역: 보관함 안쪽 모서리의 3mm 문턱이 물체를 잡아준다면(bin_lip) 오버런
@@ -435,6 +477,7 @@ class MissionFSM:
         self._tour_goal = None                 # 현재 레인 목표점 (주기 재계획용)
         self._tour_pass_done = False           # 1바퀴 끝나야 미확인 조사 허용
         self._unintended_ir_since = None
+        self._uc_drops = []         # 의도치 않은 포획 배출 지점 이력 (루프브레이커)
         self._last_time_check = -1.0
         self._hail = False          # 현재 목표가 헤일메리(시간 컷오프 무시)인지
         self._recovering = False    # 운반 중 유실물 회수 모드 (재검증 생략)
@@ -536,24 +579,39 @@ class MissionFSM:
                 self._unintended_ir_since = t
             elif t - self._unintended_ir_since > 0.4:
                 self._events.append("UNINTENDED_CAPTURE->DROP")
+                dpx = pose[0] + self.p["payload_offset"] * math.cos(pose[2])
+                dpy = pose[1] + self.p["payload_offset"] * math.sin(pose[2])
+                # 루프브레이커(2026-07-17 배터리: 같은물체 5회+ 재스쿱 루프 183건):
+                # 같은 지점(0.45m) 반복 배출이면 지금 추격 중이던 타깃의 경로가
+                # 그 물체를 계속 지나는 것 — 타깃에 tries 벌점을 줘 소진 시
+                # 블랙리스트(다른 목표로 경로 자체를 바꾼다). 첫 배출은 무벌점.
+                repeat = self.p["uc_loop_break"] and any(
+                    math.hypot(dpx - x0, dpy - y0) < 0.45
+                    for _, x0, y0 in self._uc_drops[-8:])
+                self._uc_drops.append((t, dpx, dpy))
+                if repeat and self._target is not None \
+                        and self._target["status"] in ("active", "open"):
+                    self._target["tries"] += 1
+                    if self._target["tries"] > self.p["max_tries_per_object"]:
+                        self._blacklist(self._target, "uc_loop")
                 if self._target is not None and self._target["status"] == "active":
                     self._target["status"] = "open"
                 self._target = None
                 self._unintended_ir_since = None
                 # 배출 지점(포켓 위치)을 장애물로 등록 — 같은 물체 재포획 루프 방지
-                self.memory.add_virtual(
-                    pose[0] + self.p["payload_offset"] * math.cos(pose[2]),
-                    pose[1] + self.p["payload_offset"] * math.sin(pose[2]))
+                self.memory.add_virtual(dpx, dpy)
                 self._begin_retreat(pose, 0.35, then=TOUR)
                 # 배출 물체·가상 장애물이 쌓인 구석에서는 경로가 전부 막혀
                 # 직선 폴백이 재스쿱을 유발한다 — 중심 쪽으로 강제 이탈 후 재개
+                # (반복 배출이면 이탈 거리를 늘려 같은 기하로 재진입을 끊는다)
                 cx = self.geom.arena_w / 2.0
                 cy = self.geom.arena_h / 2.0
                 dn = math.hypot(cx - pose[0], cy - pose[1])
                 if dn > 0.1:
+                    esc = 1.4 if repeat else 0.9
                     self._retreat["escape_wp"] = (
-                        pose[0] + 0.9 * (cx - pose[0]) / dn,
-                        pose[1] + 0.9 * (cy - pose[1]) / dn)
+                        pose[0] + esc * (cx - pose[0]) / dn,
+                        pose[1] + esc * (cy - pose[1]) / dn)
         else:
             self._unintended_ir_since = None
 
@@ -566,9 +624,9 @@ class MissionFSM:
                 and t - self._last_time_check > 1.0):
             self._last_time_check = t
             tgt = self._target
+            dep = self._dep_point()
             d1 = math.hypot(tgt["x"] - pose[0], tgt["y"] - pose[1])
-            d2 = math.hypot(tgt["x"] - self.p["deposit_approach_x"],
-                            tgt["y"] - self.p["deposit_lane_y"])
+            d2 = math.hypot(tgt["x"] - dep[0], tgt["y"] - dep[1])
             need = (d1 + d2) / self.p["eff_speed"] + \
                 self.p["t_capture_est"] + self.p["t_deposit_est"]
             if need > self.remaining(t) - 2.0:
@@ -1034,7 +1092,7 @@ class MissionFSM:
         p = self.p
         if not p["double_carry"]:
             return None
-        dep = (p["deposit_approach_x"], p["deposit_lane_y"])
+        dep = self._dep_point()
         best, best_d = None, p["pair_max_dist"]
         for o in self.memory.objects:
             if o["status"] != "open" or not self._is_definite_target(o):
@@ -1150,7 +1208,7 @@ class MissionFSM:
                 self._events.append("SHED_SPIN")
                 self._set_state(DEPOSIT_SHED, t)
             elif (p["deposit_align"] == "reapproach"
-                  and abs(wrap_angle(math.pi - pose[2]))
+                  and abs(wrap_angle(self._dep_heading() - pose[2]))
                   > math.radians(p["realign_tol_deg"])):
                 self._realign = dict(back0=(pose[0], pose[1]))
                 self._events.append("REALIGN_REAPPROACH")
@@ -1165,10 +1223,10 @@ class MissionFSM:
             if math.hypot(wp[0] - pose[0], wp[1] - pose[1]) < p["flyby_lookahead"]:
                 self._route.pop(0)
             return v, w
-        # rotate 모드: 마지막 지점에서 제자리 회전으로 -x 정렬.
+        # rotate 모드: 마지막 지점에서 제자리 회전으로 푸시 heading 정렬.
         # reapproach 모드: 위치만 맞추고(도착 heading 자유) 후진-호로 정렬.
-        final_yaw = (math.pi if (last and p["deposit_align"] == "rotate")
-                     else None)
+        final_yaw = (self._dep_heading()
+                     if (last and p["deposit_align"] == "rotate") else None)
         v, w, done = self.ctrl.go_to(pose, wp, dt, final_yaw=final_yaw)
         if done:
             self._route.pop(0)
@@ -1188,7 +1246,7 @@ class MissionFSM:
             v, w = self.ctrl._limit(0.0, p["shed_spin_w"], dt)
             self._shed["accum"] += abs(w) * dt
             return v, w
-        v, w, done = self.ctrl.rotate_to(pose, math.pi, dt)
+        v, w, done = self.ctrl.rotate_to(pose, self._dep_heading(), dt)
         if done:
             self._set_state(DEPOSIT_PUSH, t)
         return v, w
@@ -1206,7 +1264,7 @@ class MissionFSM:
             self._realign = None
             self._set_state(TRANSPORT, t)
             return self.ctrl._limit(0.0, 0.0, dt)
-        herr = wrap_angle(math.pi - pose[2])
+        herr = wrap_angle(self._dep_heading() - pose[2])
         backed = math.hypot(pose[0] - self._realign["back0"][0],
                             pose[1] - self._realign["back0"][1])
         if abs(herr) > math.radians(p["realign_tol_deg"]) and \
@@ -1219,22 +1277,41 @@ class MissionFSM:
 
     def _st_deposit_push(self, t, dt, pose, percep, ir):
         p = self.p
-        if self._front_obj is not None:
-            depth = p["deposit_depth_double"]   # B 가 A 앞 ~0.09 에 놓인다
+        diag = p["deposit_mode"] == "diag"
+        k = len(self.deposited)
+        if diag:
+            # 진행 좌표 = 코너 대각거리 u=(x+y)/√2 (감소 방향으로 전진)
+            if self._front_obj is not None:
+                depth = p["deposit_diag_dists"][0] + 0.10
+            else:
+                depth = p["deposit_diag_dists"][k % len(p["deposit_diag_dists"])]
+            prog = (pose[0] + pose[1]) / math.sqrt(2.0)
+            stop = max(depth + p["payload_offset"], p["deposit_diag_clear"])
+            # 축별 이중 가드: 대각에서 벗어난 드리프트가 한쪽 벽에 먼저 닿는 경우
+            ax_clear = p["deposit_diag_clear"] / math.sqrt(2.0)
+            hit_axis = pose[0] <= ax_clear or pose[1] <= ax_clear
         else:
-            depth = p["deposit_depths"][len(self.deposited) %
-                                        len(p["deposit_depths"])]
-        stop_x = depth + p["payload_offset"]
-        if pose[0] <= stop_x or self.stall.update(dt, self._prev_v, pose):
+            if self._front_obj is not None:
+                depth = p["deposit_depth_double"]   # B 가 A 앞 ~0.09 에 놓인다
+            else:
+                depth = p["deposit_depths"][k % len(p["deposit_depths"])]
+            prog = pose[0]
+            # 벽여유 클램프: 믿는 자세 기준 로봇 중심 x 하한 (deposit_wall_clear)
+            stop = max(depth + p["payload_offset"], p["deposit_wall_clear"])
+            # veer: 남향 성분이 있으므로 남벽 여유도 가드
+            hit_axis = (p["deposit_mode"] == "veer"
+                        and pose[1] <= p["deposit_wall_clear"])
+        if prog <= stop or hit_axis or \
+                self.stall.update(dt, self._prev_v, pose):
             self._release = dict(start=(pose[0], pose[1]), t0=t)
             self._set_state(DEPOSIT_RELEASE, t)
             return self.ctrl._limit(0.0, 0.0, dt)
-        herr = wrap_angle(math.pi - pose[2])
+        herr = wrap_angle(self._dep_heading() - pose[2])
         if p["deposit_fast"]:
             v_dep = p["deposit_fast_v"]          # 턱이 잡아주므로 감속 없이 끝까지
         else:
             # 보관함 근처(잔여 15cm)에서는 감속 — 정지 오버런으로 물체가 벽을 타는 것 방지
-            v_dep = p["deposit_push_v"] if pose[0] > stop_x + 0.15 else p["push_v"]
+            v_dep = p["deposit_push_v"] if prog > stop + 0.15 else p["push_v"]
         return self.ctrl.straight(v_dep, dt, hold_yaw_err=herr)
 
     def _st_deposit_release(self, t, dt, pose, percep, ir):
@@ -1431,9 +1508,26 @@ class MissionFSM:
         if route:
             self._route = route
 
+    def _dep_point(self):
+        """하역 진입 정렬 지점 (모드별)."""
+        p = self.p
+        if p["deposit_mode"] == "diag":
+            a = p["deposit_diag_approach"] / math.sqrt(2.0)
+            return (a, a)
+        return (p["deposit_approach_x"], p["deposit_lane_y"])
+
+    def _dep_heading(self):
+        """하역 푸시 heading: lane=서향(π), veer=서향-남기울기, diag=코너향."""
+        mode = self.p["deposit_mode"]
+        if mode == "diag":
+            return -0.75 * math.pi
+        if mode == "veer":
+            return wrap_angle(math.pi + math.radians(self.p["deposit_veer_deg"]))
+        return math.pi
+
     def _plan_to_deposit(self, pose):
         p = self.p
-        goal = (p["deposit_approach_x"], p["deposit_lane_y"])
+        goal = self._dep_point()
         # 하역 트립: 보관함 근처에서 비타깃을 경계로 밀어넣으면 −40 이므로 plow 를
         # 하역 경로에는 적용하지 않는다 (전부 하드 회피).
         obstacles = self.memory.obstacles(
@@ -1500,7 +1594,7 @@ class MissionFSM:
     def _est_trip_time(self, pose, obj):
         p = self.p
         d1 = math.hypot(obj["x"] - pose[0], obj["y"] - pose[1])
-        dep = (p["deposit_approach_x"], p["deposit_lane_y"])
+        dep = self._dep_point()
         d2 = math.hypot(obj["x"] - dep[0], obj["y"] - dep[1])
         return (d1 + d2) / p["eff_speed"] + p["t_approach_est"] + \
             p["t_capture_est"] + p["t_deposit_est"]
@@ -1510,7 +1604,7 @@ class MissionFSM:
         (있으면 A 포획 후 더블캐리로 한 트립에 2개 가능)."""
         if not self.p["double_carry"]:
             return False
-        dep = (self.p["deposit_approach_x"], self.p["deposit_lane_y"])
+        dep = self._dep_point()
         for o in self.memory.objects:
             if o is a or o["status"] != "open" or not self._is_definite_target(o):
                 continue
