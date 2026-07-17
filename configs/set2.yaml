@@ -312,7 +312,7 @@ verify:
   align_pair_max_age: 3
   blind_handoff_bbox_px: 320
   blind_handoff_bottom_px: 6
-  capture_push_limit: 6.0
+  capture_push_limit: 11.0   # 2026-07-17 push 예산 확대(navigation 스윕: 검출미스 강건성 +10~17점) — mission capture_push_limit_s 와 동기
 
 # --------------------------------------------------------------------------- runtime (Jetson) - conservative, false-positive averse
 runtime:

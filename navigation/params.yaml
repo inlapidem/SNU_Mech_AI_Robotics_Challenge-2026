@@ -37,6 +37,15 @@
                                    # (구 0.26 은 임의값 — DEFAULT 를 덮어쓰는 사고 방지)
     mission.standoff_dist: 0.60    # ⚠ 0.50 단축 기각(2026-07-16): 평균 +2.3 뒤에
                                    # seed102 재스쿱 무한루프(0점) — 파국 실패 모드
+    # --- 2026-07-17 다양화 배터리 채택분 (기본값은 mission_fsm.DEFAULT_PARAMS) ---
+    # capture_push_max 0.62 / capture_push_limit_s 11.0: 검출미스 강건성 +10~17점
+    #   ⚠ configs/*.yaml verify.capture_push_limit(=11.0) 과 반드시 동기 유지.
+    # deposit_wall_clear 0.205: 하역 푸시 로봇 x 하한 — 실기 자세오차에서 서벽충돌 0.
+    # uc_loop_break true: 같은 지점 반복 배출 시 타깃 tries 벌점(재스쿱 루프 차단).
+    # deposit_mode veer(기본): 푸시를 남쪽 6.5° 기울여 스필 -45%·오픽업 반감.
+    #   ⚠ cruise_v 를 0.20+ 로 올리면 veer 재검증 필수(0.30 투영서 남벽 마진 잠식
+    #   — 문제 시 mission.deposit_mode: lane 폴백). diag(코너 대각 진입)는 푸시
+    #   회랑이 격자를 관통해 오픽업 4.5배 → 기각(실험 토글만 유지).
     mission.steering_sign: -1.0     # 픽셀 오프셋 +(우측) → 우회전(w<0). 실차 확인!
     mission.endgame_margin_s: 8.0
     # hail_mary (기본 true, mission_fsm.DEFAULT_PARAMS): 막판에 시작할 수 있는

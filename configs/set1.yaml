@@ -268,7 +268,7 @@ verify:
   align_pair_max_age: 3       # two-cam alignment needs both cams seen within N updates
   blind_handoff_bbox_px: 320  # bbox height >= this -> object at the bin lip -> go blind
   blind_handoff_bottom_px: 6  # bbox bottom within N px of frame bottom -> go blind
-  capture_push_limit: 6.0     # s in BLIND_CAPTURE without IR seating -> CAPTURE_MISSED
+  capture_push_limit: 11.0    # s in BLIND_CAPTURE without IR seating -> CAPTURE_MISSED (2026-07-17: 6→11, navigation 검출미스 스윕 — mission capture_push_limit_s 와 동기)
 
 # --------------------------------------------------------------------------- runtime (Jetson)
 runtime:
