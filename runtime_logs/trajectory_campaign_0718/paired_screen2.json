@@ -1,0 +1,1952 @@
+{
+ "both:base015": {
+  "rows": [
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 10.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   }
+  ],
+  "ref": null,
+  "avg": 36.25,
+  "dep": 2.44,
+  "bad": 0,
+  "wall": 0,
+  "secs": 32.8
+ },
+ "both:decel20_015": {
+  "rows": [
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   }
+  ],
+  "ref": "base015",
+  "avg": 37.5,
+  "dep": 2.38,
+  "bad": 0,
+  "wall": 0,
+  "secs": 33.7,
+  "delta_avg": 1.25,
+  "delta_up": 4,
+  "delta_down": 4
+ },
+ "both:tip70_015": {
+  "rows": [
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 20.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 20.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   }
+  ],
+  "ref": "base015",
+  "avg": 33.12,
+  "dep": 2.31,
+  "bad": 0,
+  "wall": 0,
+  "secs": 31.8,
+  "delta_avg": -3.12,
+  "delta_up": 1,
+  "delta_down": 6
+ },
+ "both:maxw13_015": {
+  "rows": [
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 20.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 20.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 70.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 10.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   }
+  ],
+  "ref": "base015",
+  "avg": 33.12,
+  "dep": 2.31,
+  "bad": 0,
+  "wall": 0,
+  "secs": 32.4,
+  "delta_avg": -3.12,
+  "delta_up": 3,
+  "delta_down": 6
+ },
+ "both:margin02_015": {
+  "rows": [
+   {
+    "points": 20.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 10.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   }
+  ],
+  "ref": "base015",
+  "avg": 38.75,
+  "dep": 2.5,
+  "bad": 0,
+  "wall": 0,
+  "secs": 35.0,
+  "delta_avg": 2.5,
+  "delta_up": 6,
+  "delta_down": 5
+ },
+ "both:c30_lane": {
+  "rows": [
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 10.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   }
+  ],
+  "ref": null,
+  "avg": 41.25,
+  "dep": 2.62,
+  "bad": 0,
+  "wall": 0,
+  "secs": 33.2
+ },
+ "both:c30_flyby32": {
+  "rows": [
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 12
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   }
+  ],
+  "ref": "c30_lane",
+  "avg": 45.62,
+  "dep": 2.88,
+  "bad": 0,
+  "wall": 12,
+  "secs": 34.8,
+  "delta_avg": 4.38,
+  "delta_up": 5,
+  "delta_down": 1
+ },
+ "both:c30_decel20": {
+  "rows": [
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 20.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   }
+  ],
+  "ref": "c30_lane",
+  "avg": 45.62,
+  "dep": 2.94,
+  "bad": 0,
+  "wall": 0,
+  "secs": 32.1,
+  "delta_avg": 4.38,
+  "delta_up": 5,
+  "delta_down": 3
+ },
+ "both:c30_tip70": {
+  "rows": [
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 10.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 10.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 20.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   }
+  ],
+  "ref": "c30_lane",
+  "avg": 41.25,
+  "dep": 2.56,
+  "bad": 0,
+  "wall": 0,
+  "secs": 32.4,
+  "delta_avg": 0.0,
+  "delta_up": 3,
+  "delta_down": 4
+ },
+ "bothcube:base015": {
+  "rows": [
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   }
+  ],
+  "ref": null,
+  "avg": 41.25,
+  "dep": 2.06,
+  "bad": 0,
+  "wall": 0,
+  "secs": 41.7
+ },
+ "bothcube:decel20_015": {
+  "rows": [
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   }
+  ],
+  "ref": "base015",
+  "avg": 46.25,
+  "dep": 2.31,
+  "bad": 0,
+  "wall": 0,
+  "secs": 37.2,
+  "delta_avg": 5.0,
+  "delta_up": 5,
+  "delta_down": 1
+ },
+ "bothcube:tip70_015": {
+  "rows": [
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   }
+  ],
+  "ref": "base015",
+  "avg": 42.5,
+  "dep": 2.12,
+  "bad": 0,
+  "wall": 0,
+  "secs": 41.5,
+  "delta_avg": 1.25,
+  "delta_up": 1,
+  "delta_down": 0
+ },
+ "bothcube:maxw13_015": {
+  "rows": [
+   {
+    "points": 0.0,
+    "good": 0,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   }
+  ],
+  "ref": "base015",
+  "avg": 42.5,
+  "dep": 2.12,
+  "bad": 0,
+  "wall": 0,
+  "secs": 39.5,
+  "delta_avg": 1.25,
+  "delta_up": 4,
+  "delta_down": 3
+ },
+ "bothcube:margin02_015": {
+  "rows": [
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   }
+  ],
+  "ref": "base015",
+  "avg": 43.75,
+  "dep": 2.19,
+  "bad": 0,
+  "wall": 0,
+  "secs": 34.9,
+  "delta_avg": 2.5,
+  "delta_up": 4,
+  "delta_down": 2
+ },
+ "bothcube:c30_lane": {
+  "rows": [
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 70.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   }
+  ],
+  "ref": null,
+  "avg": 55.62,
+  "dep": 2.88,
+  "bad": 0,
+  "wall": 0,
+  "secs": 37.2
+ },
+ "bothcube:c30_flyby32": {
+  "rows": [
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 70.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   }
+  ],
+  "ref": "c30_lane",
+  "avg": 55.0,
+  "dep": 2.81,
+  "bad": 0,
+  "wall": 0,
+  "secs": 37.1,
+  "delta_avg": -0.62,
+  "delta_up": 1,
+  "delta_down": 1
+ },
+ "bothcube:c30_decel20": {
+  "rows": [
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   }
+  ],
+  "ref": "c30_lane",
+  "avg": 51.25,
+  "dep": 2.62,
+  "bad": 0,
+  "wall": 0,
+  "secs": 37.9,
+  "delta_avg": -4.38,
+  "delta_up": 0,
+  "delta_down": 4
+ },
+ "bothcube:c30_tip70": {
+  "rows": [
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 70.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0
+   }
+  ],
+  "ref": "c30_lane",
+  "avg": 54.38,
+  "dep": 2.81,
+  "bad": 0,
+  "wall": 0,
+  "secs": 36.6,
+  "delta_avg": -1.25,
+  "delta_up": 1,
+  "delta_down": 3
+ }
+}

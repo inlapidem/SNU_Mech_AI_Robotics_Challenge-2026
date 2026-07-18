@@ -1,0 +1,559 @@
+{
+  "summary": "Map mission/nav logic, measure where the 180s goes, rank trajectory-planning score levers",
+  "agentCount": 9,
+  "logs": [
+    "Map done: 4/4 readers, measurements ok",
+    "Analyze done: 3/3 lenses"
+  ],
+  "result": {
+    "measurements": {
+      "runs": [
+        {
+          "label": "1. bothcube @0.15, 16 seeds (worst-case announcement)",
+          "command": "python3 navigation/sim_speed_sweep.py --mode bothcube --cruise 0.15 --seeds 16 --json",
+          "result": "{\"mode\": \"bothcube\", \"cruise\": 0.15, \"gate\": \"full_tour\", \"seeds\": 16, \"avg_points\": 41.2, \"pct_of_max\": 41.2, \"avg_deposits\": 2.06, \"full_clears\": 0, \"mispickups\": 0, \"wall_hits\": 0, \"avg_first_deposit_s\": 77.8, \"deposit_gaps_s\": 47.5, \"state_time\": {\"APPROACH\": 7.0, \"CAPTURE\": 9.6, \"DEPOSIT_PUSH\": 17.5, \"DEPOSIT_RELEASE\": 8.0, \"DEPOSIT_SHED\": 2.7, \"DONE\": 0.1, \"GOTO\": 52.5, \"PARK\": 1.0, \"RETREAT\": 15.8, \"TOUR\": 25.5, \"TRANSPORT\": 40.4}}"
+        },
+        {
+          "label": "2. both @0.18, 16 seeds",
+          "command": "python3 navigation/sim_speed_sweep.py --mode both --cruise 0.18 --seeds 16 --json",
+          "result": "{\"mode\": \"both\", \"cruise\": 0.18, \"gate\": \"full_tour\", \"seeds\": 16, \"avg_points\": 39.4, \"pct_of_max\": 39.4, \"avg_deposits\": 2.56, \"full_clears\": 0, \"mispickups\": 0, \"wall_hits\": 0, \"avg_first_deposit_s\": 54.0, \"deposit_gaps_s\": 58.3, \"state_time\": {\"APPROACH\": 9.8, \"CAPTURE\": 12.3, \"DEPOSIT_PUSH\": 21.5, \"DEPOSIT_RELEASE\": 10.2, \"DEPOSIT_SHED\": 4.6, \"DONE\": 0.1, \"GOTO\": 56.7, \"RETREAT\": 15.4, \"TOUR\": 8.9, \"TRANSPORT\": 40.5}}"
+        },
+        {
+          "label": "3. both @0.20, 16 seeds",
+          "command": "python3 navigation/sim_speed_sweep.py --mode both --cruise 0.20 --seeds 16 --json",
+          "result": "{\"mode\": \"both\", \"cruise\": 0.2, \"gate\": \"full_tour\", \"seeds\": 16, \"avg_points\": 38.1, \"pct_of_max\": 38.1, \"avg_deposits\": 2.5, \"full_clears\": 0, \"mispickups\": 0, \"wall_hits\": 3, \"avg_first_deposit_s\": 54.1, \"deposit_gaps_s\": 52.5, \"state_time\": {\"APPROACH\": 11.1, \"CAPTURE\": 12.5, \"DEPOSIT_PUSH\": 23.0, \"DEPOSIT_RELEASE\": 10.7, \"DEPOSIT_SHED\": 3.9, \"DONE\": 0.1, \"GOTO\": 58.5, \"PARK\": 0.1, \"RETREAT\": 14.1, \"TOUR\": 5.9, \"TRANSPORT\": 40.1}}"
+        },
+        {
+          "label": "4a. diag pass1: both @0.15, 16 seeds, default params (double_carry=False) — reproduces announced baseline exactly",
+          "command": "python3 <scratchpad>/diag_both.py (pass1)",
+          "result": "{\"avg_points\": 36.2, \"avg_deposits\": 2.44, \"mispickups\": 0, \"deposits_hist\": {\"1\": 2, \"2\": 5, \"3\": 9, \"4\": 0}, \"loaded_total\": 47, \"capture_missed_total\": 0, \"blacklists_total\": 8, \"time_aborts_total\": 1, \"second_target_total\": 0, \"second_captured_total\": 0, \"payload_lost_total\": 0, \"holding_at_end\": 7}"
+        },
+        {
+          "label": "4b. diag pass2: both @0.15, 16 seeds, double_carry=True with instrumented _select_second",
+          "command": "python3 <scratchpad>/diag_both.py (pass2)",
+          "result": "{\"avg_points\": 33.8, \"avg_deposits\": 2.25, \"mispickups\": 0, \"deposits_hist\": {\"1\": 1, \"2\": 10, \"3\": 5, \"4\": 0}, \"loaded_total\": 42, \"time_aborts_total\": 4, \"second_target_total\": 9, \"second_captured_total\": 2, \"second_abandoned_total\": 7, \"holding_at_end\": 6}  PAIR_STATS: {\"calls\": 42, \"no_cand\": 6, \"rej_dist\": 40, \"rej_turn\": 87, \"rej_time\": 5, \"picked\": 9}  ABANDON_REASONS: {\"veto\": 5, \"unknown\": 1, \"approach_timeout\": 1}"
+        },
+        {
+          "label": "5. gate probe: both @0.15, 8 seeds, full_tour vs first_lane",
+          "command": "sweep('both',0.15,8,180,'full_tour'/'first_lane')",
+          "result": "full_tour: {\"avg_points\": 35.0, \"avg_deposits\": 2.25, \"avg_first_deposit_s\": 58.0, \"deposit_gaps_s\": 52.3, \"wall_hits\": 0, \"state_time\": {\"GOTO\": 57.6, \"TRANSPORT\": 49.8, \"TOUR\": 11.8, \"APPROACH\": 10.0, \"CAPTURE\": 12.1, \"RETREAT\": 8.9, \"DEPOSIT_PUSH\": 18.7, \"DEPOSIT_RELEASE\": 8.8, \"DEPOSIT_SHED\": 2.3}}  first_lane: {\"avg_points\": 35.0, \"avg_deposits\": 2.25, \"avg_first_deposit_s\": 58.0, \"deposit_gaps_s\": 52.3, \"wall_hits\": 0, \"state_time\": {\"GOTO\": 56.6, \"TRANSPORT\": 51.4, \"TOUR\": 11.8, \"APPROACH\": 9.9, \"CAPTURE\": 12.0, \"RETREAT\": 8.5, \"DEPOSIT_PUSH\": 18.7, \"DEPOSIT_RELEASE\": 8.8, \"DEPOSIT_SHED\": 2.3}}"
+        }
+      ],
+      "findings": [
+        "Cruise 0.15->0.18 (+20% speed) buys +3.2 pts (36.2->39.4) and first deposit 59.8s->54.0s with wall_hits still 0; 0.20 regresses to 38.1 with 3 wall hits/16 matches. Speed alone does not break the 3-deposit ceiling (0 seeds reached 4 deposits at any cruise).",
+        "Deposit distribution at baseline (both@0.15, 16 seeds): 2 seeds x1, 5 seeds x2, 9 seeds x3, 0 seeds x4. Arithmetic ceiling with measured tempo (first 59.8s + gap 51.6s): deposits land at ~60/111/163s -> 3 max; a 4th deposit needs first<45s AND gap<45s (45+3*45=180). 9/16 seeds are already at the tempo ceiling, so gains must come from cutting the ~51.6s gap (TRANSPORT 40-48s + DEPOSIT states ~30s of every match are fixed round-trip cost) or carrying 2 objects per trip.",
+        "double_carry is OFF by default (mission_fsm.py:178, DEFAULT_PARAMS double_carry=False, comment: robot.stl scoop is single-object U-channel) -> baseline trigger rate is exactly 0. The measured 2.44-deposit baseline has zero double-carry contribution.",
+        "With double_carry=True forced (both@0.15, 16 seeds): pairing triggered on 9/42 captures (21%), succeeded 2/9 (22%), and NET SCORE DROPPED 36.2->33.8 (-2.4 pts), deposits 2.44->2.25, TIME_ABORT 1->4. Instrumented _select_second (mission_fsm.py:1089-1113) rejection counts: 87 candidates failed pair_max_turn_deg=70deg (bin-direction curve constraint, mission_fsm.py:181), 40 failed pair_max_dist=1.5m (line 180), 5 failed the time budget, and 6/42 captures had no open definite target at all. Of 9 attempts, 7 were SECOND_ABANDONED: 5 veto (front verify rejected B on close look), 1 unknown, 1 approach_timeout. Conclusion: the geometric pair filter is the binary blocker (turn constraint dominates 2:1 over distance), and even accepted pairs mostly die in B's verification approach - as implemented, double-carry is score-negative.",
+        "Worst seeds are approach-failure churn, not capture failure: capture_missed_total=0 and mispickups=0 across all 16 baseline seeds; blacklists_total=8, approach_timeout events concentrated in the losing seeds (seed 6: 6 timeouts, seed 5: 2, seed 13: 3). Approach aborts fire via timeout/travel-cap/range-guard in mission_fsm.py:959-979 after failing to obtain CAPTURE_READY (face not verifiable).",
+        "7/16 baseline seeds end at t=180 holding an undeposited payload (holding=True, mostly hail-mary captures per mission_fsm.py:1662-1675); each is a certified target worth +10/+20 that never scores. E.g. seed 6 captures at 159.1s then TRANSPORTs 20.9s without reaching the bin. Starting the final trip ~15-20s earlier (raising endgame_margin_s awareness of true remaining trip time) would convert several of these.",
+        "unknown_gate full_tour vs first_lane: bit-identical aggregates (35.0 pts / 2.25 deposits / first 58.0s / gap 52.3s at 8 seeds) - relaxing the unknown-investigation gate changes nothing in both mode because definite targets dominate _select_target scoring (mission_fsm.py:1641-1645); TOUR cost (~11.8s) is unaffected.",
+        "bothcube (cube announced, worst case): 41.2 pts avg but only 2.06 deposits and first deposit 77.8s (18s later than both) with TOUR 25.5s (2.6x both's 9.7s) and RETREAT 15.8s - the multi-view cube certification tax is ~18s of first-deposit latency, partly offset because cube targets score via 20-pt set2 fruit deposits.",
+        "run_match diagnostic surface is event-string based, not counter-based: state_time dict + events list are the only per-state/per-cause diagnostics; there is no exposed hail-mary counter (internal _hail flag only, mission_fsm.py:1675) and no pairing-rejection counters (added via monkeypatch in this measurement).",
+        "Time accounting of a 3-deposit match (seed 8 typical): ~58s to first deposit, then two ~50s round trips. Per round trip at eff_speed 0.11 m/s: ~2.2m each way = 40s driving + ~10s deposit + ~8s capture cycle. The single largest lever consistent with these measurements is reducing per-trip driving (deposit-side: ~33s of DEPOSIT_PUSH+RELEASE+SHED per match; route-side: GOTO ~58s), not perception or capture reliability."
+      ],
+      "diagnostic_fields": "run_match (navigation/sim_mission.py:526-579) returns: points, good (target deposits), bad (mispickups scored), n_stored, spilled (stored but outside 0.04-0.36 scoring box), wall_hits, wall_hit_at (first 5 (t,x,y)), disturbed (body-push count), front_slips (double-carry front-slot drops), events (list of (t, str): all state transitions 'A->B' plus LOADED, CAPTURE_MISSED, APPROACH_TIMEOUT, TIME_ABORT, BLACKLIST(reason), SECOND_TARGET(id), SECOND_CAPTURED, SECOND_ABANDONED(reason), REAPPROACH_SECOND, PAYLOAD_LOST, PAYLOAD_LOST(during_second), RECAPTURED_LOST_PAYLOAD, MICRO_ADJUST, VETO->RETREAT, VETO_OTHER->REAPPROACH, READY_UNCERTIFIED->DEFER, READY_OTHER_CUBE->REAPPROACH, PREOCCUPIED_BIN->DROP, IR_CAPTURE_ON_APPROACH, UNINTENDED_CAPTURE->DROP, STALL->REPLAN(payload), STALL->RETREAT, SHED_SPIN, REALIGN_REAPPROACH, SECTOR_VISIT_DONE, DEPOSITED(cls)), end_state, holding (payload in scoop at end), deposited (list), t_end, state_time (per-state seconds), deposit_times, targets. No numeric counters for double-carry or hail-mary — everything must be greped from events; hail-mary usage is not observable at all (internal _hail flag, mission_fsm.py:1675). params_override accepts any DEFAULT_PARAMS key (mission_fsm.py:100+): cruise_v, eff_speed, approach_v, push_v, reverse_v, flyby_enable/lookahead, replan_period_s, payload_offset, tour_lanes_y, tour_margin_x, standoff_dist, approach_stop_short, approach_range_guard, blind_push_range, approach_timeout_s, capture_push_max, capture_push_limit_s, retreat_dist, micro_adjust_*, face_aware_standoff, max_tries_per_object, uc_loop_break, ir_lost_patience_s, ir_capture_on_approach, confident_capture, double_carry, pair_max_dist, pair_max_turn_deg, second_push_dist, carry_w_max, carry_v_max, deposit_depth_double, t_capture2_est, shed_spin, shed_gate, stowaway_ride_offset/radius, deposit_align, realign_*, deposit_approach_x, deposit_lane_y, deposit_depths, deposit_wall_clear, unknown_gate, target_policy, pair_boost, hail_mary, endgame_margin_s, match_duration_s, plus value/time-estimate constants (value_set1/set2/unknown, t_approach_est, t_capture_est, t_capture2_est, t_deposit_est).",
+      "double_carry": "Baseline both-mode: trigger rate 0% — double_carry=False in DEFAULT_PARAMS (mission_fsm.py:178) because the physical scoop is a single-object U-channel; sim_speed_sweep does not override it, so the announced 36.2-pt baseline contains no double-carry. Forced ON (16 seeds, both@0.15): _select_second was called at 42 of 42 LOADED events, picked a pair 9 times (21% trigger), SECOND_CAPTURED 2/9 (22% success), SECOND_ABANDONED 7/9 (5 veto during B-approach verification, 1 unknown, 1 approach_timeout), and net score fell 36.2->33.8 with TIME_ABORTs up 1->4 (the B-detour burns the time budget). Why it does not trigger more: instrumented rejection counts over 42 calls show the pair_max_turn_deg=70 bin-direction curve constraint rejected 87 candidate objects and pair_max_dist=1.5m rejected 40 (time budget only 5; 6 calls had zero open definite targets). With ~2-3 definite targets alive mid-match, requiring a second target within 1.5m AND within a 70-degree cone toward the bottom-left bin from a random capture point is geometrically rare; and when it is satisfied, the loaded-approach to B usually fails front verification (veto). As implemented, double-carry is score-negative, not merely under-triggered.",
+      "worst_seeds": "Worst 3 baseline seeds: seed 6 = 10 pts (1 deposit), seed 1 = 20 pts (1 deposit, 2 blacklists), seed 0 = 30 pts (2 deposits, ends holding). Seed 6 (targets octa+apple) full event timeline: capture #1 at t=23.4, deposit #1 at t=61.8 (38.4s trip: 25.3s TRANSPORT + 13.1s deposit states). Then t=76.6-145.0 (68.4s) produced ZERO points: six APPROACH_TIMEOUT/RETREAT cycles across two targets (76.6, 82.5, 90.1, 114.0, 124.7, 139.7 approach entries; several abort in only ~2.7s via the travel-cap/range-guard branch at mission_fsm.py:959-960), 2 BLACKLIST(approach_timeout), and a TIME_ABORT at 135.7. Hail-mary capture #2 at t=159.1, then 20.9s of TRANSPORT that never reaches the bin -> ends holding a certified target. State budget: GOTO 65.9s, TRANSPORT 46.3s, RETREAT 19.1s, APPROACH 17.8s, TOUR 9.1s, CAPTURE 8.6s, deposit 13.1s. A smarter planner that (a) abandoned each unverifiable target after ONE failed approach instead of 3 (saves ~35-40s of the 68s churn) and (b) launched the final trip ~20s earlier would plausibly have deposited 2 more objects (+20 to +30 pts) in this seed."
+    },
+    "analyses": [
+      {
+        "diagnosis": "Travel accounting (both@0.15, 16 seeds): GOTO 58.9s + TRANSPORT 47.9s = 106.8s = 59% of 180s, at eff_speed 0.11 m/s (0.73 x cruise_v 0.15, navigation/params.yaml:29-30). Tempo arithmetic: first deposit 59.8s + 51.6s/gap places deposits at ~60/111/163s -> hard 3-deposit ceiling; 9/16 seeds already sit at 3, 0 reach 4. A 4th deposit needs first<45s AND gap<45s (45+3x45=180). Where the 27% eff-speed gap goes per the controller (nav_core.py:109-198, verified): (a) final-approach decel ramp — v_des = cap*max(0.25, dist/0.35) with min_v 0.04 floor starting 0.35m out (nav_core.py:191-193) costs ~2.2s per non-flyby arrival ((0.35/0.15)*ln(0.35/0.06)=4.1s vs 1.9s at cruise), x6-9 arrivals/match = 13-20s; MEASURED: patching decel_dist to 0.20 gave +3.75 pts on 8 paired seeds (35.0->38.75, first deposit 58.0->54.9s, holding 4->2, wall=bad=spill=0). (b) turn-in-place gate — herr>50deg zeroes v entirely (nav_core.py:179-185), ~1.5-3s per major turn incl. the ~180deg turn after every deposit release. (c) post-deposit cold exit — RELEASE->TOUR at mission_fsm.py:1335 selects the next target on the very next tick (:682), so the real loss is not selection latency but that the 0.40m release reverse is aimed blindly along the deposit heading (:1337-1344) and the robot then pays a ~pi/1.0rad/s = 3.1s turn-in-place; ~3-5s/trip. (d) approach-failure churn burning GOTO: tries>max_tries_per_object(2) means 3 full approach cycles before blacklist (mission_fsm.py:971-973); worst seed 6 spent 68.4s (t=76.6-145.0) on six APPROACH_TIMEOUT cycles for zero points; MEASURED: max_tries=1 gave +1.25 avg (seed 6: 10->30, seed 2: 50->40). (e) cruise itself: 0.15->0.18 is measured +3.2 pts (36.2->39.4, first deposit 54.0s, wall_hits 0), while 0.20 regresses (38.1, 3 wall hits — violates constraint). Corrections to the code maps: carry_v_max=0.12 does NOT cap baseline TRANSPORT — mission_fsm.py:655-657 applies it only when _front_obj is set (double-carry), so with double_carry=False the transport leg already runs at cruise; and double_carry as implemented is measured score-NEGATIVE (36.2->33.8, pair turn-cone 70deg rejected 87 candidates, 5/9 accepted pairs died to B-veto) — it is not a travel lever without a redesign. 7/16 baseline seeds end holding a certified target (mostly hail-mary captures at t>155s); only faster travel converts these, since the endgame_margin family is already rejected.",
+        "lens": "TRAVEL TIME: GOTO 58.9s + TRANSPORT 47.9s = 59% of the match; trip tempo (first 59.8s, gap 51.6s) caps deposits at 3",
+        "levers": [
+          {
+            "name": "Shorten the final-approach decel ramp: decel_dist 0.35 -> 0.20",
+            "mechanism": "nav_core.py:191-193 starts slowing 0.35m before every non-flyby goal (standoff arrivals, deposit entry, tour lane ends) and crawls the tail at min_v 0.04; physics needs only 0.028m to stop from 0.15 at accel 0.4 m/s^2 (nav_core.py:113). Cutting the ramp to 0.20m saves ~1.3-2s per arrival x 6-9 arrivals = 8-15s/match, shrinking both first-deposit latency and the per-trip gap. MEASURED on 8 paired seeds via instance patch: 35.0 -> 38.75 pts (+3.75), avg_first 58.0 -> 54.9s, holding 4 -> 2, wall_hits 0, mispickups 0, spilled 0.",
+            "expected_gain_pts": "+3 to +4 (measured +3.75 on 8 paired seeds; confirm at 16-32 seeds)",
+            "risk": "Low in sim (0 wall/0 bad/0 spill in probe). Real-world: sim feeds ground-truth pose (sim_mission.py:552); with real 1.3-1.8cm pose noise a hotter arrival could overshoot the standoff pose (standoff geometry is a known trap, mission_fsm.py:126-129) or the deposit-entry point next to deposit_wall_clear=0.205. Do NOT combine with cruise 0.18 without a paired combo run (README item 9 chaos).",
+            "test_plan": "Edit nav_core.py:118 `decel_dist: float = 0.35` -> 0.20 (single line; not a DEFAULT_PARAMS key). Paired run: for s in range(16): rng=random.Random(10000+s); tg={'set1':rng.choice(['octa','dodeca','icosa']),'set2':rng.choice(FRUITS)}; run_match(seed=s,targets=tg) before/after the edit (driver pattern in scratchpad/paired_probe.py, run with /usr/bin/python3 — note yolo/bin/python does not exist). Gate: python3 navigation/sim_mission.py all scenarios PASS, wall_hits=mispickups=spilled=0 every seed. Then real-arena standoff-arrival check.",
+            "category": "small_code_change"
+          },
+          {
+            "name": "cruise_v 0.15 -> 0.18 with eff_speed 0.1314 (0.73x rule), gated on bench max-speed measurement",
+            "mechanism": "Driving is 107s/match; +20% speed cuts ~18s and pulls first deposit 59.8 -> 54.0s. MEASURED (16 seeds): 36.2 -> 39.4 pts (+3.2), deposits 2.44 -> 2.56, wall_hits 0, mispickups 0. 0.20 is the cliff: 38.1 pts with 3 wall hits (constraint violation) — 0.18 is the highest safe point on the measured curve with veer deposit mode.",
+            "expected_gain_pts": "+3.2 (measured, 16 seeds)",
+            "risk": "Hardware gate: policy is cruise = 75% of measured max wheel speed; max_wheel_speed=0.2 is an admitted guess (motor_control/params.yaml:11-15, spec range 0.16-0.26), so 0.18 requires measured max >= 0.24 — bench-measure first (PWM 255 for 1s, encoder distance). Sim margin to the 0.20 wall-hit cliff is thin: run 32 seeds, verify veer mode wall clearance. Real localization noise near deposit_wall_clear shrinks margin vs perfect-pose sim.",
+            "test_plan": "Bench: measure max_wheel_speed per motor_control/params.yaml:15 procedure. Sim: python3 navigation/sim_speed_sweep.py --mode both --cruise 0.18 --seeds 32 --json and --mode bothcube (sweep auto-sets eff_speed=cruise*0.73 and pairs seeds by construction); require wall_hits=0, mispickups=0 across all seeds; then python3 navigation/sim_mission.py scenario gate. Adopt in navigation/params.yaml cruise_v/eff_speed only if bench max >= 0.24.",
+            "category": "hardware_or_real_world"
+          },
+          {
+            "name": "Chain the deposit exit: aim the 0.40m release reverse at the pre-selected next target and go RELEASE -> GOTO directly",
+            "mechanism": "Verified: RELEASE->TOUR (mission_fsm.py:1335) re-selects on the next tick (:682), so selection latency is nil — the waste is physical: the 0.40m reverse (:1337-1344) is aimed blindly along the deposit heading, then GOTO starts with a ~180deg turn-in-place (~3.1s at max_w 1.0, nav_core.py:179-185). Pre-select during TRANSPORT/DEPOSIT_PUSH (memory is fully updated), bias the reverse bearing toward the chosen target (clamped inside the arena, reuse the in_arena check pattern at :1384), and skip the TOUR hop. Saves ~3-5s/trip x 2.5 trips = 8-12s/match; directly attacks the 51.6s gap that must drop below 45s for a 4th deposit.",
+            "expected_gain_pts": "+2 to +4",
+            "risk": "Reverse toward a south/southwest target aims at the south wall — clamp reverse bearing to keep the body >= wall margin (wall_hits must stay 0). Target state can change between selection and arrival — re-validate status on GOTO entry (pattern already exists for stale targets). Wiggle phase (:1338-1342) must stay heading-aligned for the first 0.15m to avoid dragging the deposited object out (spill check).",
+            "test_plan": "Code edit in mission_fsm.py behind a new param chain_next=False (DEFAULT_PARAMS): pre-select in _st_transport/_st_deposit_push, store as _next_target; in _st_deposit_release replace the fixed reverse heading and the :1335 TOUR transition. Paired 16-seed driver with params_override=dict(chain_next=True) vs default; compare deposit_gaps_s (51.6 baseline), TOUR+GOTO seconds, and require wall_hits=mispickups=spilled=0; python3 navigation/sim_mission.py all scenarios PASS.",
+            "category": "small_code_change"
+          },
+          {
+            "name": "max_tries_per_object 2 -> 1 (2 approach attempts instead of 3 before blacklist)",
+            "mechanism": "Approach-failure churn is pure wasted travel: each retry is a GOTO re-leg + up-to-14s approach + retreat (mission_fsm.py:959-979); blacklist only fires at tries>2 (:971-973) = 3 full cycles. Seed 6 lost 68.4s to six cycles across two unverifiable targets and scored 10 pts. MEASURED (8 paired seeds, params_override only): 35.0 -> 36.25 (+1.25); churn seed 6: 10 -> 30 (+20); seed 2: 50 -> 40 (-10, a retry that would have succeeded). Caps worst-case losses at the cost of occasional recoverable targets.",
+            "expected_gain_pts": "+1 to +2 avg, +20 on churn-tail seeds (high variance — needs 32 seeds to confirm sign)",
+            "risk": "Real robot has detection misses the sim lacks (recall=1 in SimPerception), so real approach timeouts are more often transient and a 2nd retry is more valuable than sim suggests — must re-run under the detection-miss battery (p=0.25/0.45 harness cited at mission_fsm.py:140-147) before adopting. No mispickup/wall risk (probe: 0/0); blacklisted targets are never rehabilitated (:1678-1682), so over-eager blacklisting forfeits 10-20 pt objects.",
+            "test_plan": "params_override=dict(max_tries_per_object=1), paired driver over 32 seeds (both + bothcube modes), compare avg plus min/p10 points; grep events for BLACKLIST(approach_timeout) counts; python3 navigation/sim_mission.py gate; then the external det-miss battery before flashing the robot.",
+            "category": "params_only"
+          },
+          {
+            "name": "Blend turns instead of full stop: turn_in_place_deg 50 -> 70",
+            "mechanism": "nav_core.py:179-185 zeroes forward velocity whenever heading error > 50deg (non-flyby); with the cos(herr) scaler at :195 the robot could creep-turn (cos70 = 0.34*cap) instead of stopping dead. kp_ang=2.5 at max_w 1.0 converges a 70deg error in under 1s, so each major turn (leg starts, post-retreat, post-deposit — ~6-10/match) trades ~0.5-1s of stationary spinning for forward progress: est 4-8s/match.",
+            "expected_gain_pts": "+1 to +3 (unmeasured — probe budget was spent on decel/max_tries)",
+            "risk": "Wider arcs during large-error turns pass closer to obstacles/walls; the 0.32m inflation + 0.24m wall margin (nav_core.py:221,226) should absorb it, but wall_hits=0 is a hard gate — reject if any seed regresses. Real-world: combined v+w at higher rates stresses open-loop PWM odometry.",
+            "test_plan": "Edit nav_core.py:117 `turn_in_place_deg: float = 50.0` -> 70.0 (or patch mission.ctrl.cfg via tick hook for a zero-edit probe, pattern in scratchpad/paired_probe.py). Paired 16-seed driver, watch wall_hits and GOTO/TRANSPORT state_time; python3 navigation/sim_mission.py gate.",
+            "category": "small_code_change"
+          },
+          {
+            "name": "Kill the false-FAR_CANDIDATE dead-end trips (cross-set negatives in detector, or defer far candidates while definite targets exist)",
+            "mechanism": "Real-world-only GOTO waste invisible to the sim: far Set-1 polyhedra are misdetected as cube FAR_CANDIDATEs (far-bucket FP 50, docs/long_range_upgrade.md:182-185) and are only rejected by the classifier after a full approach — each occurrence burns a 10-20s GOTO+verify+retreat cycle out of the 58.9s GOTO pool. Cheapest interim fix is planner-side: in _select_target, rank FAR_CANDIDATE/unknown below any open definite target regardless of distance (partially true today via value_unknown=4, but a far candidate can still win when definite targets are far); the durable fix is the planned cross-set negative retrain.",
+            "expected_gain_pts": "0 in sim; real-world +10-20s per avoided dead-end trip (~1-2 occurrences/match plausible given FP counts)",
+            "risk": "Over-suppression hides genuinely distant targets (lost opportunity, no penalty); retrain requires the Windows Isaac regeneration loop and re-passing the mispickup holdout gates (budget 0). No sim regression possible since sim perception has no FPs.",
+            "test_plan": "Measure first: eval_detector_by_distance.py far-bucket FP count on current best.engine; replay_mission.py with recorded far-FP injection to size the per-match cost. Then either (a) retrain with cross-set negatives per docs/long_range_upgrade.md:185,310 and re-run the far-recall + mispickup holdout, or (b) one-line _select_target gate deferring FAR_CANDIDATEs while any open definite target exists, tested on the real robot (sim cannot exercise it).",
+            "category": "perception_side"
+          }
+        ]
+      },
+      {
+        "diagnosis": "PER-OBJECT CYCLE OVERHEAD accounting (16-seed baseline, both@0.15): 2.44 deposits from 47/16=2.94 captures. Non-travel cost per deposited object = deposit choreography 33.4/2.44 = 13.7s (DEPOSIT_PUSH 8.4 + RELEASE 4.0 + SHED 1.3, mission_fsm.py:1278-1344) + capture cycle 30.2/2.44 = 12.4s = ~26s/object, on top of ~36s driving per trip. Tempo ceiling: first deposit 59.8s + gap 51.6s puts deposits at ~60/111/163s, so 3 is the hard cap (9/16 seeds already there, 0/16 reach 4); a 4th needs gap<=40s. Where the seconds leak: (1) DEPOSIT_PUSH is a 0.57-0.745m run at 0.10 m/s with a 0.15m crawl at 0.06 (mission_fsm.py:1304-1315): 6.7-8.4s/deposit; (2) DEPOSIT_RELEASE is a fixed 0.40m reverse (:1317-1344) that ends facing WEST (heading ~pi+6.5deg), then TOUR->GOTO starts with a 135-180deg turn-in-place at max_w=1.0 (nav_core.py:179-185) = 2.5-3s dead per trip — the release reverse direction ignores the next target even though _st_tour selects it on the very next tick (:682-688, :1335); (3) approach-timeout churn tail: max_tries_per_object=2 (:162) allows 3 full approach(2.7-14s)+retreat(3s)+re-GOTO(5-10s) cycles per unverifiable target (:971-978) — seed 6 burned 68.4s at zero yield (6 approach entries, 2 blacklists), and baseline has 8 blacklists/16 seeds; (4) 7/16 seeds end holding a certified +10/+20 target (mostly hail-mary picks, :1662-1675) because trips launched after ~155s cannot cover transport ~20s + choreography 13.7s; (5) TRANSPORT is capped at carry_v_max=0.12 vs cruise 0.15 (:185), taxing 47.9s/match by 20%. My 8-seed paired probe (only sim run used): max_tries_per_object=1 -> 36.25 pts / 2.38 dep vs baseline 35.0 / 2.25, seed 6 from 10->30 pts, mispickups 0, wall_hits 0.",
+        "lens": "per-object cycle overhead (deposit choreography + capture cycle = ~26s per deposited object for only 2.44 objects)",
+        "levers": [
+          {
+            "name": "Blacklist unverifiable targets one retry earlier (max_tries_per_object 2->1)",
+            "category": "params_only",
+            "mechanism": "Each spared approach cycle removes approach up to 14s (:959-979) + retreat 3s (:148,1375-1390) + re-GOTO 5-10s. Baseline worst seeds lose 40-68s to this churn (seed 6: 6 approach entries, 68.4s zero-yield between t=76.6 and 145.0). Since a face that fails verification from an angle usually fails again (capture_missed_total=0 baseline — these are verification failures, not scoop misses), the 3rd attempt has near-zero expected value. MEASURED in this analysis (8 paired seeds 0-7): 35.0->36.25 pts, deposits 2.25->2.38, seed 6: 10->30 pts (+20), approach_timeouts 6->3 in seed 6, mispickups 0, wall_hits 0, holding 4/8. Frees ~35-40s in churn seeds — enough for one full extra trip (gap 51.6s).",
+            "expected_gain_pts": "+1 to +3 avg (both mode, measured +1.25 on 8 seeds); tail seeds +10 to +20; likely larger in bothcube where RETREAT is 15.8s/match",
+            "risk": "Gives up recoverable targets after 2 fails instead of 3 — per-seed deltas are mixed (seed 6 +20 but net over 8 seeds +10, so ~-10 spread elsewhere); mispickup/wall risk zero (fewer approaches, never more). Scenario D (capture-miss) still retries once since CAPTURE_MISSED sets tries=1<=max. uc_loop_break penalty also trips faster — verify scenario suite.",
+            "test_plan": "params_override=dict(max_tries_per_object=1); paired driver: for s in range(16): rng=random.Random(10000+s); targets={'set1':rng.choice(['octa','dodeca','icosa']),'set2':rng.choice(FRUITS)}; run_match(seed=s,targets=targets,params_override=...) vs baseline; repeat --mode bothcube; then python3 navigation/sim_mission.py (9/9 PASS, especially D and C)."
+          },
+          {
+            "name": "Deposit-exit chaining: pre-select next target during DEPOSIT_PUSH and reverse-arc into the new GOTO leg",
+            "category": "small_code_change",
+            "mechanism": "RELEASE ends at :1335 with the robot facing ~pi (west) at ~(0.68,0.31); _st_tour picks the next target one tick later (:682) which is almost always NE -> GOTO opens with a 135-180deg turn-in-place at max_w=1.0 (nav_core.py:179-185) = 2.5-3s of zero progress per trip. Fix: (a) run _select_target once on DEPOSIT_PUSH entry (memory is complete by then), (b) after the wiggle phase of RELEASE (moved>0.15, :1341-1343) and once robot x>0.75 (scoop tip x-0.35 clears the 0.36 score box + margin), steer the remaining reverse as an arc toward the bearing of the pre-selected standoff, (c) transition RELEASE->GOTO directly with the pre-planned route. Converts 2.5-3s stationary spin into ~0.25m of productive eastward travel (worth another ~2s of GOTO at eff 0.11). This is the 'release doubles as the start of the next GOTO leg' mechanism — NOT deposit acceleration (speeds unchanged), so it does not re-open the rejected family.",
+            "expected_gain_pts": "+2 to +4 (4-5s/trip x 2.44 trips = 10-12s/match ~= 0.2 deposits); also shaves the 51.6s gap toward the 40s needed for a 4th deposit",
+            "risk": "Reverse-arc sweeps the scoop laterally near the pile — must gate steering on robot x>0.75 and clamp w to yaw away from the south wall when y<0.5 (wall_hits must stay 0); pre-selected target may change status before arrival (re-validate on GOTO entry, statuses already re-checked in _select flow). No new contact with objects -> mispickup risk unchanged.",
+            "test_plan": "Add DEFAULT_PARAMS toggle chain_exit=False; edit _st_deposit_release (:1317-1344) + _st_deposit_push entry (:1278) + release completion branch (:1330-1335). Paired 16-seed driver (both + bothcube) comparing points, deposit_gaps_s (baseline 51.6), TOUR s (9.7) and wall_hits==0; then sim_mission.py 9/9."
+          },
+          {
+            "name": "Raise carry_v_max 0.12 -> 0.14 (transport leg of every cycle)",
+            "category": "params_only",
+            "mechanism": "TRANSPORT is 47.9s/match clamped to carry_v_max=0.12 (mission_fsm.py:185, applied :654-657) = 80% of cruise. 0.14 recovers 47.9x(1-12/14) ~= 6.8s/match, directly shortening the 51.6s inter-deposit gap. params.yaml:32 already notes 0.14 headroom. Not in the rejected list (eff_speed/margin/lane-order were; carry cap was not).",
+            "expected_gain_pts": "+2 to +3 (~0.15 deposits/match)",
+            "risk": "Sim cannot falsify the real risk: pocket payload retention at 0.14 on flyby arcs (sim only drops payload on reverse or |w|>slip_w, sim_mission.py:364-367) — needs a 2-minute bench check with a cube in the scoop at 0.14 m/s through S-turns. Mispickup/wall risk unchanged in sim; watch PAYLOAD_LOST events.",
+            "test_plan": "params_override=dict(carry_v_max=0.14), paired 16-seed driver (both + bothcube); grep events for PAYLOAD_LOST (baseline 0); scenario suite 9/9 (B ir-dropout and C payload-lost are the sensitive ones); then hardware carry bench before adoption."
+          },
+          {
+            "name": "Two-speed blind capture push (0.10 far / 0.06 for the final 0.15m seat)",
+            "category": "small_code_change",
+            "mechanism": "CAPTURE runs the entire blind push at push_v=0.06 (:103, :1033-1049) but IR ends it early: measured CAPTURE = 12.9s/match over 2.94 captures ~= 4.4s = ~0.26m per successful push, and a failed push burns the full 0.62m = 10.3s. Driving at 0.10 until (last verified range - 0.15m est. by odometry) then 0.06 for the seat keeps contact speed identical while cutting dead-air approach: ~0.11m x (1/0.06-1/0.10) ~= 0.7-1.2s per capture, ~2.6s on each full-length miss. Preserves the 0.62/11 robustness budget untouched (do NOT shrink it — that widening was worth +10-17 pts in the det battery, :140-147).",
+            "expected_gain_pts": "+1 to +2 (3-5s/match)",
+            "risk": "Sim CANNOT validate contact physics: funnel convergence k=0.25 is speed-independent (sim_mission.py:395-399), so a sim PASS proves nothing about deflection. Requires bench: 20 pushes per speed profile measuring IR-seat rate; adopt only if seat rate is unchanged. If the fast segment ever reaches the contact zone due to range error, deflection -> CAPTURE_MISSED churn (the exact failure the 0.62/11 widening fixed).",
+            "test_plan": "Add push_v_far=0.10 + logic in _st_capture (~:1033-1049): v=push_v_far while pushed < max(0, verify_range_at_entry - 0.15) else push_v; paired 16 seeds + re-run scenarios C/D; count CAPTURE_MISSED in events (baseline 0); hardware seat-rate bench gates adoption."
+          },
+          {
+            "name": "Measure verify-cam FPS at imgsz 960 and right-size the verify gate (640 fallback)",
+            "category": "perception_side",
+            "mechanism": "CAPTURE_READY needs verify_k=5 CONSECUTIVE clean frames on one front cam and the streak resets to 0 on any missed frame (runtime/capture_fsm.py:389, 457-462; configs/merged.yaml:158). Verify FPS at 960 on the Orin Nano was never measured (benchmark_latency.py still pending, docs/long_range_upgrade.md:307). If real FPS is 4-6, the gate costs 1-3s per approach attempt and multiplies the approach-timeout churn that lever 1 attacks (76-89% of CAPTURE entries already start with verify-range misses under realistic recall, mission_fsm.py:140-145). At <=0.6m an 8cm object is huge in-frame; 640 on verify cams roughly doubles FPS with minimal recall cost, shortening every approach dwell and reducing 14s timeouts.",
+            "expected_gain_pts": "0 in sim; +2 to +5 real-world if measured verify FPS < 8 (4-12s/match of dwell + fewer timeout cycles); 0 if FPS >= 15",
+            "risk": "The verify gate IS the anti-mispickup defense (budget: 0 mispickups). Any imgsz drop must re-pass the front-crop holdout eval and the detection-miss battery before deployment. Measurement itself is zero-risk.",
+            "test_plan": "On-device: deployment/benchmark_latency.py --imgsz 640 800 960 (single short run, not a match); if verify FPS<8 at 960, set verify-cam inference imgsz=640 in configs/merged.yaml runtime section, re-run front-crop holdout + e2e gates; no sim change needed (sim perception is same-tick)."
+          },
+          {
+            "name": "Physically confirm the 3mm bin lip, then deposit_fast=True",
+            "category": "hardware_or_real_world",
+            "mechanism": "The rejected 'deposit acceleration family' failed on overrun spill/wall hits WITHOUT a backstop. The genuinely new element is hardware: if the competition bin has the lip, overrun spill becomes physically impossible and the push can run the whole 0.57-0.745m at deposit_fast_v=0.16 instead of 0.10+0.06-crawl (mission_fsm.py:255-259, 1310-1314): 8.4s -> ~4.7s on the deepest slot, ~3.3s avg/deposit = ~8s/match. This is a constraint-removal verified in the real world, not a parameter gamble — the toggle and sim lip model (world_kw bin_lip=True, sim_mission.py:476-496) already exist.",
+            "expected_gain_pts": "+2 to +4 (~0.15-0.2 deposits) IF the lip exists; 0 (do nothing) otherwise",
+            "risk": "Enabling without the physical lip reproduces the exact spill failure that killed the family — the physical check is a hard precondition, plus one real-robot deposit test at 0.16 to confirm the lip holds an 8cm cube at that momentum. Sim lip is a clamp, not contact physics. Wall-clear clamp (deposit_wall_clear=0.205, :1300) still guards the robot body.",
+            "test_plan": "1) Measure the real bin lip (competition spec / venue check). 2) Sim: paired 16 seeds run_match(..., params_override=dict(deposit_fast=True), world_kw=dict(bin_lip=True)); require spilled==0 and wall_hits==0 on every seed; scenario suite 9/9. 3) One physical deposit trial at 0.16 m/s before enabling in navigation/params.yaml."
+          }
+        ]
+      },
+      {
+        "diagnosis": "Score = deposits x value-per-deposit, and BOTH factors are currently left on the table. (1) Tempo ceiling: first deposit 59.8s + 51.6s/trip puts deposits at ~60/111/163s -> hard max 3 in 180s; measured histogram (16 seeds, both@0.15): 1x2, 2x5, 3x9, 4x0. A 4th deposit needs first<45s AND gap<45s. (2) Value mix: both-mode averages 36.2 = 2.44 deposits x 14.8 pts/deposit (~half the picks are 10-pt set1), while bothcube scores MORE with FEWER trips: 41.2 = 2.06 x 20.0 pts/deposit. With only ~2.4 trips per match, trips are the scarce resource, so each deposit upgraded set1->set2 is worth +10 - the val/trip greedy (mission_fsm.py:1658-1659) treats a 25s set1 trip as equal to a 50s set2 trip, which is only correct when time (not trip count) binds. (3) Zero-point churn: worst seeds lose to approach-geometry retries, not capture failure (capture_missed=0, mispickups=0 across all 16 seeds; blacklists=8). Seed 6 burned 68.4s (t=76.6-145.0) on 6 APPROACH_TIMEOUT cycles across 2 targets (3 tries each via the shared tries counter, mission_fsm.py:959-979) and finished with 10 pts. (4) Endgame: 7/16 seeds end holding a certified +10/+20 target (seed 6: hail-mary capture at 159.1s, then 20.9s TRANSPORT never reaches the bin) - hail-mary ranks by val/trip ignoring whether the trip fits remaining time (mission_fsm.py:1667-1673). (5) Per-trip dead time: next target is selected only after DEPOSIT_RELEASE->TOUR (mission_fsm.py:1330-1335, :682), so every trip cold-restarts from the bin corner. (6) Dead/negative knobs measured this session: unknown_gate first_lane is bit-identical to full_tour in both mode (35.0/35.0 over 8 paired seeds); double_carry as implemented is score-NEGATIVE (36.2->33.8, pairs picked 9/42, captured 2/9, pair_max_turn_deg=70 rejects 87 candidates vs 40 for distance) - do not enable without redesign. (7) Speed frontier: cruise 0.18 is +3.2 pts (39.4) with wall_hits=0 and first deposit 54.0s; 0.20 regresses to 38.1 with 3 wall hits (veer deposit margin erodes) - 0.18, not 0.20, is the adoptable point.",
+        "lens": "STRATEGY/SCORING - target selection value/time math, time-cutoff and endgame policy, trip-count vs value-per-trip economics",
+        "levers": [
+          {
+            "name": "Adopt cruise_v=0.18 (pending motor bench measurement)",
+            "mechanism": "Driving is 107s/match (59%). +20% speed cuts first deposit 59.8->54.0s and raises deposits 2.44->2.56; measured paired result +3.2 pts (36.2->39.4) with wall_hits=0 and mispickups=0. 0.20 is past the frontier (38.1 pts, 3 wall hits from veer deposit margin) so 0.18 is the sweet spot requiring NO deposit_mode re-validation in sim. Blocked only by the 75%-of-measured-max policy: needs real max_wheel_speed >= 0.24 m/s (spec range 0.16-0.26, motor_control/params.yaml:11-15 - currently a guess).",
+            "expected_gain_pts": "+3.2 (measured, 16 paired seeds)",
+            "risk": "Low in sim (0 wall hits, 0 mispickups at 0.18). Real risk: motor may not reach 0.24 max; odometry/localization slip at higher PWM steps; must set eff_speed=0.131 (0.73x rule, mission_fsm.py:279-282) or the time-cutoff math goes stale.",
+            "test_plan": "Bench: PWM-255 1s encoder run per motor_control/params.yaml:15. If max>=0.24: params_override dict(cruise_v=0.18, eff_speed=0.131); sim already validated via 'yolo/bin/python navigation/sim_speed_sweep.py --mode both --cruise 0.18 --seeds 16 --json' (run 2, +3.2). Re-run bothcube at 0.18, then 'yolo/bin/python navigation/sim_mission.py' (all scenarios PASS), then real-arena veer deposit check.",
+            "category": "hardware_or_real_world"
+          },
+          {
+            "name": "Chain next-target selection into the deposit exit (RELEASE->GOTO)",
+            "mechanism": "Selection runs only from TOUR (mission_fsm.py:682); after a deposit the FSM goes RELEASE->TOUR (:1330-1335) with _target=None, so each trip cold-restarts from the bin corner: re-enter TOUR, replan, rotate. Pre-selecting the next target during TRANSPORT/DEPOSIT_PUSH (memory is already fully updated) and transitioning RELEASE->GOTO with the plan ready saves ~4-8s/trip x 2.5 trips = 10-20s/match. Since 9/16 seeds sit exactly at the 3-deposit tempo ceiling (gap 51.6s, 4th needs gap<45s), a 6-7s gap cut converts several ceiling seeds to 4 deposits and several holding seeds to scored deposits.",
+            "expected_gain_pts": "+3 to +6 (est; 10-20s recovered against a 45s gap threshold)",
+            "risk": "Target may move/be re-scooped between selection and arrival - re-validate status on GOTO entry (statuses already tracked). No new driving primitives, so wall/mispickup risk ~0; the pre-selected trip must re-check the time cutoff at release completion or a stale estimate could start an infeasible trip (ends holding, 0 penalty).",
+            "test_plan": "Code edit: in _st_transport, call _select_target with pose=deposit exit point and stash as _next_target; at mission_fsm.py:1330-1335 replace _set_state(TOUR,t) with: if _next_target still open and trip fits, set active + _plan_to_standoff + _set_state(GOTO,t), else TOUR. Gate behind params key chain_next=True. Paired driver: for s in range(16): tg from random.Random(10000+s); run_match(seed=s,targets=tg) vs run_match(...,params_override=dict(chain_next=True)); compare points/deposit gap; then yolo/bin/python navigation/sim_mission.py must PASS all scenarios.",
+            "category": "small_code_change"
+          },
+          {
+            "name": "One-strike abandon on APPROACH_TIMEOUT (kill the 68s churn seeds)",
+            "mechanism": "Approach aborts (timeout/travel-cap/range-guard, mission_fsm.py:959-979) increment a shared tries counter with max_tries_per_object=2, allowing 3 full approach cycles (~13-17s each: up to 14s approach + 3s retreat + GOTO) against a target whose face is unverifiable from available geometry. Seed 6 lost 68.4s of zero-point churn to exactly this (6 timeouts, 2 targets, final score 10 vs match avg 36). All 16 baseline seeds show capture_missed=0 - retries are not rescuing captures, they are repeating failed verification geometry. Blacklisting a target after its 2nd APPROACH_TIMEOUT (separate per-reason counter, since :863 micro-adjust shares the tries counter and must keep its retries) redirects 30-40s to other open targets or hail-mary.",
+            "expected_gain_pts": "+2 to +4 avg (concentrated: worst seeds gain +10-20, most seeds unchanged)",
+            "risk": "Some timeouts are transient (occlusion just cleared); over-eager blacklisting could strand seeds with few targets - the never-rehabilitate rule (:1678-1682) makes blacklist permanent, so pair with hail-mary which only scans 'open' targets (blacklisted targets are excluded, :1668). Mispickup risk zero (fewer approaches). Watch deposits on currently-3-deposit seeds in the paired run.",
+            "test_plan": "Step 1 (params-only probe): paired driver 16 seeds both + bothcube, params_override=dict(max_tries_per_object=1) - blunt (also curtails micro-adjust) but free. Step 2 if probe shows collateral: add obj['timeouts'] counter incremented only at mission_fsm.py:971, blacklist when timeouts>=2 leaving tries logic intact. Both: yolo/bin/python navigation/sim_mission.py all-PASS gate (scenario D capture-miss especially).",
+            "category": "small_code_change"
+          },
+          {
+            "name": "Set2-weighted selection: value_set1 10 -> 6 in the val/trip score",
+            "mechanism": "Trip-scarcity arithmetic: at ~2.4 trips/match, score is dominated by value-per-trip, not value-per-second. bothcube proves it: 2.06 deposits all at 20 pts = 41.2 > both-mode's 2.44 x 14.8 = 36.2. Current value_time (mission_fsm.py:1658-1659) picks a set1 whenever its trip is less than half a set2's trip, which happens ~half the time (14.8 avg/deposit). Setting value_set1=6 moves the indifference point to 0.3x trip ratio: certified set2 wins unless the set1 is dramatically closer, upgrading ~0.5-1 deposit/match from 10 to 20 pts. This is an untested intermediate point: the documented rejection is only the EXTREME value_first policy (neutral, mission_fsm.py:264-266); value weighting within value_time was never swept.",
+            "expected_gain_pts": "+0 to +5 (uncertain: if the 14.8 mix reflects set2 availability at selection time rather than choice, gain collapses to ~0 - the paired run decides)",
+            "risk": "Longer average trips could cut deposits below breakeven (need avg value x deposits to rise; 2.2 x 18 = 39.6 still beats 36.2); no mispickup channel (only reweights already-certified targets, verify gate untouched). Only pitfall: with 4 set1 needed for full clear, ignoring near set1s early could cost full-clear seeds - currently 0 full clears, so nothing to lose.",
+            "test_plan": "Params-only paired driver: for s in range(16): tg from random.Random(10000+s); baseline run_match(seed=s,targets=tg) vs run_match(...,params_override=dict(value_set1=6.0)); repeat --mode bothcube seeds; report per-seed point deltas plus deposits and pts/deposit. Then yolo/bin/python navigation/sim_mission.py all-PASS.",
+            "category": "params_only"
+          },
+          {
+            "name": "Feasibility-tiered hail-mary ranking (convert holding-at-buzzer into scored deposits)",
+            "mechanism": "7/16 baseline seeds end holding a certified +10/+20 target that never scores. The hail-mary scan (mission_fsm.py:1667-1673) ranks by val/trip while IGNORING remaining time entirely, so it can pick a high-value target whose capture lands at t~159 with a 30s transport left (seed 6). Fix: inside the hail branch only, prefer targets with trip <= rem - 2 (deposit actually completable) over infeasible ones; fall back to current val/trip when none fits. This is NOT the rejected blanket endgame_margin reduction: the primary cutoff (:1647, margin 8) is untouched, and in the hail branch the alternative is a guaranteed-0 attempt, so re-ranking has zero downside vs today's behavior.",
+            "expected_gain_pts": "+1 to +3 (converts an estimated 2-3 of the 7 holding seeds x 10-20 pts each)",
+            "risk": "Near-zero: same verify gate (mispickup channel unchanged), same trip count, only the choice among hail candidates changes. Residual: trip estimates use straight-line d1+d2 (:1594-1600), so a 'feasible' pick can still miss the buzzer - ends holding, 0 penalty, same as today.",
+            "test_plan": "Code edit at mission_fsm.py:1670-1673: compute fits = trip <= rem - 2.0; rank by (fits, val/trip) tuple (feasible tier first). Paired driver 16 seeds both + bothcube comparing points and grep of events for DEPOSITED count in t>150; scenario E/E2 (endgame/hail-mary) must PASS in yolo/bin/python navigation/sim_mission.py.",
+            "category": "small_code_change"
+          },
+          {
+            "name": "NEGATIVE FINDINGS to lock in (no action, prevents wasted effort)",
+            "mechanism": "Two knobs measured dead-or-harmful this session and should be excluded from future batteries in current form: (a) double_carry=True is score-NEGATIVE (-2.4 pts: 36.2->33.8, TIME_ABORT 1->4). The pair filter pair_max_turn_deg=70 (mission_fsm.py:1615) rejects 87 candidates vs 40 for pair_max_dist, then 5/9 accepted pairs die to B-veto during the loaded approach - the mechanism fails in planning AND execution, so hardware scoop validation alone will not rescue it; it needs a redesigned pair geometry (e.g., B between A and bin) before re-testing. (b) unknown_gate first_lane is bit-identical to full_tour in both mode (35.0/35.0, 8 paired seeds) because definite targets dominate _select_target (:1641-1645) - the first-deposit latency lives in the tour pass itself, not the gate.",
+            "expected_gain_pts": "0 directly; saves future battery budget and blocks a -2.4 pt trap",
+            "risk": "None (documentation-only).",
+            "test_plan": "Record in navigation/params.yaml comments next to double_carry and unknown_gate: '2026-07-18 16-seed paired: double_carry -2.4 pts (turn-cone filter + B-veto), first_lane identical in both mode'. No sim run needed - data above.",
+            "category": "params_only"
+          }
+        ]
+      }
+    ],
+    "synthesis": {
+      "bottleneck_summary": "Tempo, not capability, caps the score: first deposit at 59.8s + 51.6s/trip places deposits at ~60/111/163s, a hard 3-deposit ceiling (16-seed baseline: hist 1x2/2x5/3x9/4x0, avg 2.44 dep = 36.2 pts); a 4th deposit needs first<45s AND gap<45s. Driving is 107s/180s (59%) at eff 0.11 m/s (0.73x cruise 0.15); the 27% eff-speed gap is dominated by code-verified controller overheads: (a) final-approach decel ramp starting 0.35m out with a 0.04 m/s crawl floor (nav_core.py:118,191-193) vs ~3cm physically needed at accel 0.4 (nav_core.py:113) — ~1.3-2s lost per non-flyby arrival x 6-9 arrivals; (b) turn-in-place gate zeroing v whenever heading error >50deg (nav_core.py:179-185), including the ~180deg turn after every deposit because DEPOSIT_RELEASE reverses blindly along the deposit heading (mission_fsm.py:1337-1344) then transitions to TOUR at :1335 where the next target is picked one tick later (:682) — selection latency is nil, the loss is the ~3.1s physical spin. Non-travel cost is ~26s per deposited object (deposit choreography 13.7s + capture cycle 12.4s). Tail losses: approach-retry churn (tries at mission_fsm.py:971, blacklist only when tries>2, max_tries_per_object=2 at :162) burned 68.4s for 0 pts in seed 6; 7/16 seeds end holding a certified +10/+20 target because the hail-mary scan (:1662-1675) ranks by val/trip ignoring whether the trip fits remaining time. Value mix is a second axis: both mode averages 14.8 pts/deposit vs bothcube's 20.0 (2.06x20=41.2 > 2.44x14.8=36.2) — with ~2.4 trips, trips are the scarce resource. Corrections to analyst claims, verified by reading code: carry_v_max does NOT cap baseline transport (clamp at mission_fsm.py:654-657 applies only when _front_obj is set, i.e. double-carry — the 0.12->0.14 lever is a dead knob); chain-exit gains are ~3-5s/trip not 10-20s (selection is already next-tick); and cruise 0.18's measured gain (+3.2) came from earlier first deposit (54.0s) and count (2.56), while deposit_gaps_s actually rose to 58.3 — it does not shorten the gap.",
+      "ranked_levers": [
+        {
+          "rank": 1,
+          "name": "Shorten final-approach decel ramp: decel_dist 0.35 -> 0.20",
+          "mechanism": "nav_core.py:118 sets decel_dist=0.35; the ramp law at :191-193 (v_des = cap*max(0.25, dist/0.35), floor min_v=0.04 at :121,193) starts braking 0.35m before EVERY non-flyby goal (standoff arrivals, deposit entry, tour lane ends) though accel=0.4 m/s^2 (:113) needs only ~3cm to stop from 0.15 m/s. Saves ~1.3-2s per arrival x 6-9 arrivals = 8-15s/match, cutting both first-deposit latency and the per-trip gap toward the 45s threshold for a 4th deposit. MEASURED (8 paired seeds, instance patch): 35.0 -> 38.75 pts (+3.75), first deposit 58.0 -> 54.9s, holding 4 -> 2, wall_hits=mispickups=spilled=0. Baseline 35.0 matches the independent 8-seed run 5, so the probe is consistent with the announced baseline.",
+          "expected_gain_pts": "+3 to +4 (measured +3.75 on 8 paired seeds; 8-15s recovered vs 51.6s gap)",
+          "category": "small_code_change",
+          "test_plan": "Edit navigation/nav_core.py:118 `decel_dist: float = 0.35` -> 0.20 (ControllerConfig default, not a DEFAULT_PARAMS key, so it needs the source edit). Paired driver with /usr/bin/python3 (yolo/bin/python does not exist): for s in range(16..31): rng=random.Random(10000+s); tg={'set1':rng.choice(['octa','dodeca','icosa']),'set2':rng.choice(FRUITS)}; run_match(seed=s,targets=tg) before/after edit, both + bothcube modes. Gates: per-seed wall_hits=mispickups=spilled=0; python3 navigation/sim_mission.py all scenarios PASS. Real-arena check: standoff arrival overshoot with 1.3-1.8cm pose noise (sim feeds ground-truth pose at sim_mission.py:552; standoff geometry is a known trap, mission_fsm.py:126-129). Do NOT stack with lever 2 without a dedicated paired combo run (README item 9).",
+          "confidence": "high"
+        },
+        {
+          "rank": 2,
+          "name": "cruise_v 0.15 -> 0.18 + eff_speed 0.1314, gated on bench max-wheel-speed measurement",
+          "mechanism": "Driving is 107s/match; +20% cruise pulls first deposit 59.8 -> 54.0s and deposits 2.44 -> 2.56. MEASURED (16 paired seeds, run 2): 36.2 -> 39.4 (+3.2), wall_hits=0, mispickups=0. Note the gain is first-deposit latency + count, NOT gap (deposit_gaps_s rose 51.6 -> 58.3). 0.20 is past the frontier: 38.1 pts with 3 wall hits (run 3, constraint violation), so 0.18 is the highest measured-safe point with deposit_mode=veer. Hardware gate: cruise policy is 75% of measured max wheel speed; max_wheel_speed=0.2 is an admitted guess (motor_control/params.yaml:11-15, spec range 0.16-0.26), so adoption requires measured max >= 0.24 — roughly a coin flip within the spec range, hence medium confidence overall despite the high-confidence sim number.",
+          "expected_gain_pts": "+3.2 (measured, 16 paired seeds) IF bench max wheel speed >= 0.24 m/s; 0 otherwise",
+          "category": "hardware_or_real_world",
+          "test_plan": "1) Bench: PWM-255 1s encoder run per motor_control/params.yaml:15. 2) If max>=0.24: python3 navigation/sim_speed_sweep.py --mode both --cruise 0.18 --seeds 32 --json and --mode bothcube (sweep pairs seeds by construction and auto-sets eff_speed=0.73x); require wall_hits=mispickups=0 on every seed. 3) python3 navigation/sim_mission.py scenario gate. 4) Adopt in navigation/params.yaml (cruise_v=0.18, eff_speed=0.131) and do a real-arena veer-deposit wall-clearance check (perfect-pose sim understates margin erosion near deposit_wall_clear=0.205).",
+          "confidence": "medium"
+        },
+        {
+          "rank": 3,
+          "name": "Chain the deposit exit: pre-select next target during TRANSPORT/DEPOSIT_PUSH, aim the release reverse at it, RELEASE -> GOTO directly",
+          "mechanism": "Code-verified waste: DEPOSIT_RELEASE reverses 0.40m blindly along the deposit heading with wiggle (mission_fsm.py:1337-1344), transitions to TOUR at :1335, and although _st_tour selects the next target on the very next tick (:682) — selection latency is nil — the robot then pays a ~180deg turn-in-place at max_w=1.0 (~3.1s, nav_core.py:179-185) plus the TOUR hop because the exit ignores where it is going next. Fix: run _select_target once during TRANSPORT/DEPOSIT_PUSH (memory fully updated), bias the post-wiggle reverse bearing (moved>0.15 branch, :1341-1343) toward the chosen target with a wall clamp, and go RELEASE->GOTO with the plan ready. Saves ~3-5s/trip x ~2.5 trips = 8-12s/match, directly attacking the 51.6s gap (needs <45s for a 4th deposit). Convergent proposal from all 3 analysts; the +3-6 pt variant overstated the gain by counting selection latency that does not exist.",
+          "expected_gain_pts": "+2 to +4 (8-12s/match; ~0.2 deposits, more via converting the 7/16 holding-at-buzzer seeds)",
+          "category": "small_code_change",
+          "test_plan": "Add DEFAULT_PARAMS toggle chain_next=False (mission_fsm.py:100+). Edits: pre-select + stash _next_target in _st_transport/_st_deposit_push; in _st_deposit_release replace the fixed reverse heading (steer only after moved>0.15 to keep the wiggle phase heading-aligned — spill guard) and replace the :1335 TOUR transition with GOTO if _next_target is still open and fits the time cutoff, else TOUR. Clamp reverse bearing so the body keeps wall margin (reuse in_arena pattern near :1384); re-validate target status on GOTO entry. Paired 16-seed driver both + bothcube, params_override=dict(chain_next=True) vs default; compare deposit_gaps_s (51.6 baseline) and TOUR s (9.7); require wall_hits=mispickups=spilled=0; python3 navigation/sim_mission.py all PASS.",
+          "confidence": "medium"
+        },
+        {
+          "rank": 4,
+          "name": "Cut approach-retry churn: max_tries_per_object 2 -> 1 (probe), escalate to per-reason timeout counter if collateral",
+          "mechanism": "Verified: approach timeout/travel-cap/range-guard increments tries at mission_fsm.py:971 and blacklists only when tries > max_tries_per_object=2 (:972-973, param at :162) = 3 full cycles of up-to-14s approach + 3s retreat + 5-10s re-GOTO per unverifiable target. Baseline: capture_missed_total=0 and mispickups=0 across all 16 seeds — retries repeat failed verification geometry, not failed scoops; seed 6 burned 68.4s (t=76.6-145.0, six APPROACH_TIMEOUT cycles) for 0 pts. MEASURED (8 paired seeds, params-only): 35.0 -> 36.25 (+1.25); seed 6: 10 -> 30 (+20); seed 2: 50 -> 40 (-10). High variance — a tail-loss cap, not a uniform gain.",
+          "expected_gain_pts": "+1 to +2 avg (measured +1.25 on 8 seeds; +20 on churn-tail seeds, -10 collateral possible; 32 seeds needed to confirm sign)",
+          "category": "params_only",
+          "test_plan": "Step 1 (free): params_override=dict(max_tries_per_object=1), paired driver 32 seeds both + bothcube; compare avg AND p10/min points; grep events for BLACKLIST(approach_timeout). Step 2 if collateral appears: add obj['timeouts'] incremented only at mission_fsm.py:971, blacklist at timeouts>=2, leaving the shared tries counter (also fed by MICRO_ADJUST :863, CAPTURE_MISSED :1038, uc_loop :592-596) intact. Gates: python3 navigation/sim_mission.py all PASS (scenario D capture-miss especially — CAPTURE_MISSED sets tries=1<=max so one retry survives); before flashing the robot, re-run under the external detection-miss battery (p=0.25/0.45, cited at mission_fsm.py:140-147) since real transient misses make 2nd retries more valuable than sim shows.",
+          "confidence": "medium"
+        },
+        {
+          "rank": 5,
+          "name": "Feasibility-tiered hail-mary ranking (prefer targets whose full trip fits remaining time)",
+          "mechanism": "Verified: the hail-mary 2nd scan at mission_fsm.py:1662-1675 ignores the time cutoff entirely and ranks open definite targets by val/trip (:1670-1671) with only a rem>6.0 gate — it can pick a target whose capture lands at t~159 with a 30s transport left (seed 6 ends holding). 7/16 baseline seeds end holding a certified +10/+20 target. Fix inside the hail branch only: compute fits = trip <= rem - 2 and rank by (fits, val/trip) so completable deposits win; fall back to current behavior when none fits. The primary cutoff (:1647, endgame_margin_s=8) is untouched — this is NOT the rejected endgame_margin family; the alternative today is a guaranteed-0 attempt, so downside is ~nil.",
+          "expected_gain_pts": "+1 to +3 (converting 2-3 of 7 holding seeds x 10-20 pts each over 16 seeds = +1.9 to +2.8 avg; some holding seeds have no feasible alternative, hence the low end)",
+          "category": "small_code_change",
+          "test_plan": "Edit mission_fsm.py:1670-1673: fits = (trip <= rem - 2.0); score tuple (fits, val/trip) — 3-line change, optionally behind params key hail_feasibility=True. Paired 16-seed driver both + bothcube; compare points, holding count (baseline 7/16), and grep events for DEPOSITED at t>150. Gates: scenarios E/E2 PASS in python3 navigation/sim_mission.py; wall_hits=mispickups=0.",
+          "confidence": "medium"
+        },
+        {
+          "rank": 6,
+          "name": "Physically confirm the bin lip, then deposit_fast=True",
+          "mechanism": "The rejected deposit-acceleration family failed on overrun spill/wall hits WITHOUT a backstop; the genuinely new element is a hardware fact. If the competition bin has the lip, deposit_fast=True (mission_fsm.py:1310-1311) runs the whole 0.57-0.745m push at deposit_fast_v=0.16 instead of 0.10 with a 0.06 crawl in the last 0.15m (:1314): ~7.7s -> ~4.2s on a typical slot, ~3.5s/deposit x 2.44 = ~8.5s/match. The toggle (:255-259 per code map) and sim lip model (world_kw bin_lip=True, sim_mission.py:476-496) already exist — this is constraint removal verified in the real world, not a parameter gamble.",
+          "expected_gain_pts": "+2 to +4 (~8.5s/match) IF the lip exists on the competition bin; 0 (do nothing) otherwise",
+          "category": "hardware_or_real_world",
+          "test_plan": "1) Venue/spec check: measure the real bin lip. 2) Sim: paired 16 seeds run_match(..., params_override=dict(deposit_fast=True), world_kw=dict(bin_lip=True)), both + bothcube; require spilled==0 and wall_hits==0 on every seed (sim lip is a clamp, not contact physics — treat as necessary, not sufficient). 3) python3 navigation/sim_mission.py all PASS. 4) One physical deposit trial at 0.16 m/s with an 8cm cube confirming the lip holds before touching navigation/params.yaml.",
+          "confidence": "medium"
+        },
+        {
+          "rank": 7,
+          "name": "Set2-weighted selection probe: value_set1 10 -> 6 in the val/trip score",
+          "mechanism": "Trip-scarcity arithmetic: at ~2.4 trips/match score is value-per-trip bound — bothcube gets 41.2 pts from FEWER deposits (2.06 x 20.0) than both mode (2.44 x 14.8 = 36.2). The value_time score at mission_fsm.py:1658-1659 (verified) picks a set1 whenever its trip is under half a set2's trip; value_set1=6 moves the indifference point to 0.3x, upgrading ~0.5-1 deposit/match from 10 to 20 pts if the 14.8 mix reflects choice. Untested intermediate point: only the extreme value_first policy was rejected (:1652-1653 exists as a policy, documented no-gain); value weighting inside value_time was never swept. Breakeven: 2.2 dep x 18 pts = 39.6 still beats 36.2 even if deposits dip.",
+          "expected_gain_pts": "+0 to +5 (collapses to ~0 if the 14.8 pts/deposit mix reflects set2 availability rather than selection choice — the paired run decides; probe is free)",
+          "category": "params_only",
+          "test_plan": "params_override=dict(value_set1=6.0), paired 16-seed driver both + bothcube; report per-seed deltas, deposits, and pts/deposit (baseline 14.8). Adopt only if avg points rise with deposits >= ~2.2. Watch full-clear seeds (currently 0, so nothing to lose from deferring set1). python3 navigation/sim_mission.py all PASS.",
+          "confidence": "low"
+        },
+        {
+          "rank": 8,
+          "name": "Blend turns instead of full stop: turn_in_place_deg 50 -> 70",
+          "mechanism": "Verified: nav_core.py:179-185 zeroes forward velocity whenever heading error > 50deg (non-flyby; tip at :179, param default at :117), while the cos(herr) scaler at :195 would let the robot creep-turn at cos70 = 0.34x cap instead of stopping dead. kp_ang=2.5 at max_w=1.0 converges a 70deg residual in well under 1s, so each of ~6-10 major turns/match (leg starts, post-retreat, post-deposit) trades ~0.5-1s of stationary spin for forward progress: est 4-8s/match. Partially overlaps lever 3 (which removes the biggest single turn); test separately per README item 9.",
+          "expected_gain_pts": "+1 to +3 (unmeasured; 4-8s/match)",
+          "category": "small_code_change",
+          "test_plan": "Edit navigation/nav_core.py:117 `turn_in_place_deg: float = 50.0` -> 70.0 (ControllerConfig default; or patch mission.ctrl.cfg via a tick hook for a zero-edit probe). Paired 16-seed driver both + bothcube; hard gate wall_hits==0 on every seed (wider arcs pass closer to the 0.32m inflation / 0.24m wall margin, nav_core.py:221,226); compare GOTO+TRANSPORT state_time. python3 navigation/sim_mission.py all PASS. Real-world caveat: combined v+w at large errors stresses open-loop PWM odometry — bench-check before adopting on hardware.",
+          "confidence": "low"
+        }
+      ],
+      "rejected": [
+        {
+          "name": "carry_v_max 0.12 -> 0.14 (proposed by 2 analysts as +2-3 pts / 9.6s per match)",
+          "why": "Dead knob — code-verified: the clamp at mission_fsm.py:654-657 applies only inside `if self._front_obj is not None` (double-carry B-slot). With double_carry=False (:178) the baseline TRANSPORT leg already runs at cruise; expected gain is exactly 0. The '+2-3 pts' and '9.6s/match tax' claims are contradicted by the code."
+        },
+        {
+          "name": "Enable double_carry",
+          "why": "Measured score-NEGATIVE this session: 36.2 -> 33.8 (-2.4), deposits 2.44 -> 2.25, TIME_ABORT 1 -> 4; pair_max_turn_deg=70 rejected 87 candidates and 5/9 accepted pairs died to B-veto during the loaded approach. Fails in planning AND execution — needs a redesigned pair geometry (e.g. B between A and bin) before any retest; hardware scoop is also an unverified 1-object U-channel."
+        },
+        {
+          "name": "unknown_gate first_lane / earlier unknown investigation / tour shortening",
+          "why": "Measured bit-identical to full_tour (35.0/35.0, 8 paired seeds) because definite targets dominate _select_target (:1641-1645); also squarely in the already-rejected 'early unknown-object investigation' and 'tour lane reduction' families with no new mechanism. TOUR is only 9.7s/match — no headroom."
+        },
+        {
+          "name": "cruise_v 0.20 or 0.30 (and motor re-gearing to reach 0.30)",
+          "why": "0.20 measured 38.1 pts with 3 wall hits (run 3) — violates the wall_hits=0 hard constraint via veer-mode margin erosion. 0.30 requires ~0.40 m/s max wheel speed, beyond the 131:1 gearmotor spec ceiling (0.16-0.26, motor_control/params.yaml:11-15), plus documented veer regression (wall hits 11->35) — re-gearing is schedule risk before competition. 0.18 (lever 2) is the measured frontier."
+        },
+        {
+          "name": "Deposit choreography trims: deposit_push_v up, deposit_approach_x 0.95->0.75-0.80, release_reverse_dist 0.40->0.25-0.28",
+          "why": "This is the already-rejected 'deposit acceleration family' (wall hits/spill) re-proposed without a new mechanism. The single genuinely new variant — deposit_fast backed by a physically confirmed bin lip — is kept as lever 6; everything else in the family stays rejected."
+        },
+        {
+          "name": "Two-speed blind capture push (push_v_far=0.10 until last 0.15m)",
+          "why": "Sim cannot falsify the real risk: funnel convergence is a speed-independent k=0.25 gain (sim_mission.py:395-399), so a sim PASS proves nothing about deflection — the exact failure mode the just-adopted capture_push_max 0.62/11 widening fixed (+10-17 pts in the det battery). Gain is only +1-2 pts and it is bench-gated (20-push seat-rate test) — poor gain/effort next to the ranked levers; revisit only with bench data."
+        },
+        {
+          "name": "approach_v 0.10 -> 0.13 and/or verify streak 6 -> 4",
+          "why": "Erodes the anti-mispickup verify gate (mispickups must stay 0 at 2x penalty) and touches the known standoff-geometry trap (seed102 infinite loop, mission_fsm.py:126-129); external detection-miss battery already showed faster/looser approach is costly. No new mechanism over the rejected capture-side family."
+        },
+        {
+          "name": "Obstacle-inflation trim (extra_margin 0.04->0.02) / plow soft_inflate",
+          "why": "2-5s/match upside against a direct mispickup channel (-20/-40 for a lookalike entering the scoop laterally) and stall-recovery costs; conflicts with the mispickups=0 and wall_hits=0 hard constraints for marginal gain."
+        },
+        {
+          "name": "Perception-side real-world items: verify-cam FPS benchmark at imgsz 960 (640 fallback) and false-FAR_CANDIDATE suppression/cross-set-negative retrain",
+          "why": "Not wrong — but 0 sim-measurable gain (sim perception is same-tick with recall=1 and no FPs), gains are conditional on unmeasured facts (verify FPS, real far-FP encounter rate), and any imgsz/detector change must re-pass the mispickup holdout gates. Excluded from the ranked 8 on gain-confidence/effort; still run deployment/benchmark_latency.py on-device (zero-risk measurement, pending per docs/long_range_upgrade.md:307) and log far-FP dead-end trips in real tests to size the FAR_CANDIDATE lever with data."
+        },
+        {
+          "name": "flyby_lookahead scaling (0.16 -> ~1.1s x v)",
+          "why": "Standalone gain at cruise 0.15 is only 1-3s/match; it is a dependent tuning of lever 2 (mandatory re-check if cruise rises), not an independent lever. Fold into lever 2's validation rather than spending a paired-seed slot."
+        },
+        {
+          "name": "eff_speed +/-15% sweep / endgame_margin_s reduction",
+          "why": "'eff_speed up / margin down' is explicitly on the already-rejected list with no new mechanism offered; the legitimate endgame residual (holding-at-buzzer conversion) is captured by lever 5, which changes ranking only inside the hail branch and leaves the cutoff math untouched."
+        }
+      ]
+    }
+  },
+  "workflowProgress": [
+    {
+      "type": "workflow_phase",
+      "index": 1,
+      "title": "Map"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 2,
+      "title": "Measure"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 3,
+      "title": "Analyze"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 4,
+      "title": "Synthesize"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 1,
+      "label": "measure",
+      "phaseIndex": 2,
+      "phaseTitle": "Measure",
+      "agentId": "ada80fe18d6c8c8e1",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1784301378671,
+      "queuedAt": 1784301378598,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "run_match (navigation/sim_mission.py:526-579) returns: poin…",
+      "promptPreview": "You are analyzing a robot competition codebase at /home/teamtwo/AIrobot/SNU_Mech_AI_Robotics_Challenge-2026 (work from this directory). This runs on a Jetson Orin Nano (6 cores) - be frugal: do NOT run heavy compute; reading files is fine.\nCOMPETITION RULES: one 3-minute match. 4x4m arena, 42 placement points on a 0.5m grid, 16 set1 polyhedra + 12 set2 fruit cubes mixed. Set1 target shape: +10 eac…",
+      "lastProgressAt": 1784301836718,
+      "tokens": 73385,
+      "toolCalls": 27,
+      "durationMs": 458047,
+      "resultPreview": "{\"runs\":[{\"label\":\"1. bothcube @0.15, 16 seeds (worst-case announcement)\",\"command\":\"python3 navigation/sim_speed_sweep.py --mode bothcube --cruise 0.15 --seeds 16 --json\",\"result\":\"{\\\"mode\\\": \\\"bothcube\\\", \\\"cruise\\\": 0.15, \\\"gate\\\": \\\"full_tour\\\", \\\"seeds\\\": 16, \\\"avg_points\\\": 41.2, \\\"pct_of_max\\\": 41.2, \\\"avg_deposits\\\": 2.06, \\\"full_clears\\\": 0, \\\"mispickups\\\": 0, \\\"wall_hits\\\": 0, \\\"avg_firs…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 2,
+      "label": "map:mission_fsm",
+      "phaseIndex": 1,
+      "phaseTitle": "Map",
+      "agentId": "a8007971faeebc414",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1784301378823,
+      "queuedAt": 1784301378774,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "mission_fsm.py is a 13-state greedy value/time planner. A m…",
+      "promptPreview": "You are analyzing a robot competition codebase at /home/teamtwo/AIrobot/SNU_Mech_AI_Robotics_Challenge-2026 (work from this directory). This runs on a Jetson Orin Nano (6 cores) - be frugal: do NOT run heavy compute; reading files is fine.\nCOMPETITION RULES: one 3-minute match. 4x4m arena, 42 placement points on a 0.5m grid, 16 set1 polyhedra + 12 set2 fruit cubes mixed. Set1 target shape: +10 eac…",
+      "lastProgressAt": 1784301574793,
+      "tokens": 71048,
+      "toolCalls": 9,
+      "durationMs": 195969,
+      "resultPreview": "{\"summary\":\"mission_fsm.py is a 13-state greedy value/time planner. A match is: TOUR lanes until a target is mapped -> GOTO standoff (A* + approach-angle selection) -> APPROACH (vision servo, 14s timeout) -> CAPTURE (blind push 0.06 m/s up to 0.62m/11s, IR-confirmed) -> TRANSPORT to a fixed bin-entry point (0.95, 0.30) -> rotate-in-place align -> DEPOSIT_PUSH at 0.10 m/s to a cycling depth slot ->…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 3,
+      "label": "map:nav_core",
+      "phaseIndex": 1,
+      "phaseTitle": "Map",
+      "agentId": "a82d1581981927b9e",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1784301378824,
+      "queuedAt": 1784301378774,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "The navigation stack is a rotate-then-drive P controller (n…",
+      "promptPreview": "You are analyzing a robot competition codebase at /home/teamtwo/AIrobot/SNU_Mech_AI_Robotics_Challenge-2026 (work from this directory). This runs on a Jetson Orin Nano (6 cores) - be frugal: do NOT run heavy compute; reading files is fine.\nCOMPETITION RULES: one 3-minute match. 4x4m arena, 42 placement points on a 0.5m grid, 16 set1 polyhedra + 12 set2 fruit cubes mixed. Set1 target shape: +10 eac…",
+      "lastProgressAt": 1784301498302,
+      "tokens": 29486,
+      "toolCalls": 5,
+      "durationMs": 119478,
+      "resultPreview": "{\"summary\":\"The navigation stack is a rotate-then-drive P controller (nav_core.py DiffDriveController) feeding a 10cm-grid A* with LOS shortcutting (GridPlanner). Effective speed is ~73% of cruise because each leg pays: (1) a turn-in-place phase whenever heading error >50° (>90° even in flyby), ~1.5-2.5s per big turn; (2) a long linear decel ramp starting 0.35m out that crawls the last ~9cm at min…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 4,
+      "label": "map:sim_world",
+      "phaseIndex": 1,
+      "phaseTitle": "Map",
+      "agentId": "a2b69c52c6e86ecf2",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1784301378825,
+      "queuedAt": 1784301378775,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "sim_mission.py is a 20Hz (DT=0.05) full-match simulator whe…",
+      "promptPreview": "You are analyzing a robot competition codebase at /home/teamtwo/AIrobot/SNU_Mech_AI_Robotics_Challenge-2026 (work from this directory). This runs on a Jetson Orin Nano (6 cores) - be frugal: do NOT run heavy compute; reading files is fine.\nCOMPETITION RULES: one 3-minute match. 4x4m arena, 42 placement points on a 0.5m grid, 16 set1 polyhedra + 12 set2 fruit cubes mixed. Set1 target shape: +10 eac…",
+      "lastProgressAt": 1784301561052,
+      "tokens": 52315,
+      "toolCalls": 11,
+      "durationMs": 182227,
+      "resultPreview": "{\"summary\":\"sim_mission.py is a 20Hz (DT=0.05) full-match simulator where the real MissionFSM (navigation/mission_fsm.py) runs unmodified against an emulated World + SimPerception. run_match(seed, targets, duration, hooks, verbose, params_override, world_kw) forwards params_override into MissionFSM's DEFAULT_PARAMS (mission_fsm.py:100-302, ~80 tunables) and returns a rich diagnostics dict (sim_mis…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 5,
+      "label": "map:perception_hw",
+      "phaseIndex": 1,
+      "phaseTitle": "Map",
+      "agentId": "a0e316c538d434421",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1784301500915,
+      "queuedAt": 1784301378775,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Travel time (107s/180s in GOTO+TRANSPORT) is capped by an U…",
+      "promptPreview": "You are analyzing a robot competition codebase at /home/teamtwo/AIrobot/SNU_Mech_AI_Robotics_Challenge-2026 (work from this directory). This runs on a Jetson Orin Nano (6 cores) - be frugal: do NOT run heavy compute; reading files is fine.\nCOMPETITION RULES: one 3-minute match. 4x4m arena, 42 placement points on a 0.5m grid, 16 set1 polyhedra + 12 set2 fruit cubes mixed. Set1 target shape: +10 eac…",
+      "lastProgressAt": 1784301687157,
+      "tokens": 75507,
+      "toolCalls": 17,
+      "durationMs": 186241,
+      "resultPreview": "{\"summary\":\"Travel time (107s/180s in GOTO+TRANSPORT) is capped by an UNMEASURED motor constant: motor_control/params.yaml:11 admits max_wheel_speed=0.2 m/s is a guess (plausible real range 0.16-0.26), and cruise_v=0.15 is just 75% of that guess; the team's own sim sweep (navigation/params.yaml:25-30) shows cruise 0.30 would add +8.5 pts but the 131:1 gearmotors likely cannot reach it, making moto…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 6,
+      "label": "analyze:travel",
+      "phaseIndex": 3,
+      "phaseTitle": "Analyze",
+      "agentId": "acbd7f5159416514f",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1784301840275,
+      "queuedAt": 1784301836780,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Travel accounting (both@0.15, 16 seeds): GOTO 58.9s + TRANS…",
+      "promptPreview": "You are analyzing a robot competition codebase at /home/teamtwo/AIrobot/SNU_Mech_AI_Robotics_Challenge-2026 (work from this directory). This runs on a Jetson Orin Nano (6 cores) - be frugal: do NOT run heavy compute; reading files is fine.\nCOMPETITION RULES: one 3-minute match. 4x4m arena, 42 placement points on a 0.5m grid, 16 set1 polyhedra + 12 set2 fruit cubes mixed. Set1 target shape: +10 eac…",
+      "lastProgressAt": 1784302172662,
+      "tokens": 67678,
+      "toolCalls": 13,
+      "durationMs": 332386,
+      "resultPreview": "{\"diagnosis\":\"Travel accounting (both@0.15, 16 seeds): GOTO 58.9s + TRANSPORT 47.9s = 106.8s = 59% of 180s, at eff_speed 0.11 m/s (0.73 x cruise_v 0.15, navigation/params.yaml:29-30). Tempo arithmetic: first deposit 59.8s + 51.6s/gap places deposits at ~60/111/163s -> hard 3-deposit ceiling; 9/16 seeds already sit at 3, 0 reach 4. A 4th deposit needs first<45s AND gap<45s (45+3x45=180). Where the …"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 7,
+      "label": "analyze:cycle",
+      "phaseIndex": 3,
+      "phaseTitle": "Analyze",
+      "agentId": "a916238a0f2e4e2d6",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1784301839490,
+      "queuedAt": 1784301836781,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "PER-OBJECT CYCLE OVERHEAD accounting (16-seed baseline, bot…",
+      "promptPreview": "You are analyzing a robot competition codebase at /home/teamtwo/AIrobot/SNU_Mech_AI_Robotics_Challenge-2026 (work from this directory). This runs on a Jetson Orin Nano (6 cores) - be frugal: do NOT run heavy compute; reading files is fine.\nCOMPETITION RULES: one 3-minute match. 4x4m arena, 42 placement points on a 0.5m grid, 16 set1 polyhedra + 12 set2 fruit cubes mixed. Set1 target shape: +10 eac…",
+      "lastProgressAt": 1784302302833,
+      "tokens": 82622,
+      "toolCalls": 12,
+      "durationMs": 463342,
+      "resultPreview": "{\"diagnosis\":\"PER-OBJECT CYCLE OVERHEAD accounting (16-seed baseline, both@0.15): 2.44 deposits from 47/16=2.94 captures. Non-travel cost per deposited object = deposit choreography 33.4/2.44 = 13.7s (DEPOSIT_PUSH 8.4 + RELEASE 4.0 + SHED 1.3, mission_fsm.py:1278-1344) + capture cycle 30.2/2.44 = 12.4s = ~26s/object, on top of ~36s driving per trip. Tempo ceiling: first deposit 59.8s + gap 51.6s p…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 8,
+      "label": "analyze:strategy",
+      "phaseIndex": 3,
+      "phaseTitle": "Analyze",
+      "agentId": "a0f6f9e76c22d5815",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1784301840537,
+      "queuedAt": 1784301836782,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Score = deposits x value-per-deposit, and BOTH factors are …",
+      "promptPreview": "You are analyzing a robot competition codebase at /home/teamtwo/AIrobot/SNU_Mech_AI_Robotics_Challenge-2026 (work from this directory). This runs on a Jetson Orin Nano (6 cores) - be frugal: do NOT run heavy compute; reading files is fine.\nCOMPETITION RULES: one 3-minute match. 4x4m arena, 42 placement points on a 0.5m grid, 16 set1 polyhedra + 12 set2 fruit cubes mixed. Set1 target shape: +10 eac…",
+      "lastProgressAt": 1784302110688,
+      "tokens": 64018,
+      "toolCalls": 7,
+      "durationMs": 270151,
+      "resultPreview": "{\"diagnosis\":\"Score = deposits x value-per-deposit, and BOTH factors are currently left on the table. (1) Tempo ceiling: first deposit 59.8s + 51.6s/trip puts deposits at ~60/111/163s -> hard max 3 in 180s; measured histogram (16 seeds, both@0.15): 1x2, 2x5, 3x9, 4x0. A 4th deposit needs first<45s AND gap<45s. (2) Value mix: both-mode averages 36.2 = 2.44 deposits x 14.8 pts/deposit (~half the pic…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 9,
+      "label": "synthesize",
+      "phaseIndex": 4,
+      "phaseTitle": "Synthesize",
+      "agentId": "af1e7b05a3d7af88c",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1784302312788,
+      "queuedAt": 1784302308494,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Tempo, not capability, caps the score: first deposit at 59.…",
+      "promptPreview": "You are analyzing a robot competition codebase at /home/teamtwo/AIrobot/SNU_Mech_AI_Robotics_Challenge-2026 (work from this directory). This runs on a Jetson Orin Nano (6 cores) - be frugal: do NOT run heavy compute; reading files is fine.\nCOMPETITION RULES: one 3-minute match. 4x4m arena, 42 placement points on a 0.5m grid, 16 set1 polyhedra + 12 set2 fruit cubes mixed. Set1 target shape: +10 eac…",
+      "lastProgressAt": 1784302570446,
+      "tokens": 73289,
+      "toolCalls": 7,
+      "durationMs": 257656,
+      "resultPreview": "{\"bottleneck_summary\":\"Tempo, not capability, caps the score: first deposit at 59.8s + 51.6s/trip places deposits at ~60/111/163s, a hard 3-deposit ceiling (16-seed baseline: hist 1x2/2x5/3x9/4x0, avg 2.44 dep = 36.2 pts); a 4th deposit needs first<45s AND gap<45s. Driving is 107s/180s (59%) at eff 0.11 m/s (0.73x cruise 0.15); the 27% eff-speed gap is dominated by code-verified controller overhea…"
+    }
+  ],
+  "totalTokens": 589348,
+  "totalToolCalls": 108
+}

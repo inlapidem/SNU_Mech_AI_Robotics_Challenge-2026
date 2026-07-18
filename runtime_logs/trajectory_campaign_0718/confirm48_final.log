@@ -1,0 +1,30 @@
+=== scenario suite with decel_dist=0.20 ===
+  seed 0:   +20점  정상하역 1 오픽업 0 벽충돌 0 밀침 128  종료 DONE
+  seed 1:   +40점  정상하역 2 오픽업 0 벽충돌 0 밀침   0  종료 DONE
+  seed 2:   +30점  정상하역 2 오픽업 0 벽충돌 0 밀침   2  종료 DONE
+  seed 3:   +30점  정상하역 2 오픽업 0 벽충돌 0 밀침   0  종료 DONE
+  seed 4:   +50점  정상하역 3 오픽업 0 벽충돌 0 밀침   0  종료 DONE
+  seed 5:   +50점  정상하역 3 오픽업 0 벽충돌 0 밀침  41  종료 DONE
+  평균 +36.7점
+  하역 3  오픽업 0  가짜 유실판정: False
+  유실 주입: True  유실 감지: True  최종 하역 1
+  재시도 발생: False  하역 3  오픽업 0
+  종료 상태 DONE  적재물 방치: False  하역 0
+  하역 1 vs 컷오프-only 0  점수 +10 vs +0  종료 적재: False  오픽업 0
+  하역 3  오픽업 0  벽충돌 0
+  2차 포획: True  하역 2  오픽업 0  하역시각 [47.2, 47.2, 83.5]
+  이탈 14회  하역 1  오픽업 0
+SUITE(decel20): {'A': 'PASS', 'B': 'PASS', 'C': 'PASS', 'D': 'PASS', 'E': 'PASS', 'E2': 'PASS', 'F': 'PASS', 'G': 'PASS', 'H': 'PASS'}
+both:base015 avg=36.46 dep=2.35 bad=0 wall=0 hold=17 (103.6s)
+both:decel20 avg=37.5 dep=2.38 bad=0 wall=0 hold=12 (102.7s)  Δ: +1.04 (up 11/down 10)
+both:lip015 avg=36.88 dep=2.4 bad=0 wall=0 hold=17 (103.6s)
+both:lipfast015 avg=37.71 dep=2.46 bad=0 wall=0 hold=10 (107.4s)  Δ: +0.83 (up 14/down 8)
+both:c30_lane avg=41.67 dep=2.58 bad=0 wall=8 hold=19 (99.9s)
+both:c30_stack avg=51.25 dep=3.23 bad=0 wall=14 hold=11 (104.7s)  Δ: +9.58 (up 28/down 5)
+bothcube:base015 avg=40.0 dep=2.02 bad=0 wall=0 hold=12 (126.5s)
+bothcube:decel20 avg=42.5 dep=2.17 bad=0 wall=43 hold=16 (120.4s)  Δ: +2.50 (up 12/down 6)
+bothcube:lip015 avg=40.0 dep=2.02 bad=0 wall=0 hold=12 (126.3s)
+bothcube:lipfast015 avg=39.58 dep=2.0 bad=0 wall=0 hold=12 (126.7s)  Δ: -0.42 (up 4/down 5)
+bothcube:c30_lane avg=52.29 dep=2.71 bad=0 wall=5 hold=11 (116.0s)
+bothcube:c30_stack avg=50.83 dep=2.67 bad=0 wall=22 hold=13 (122.3s)  Δ: -1.46 (up 12/down 15)
+DONE

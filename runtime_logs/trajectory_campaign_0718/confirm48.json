@@ -1,0 +1,4195 @@
+{
+ "suite_decel20": {
+  "A": true,
+  "B": true,
+  "C": true,
+  "D": true,
+  "E": true,
+  "E2": true,
+  "F": true,
+  "G": true,
+  "H": true
+ },
+ "both:base015": {
+  "ref": null,
+  "avg": 36.46,
+  "dep": 2.35,
+  "bad": 0,
+  "wall": 0,
+  "hold": 17,
+  "secs": 103.6,
+  "_rows": [
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 10.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   }
+  ]
+ },
+ "both:decel20": {
+  "ref": "base015",
+  "avg": 37.5,
+  "dep": 2.38,
+  "bad": 0,
+  "wall": 0,
+  "hold": 12,
+  "secs": 102.7,
+  "delta_avg": 1.04,
+  "delta_up": 11,
+  "delta_down": 10,
+  "_rows": [
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   }
+  ]
+ },
+ "both:lip015": {
+  "ref": null,
+  "avg": 36.88,
+  "dep": 2.4,
+  "bad": 0,
+  "wall": 0,
+  "hold": 17,
+  "secs": 103.6,
+  "_rows": [
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 10.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   }
+  ]
+ },
+ "both:lipfast015": {
+  "ref": "lip015",
+  "avg": 37.71,
+  "dep": 2.46,
+  "bad": 0,
+  "wall": 0,
+  "hold": 10,
+  "secs": 107.4,
+  "delta_avg": 0.83,
+  "delta_up": 14,
+  "delta_down": 8,
+  "_rows": [
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   }
+  ]
+ },
+ "both:c30_lane": {
+  "ref": null,
+  "avg": 41.67,
+  "dep": 2.58,
+  "bad": 0,
+  "wall": 8,
+  "hold": 19,
+  "secs": 99.9,
+  "_rows": [
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 10.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 8,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   }
+  ]
+ },
+ "both:c30_stack": {
+  "ref": "c30_lane",
+  "avg": 51.25,
+  "dep": 3.23,
+  "bad": 0,
+  "wall": 14,
+  "hold": 11,
+  "secs": 104.7,
+  "delta_avg": 9.58,
+  "delta_up": 28,
+  "delta_down": 5,
+  "_rows": [
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 70.0,
+    "good": 5,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 70.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 80.0,
+    "good": 5,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 14,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 70.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 80.0,
+    "good": 5,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 70.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   }
+  ]
+ },
+ "bothcube:base015": {
+  "ref": null,
+  "avg": 40.0,
+  "dep": 2.02,
+  "bad": 0,
+  "wall": 0,
+  "hold": 12,
+  "secs": 126.5,
+  "_rows": [
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   }
+  ]
+ },
+ "bothcube:decel20": {
+  "ref": "base015",
+  "avg": 42.5,
+  "dep": 2.17,
+  "bad": 0,
+  "wall": 43,
+  "hold": 16,
+  "secs": 120.4,
+  "delta_avg": 2.5,
+  "delta_up": 12,
+  "delta_down": 6,
+  "_rows": [
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 43,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 0.0,
+    "good": 0,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   }
+  ]
+ },
+ "bothcube:lip015": {
+  "ref": null,
+  "avg": 40.0,
+  "dep": 2.02,
+  "bad": 0,
+  "wall": 0,
+  "hold": 12,
+  "secs": 126.3,
+  "_rows": [
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   }
+  ]
+ },
+ "bothcube:lipfast015": {
+  "ref": "lip015",
+  "avg": 39.58,
+  "dep": 2.0,
+  "bad": 0,
+  "wall": 0,
+  "hold": 12,
+  "secs": 126.7,
+  "delta_avg": -0.42,
+  "delta_up": 4,
+  "delta_down": 5,
+  "_rows": [
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   }
+  ]
+ },
+ "bothcube:c30_lane": {
+  "ref": null,
+  "avg": 52.29,
+  "dep": 2.71,
+  "bad": 0,
+  "wall": 5,
+  "hold": 11,
+  "secs": 116.0,
+  "_rows": [
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 70.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 5,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   }
+  ]
+ },
+ "bothcube:c30_stack": {
+  "ref": "c30_lane",
+  "avg": 50.83,
+  "dep": 2.67,
+  "bad": 0,
+  "wall": 22,
+  "hold": 13,
+  "secs": 122.3,
+  "delta_avg": -1.46,
+  "delta_up": 12,
+  "delta_down": 15,
+  "_rows": [
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 70.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 9,
+    "hold": 1
+   },
+   {
+    "points": 70.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 70.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 70.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 70.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 13,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   }
+  ]
+ }
+}

@@ -1,0 +1,9 @@
+both:w3_base avg=45.62 dep=2.94 bad=0 wall=0 uc=44 hold=7 (32.3s)
+both:replan05 avg=43.75 dep=2.75 bad=0 wall=94 uc=45 hold=6 (40.0s)  Δ: -1.88 (up 3/down 4)
+both:margin06 avg=45.0 dep=2.94 bad=0 wall=8 uc=37 hold=3 (30.9s)  Δ: -0.62 (up 3/down 5)
+both:flyby10 avg=47.5 dep=2.94 bad=0 wall=0 uc=50 hold=4 (30.7s)  Δ: +1.88 (up 4/down 2)
+both:lip_fastdep avg=50.62 dep=3.44 bad=0 wall=9 uc=61 hold=2 (33.4s)  Δ: +5.00 (up 7/down 3)
+both:stack avg=51.25 dep=3.56 bad=1 wall=22 uc=31 hold=6 (39.2s)  Δ: +5.62 (up 11/down 2)
+bothcube:w3_base avg=51.25 dep=2.62 bad=0 wall=0 uc=76 hold=3 (37.6s)
+bothcube:stack avg=58.75 dep=3.12 bad=0 wall=5 uc=58 hold=3 (49.4s)  Δ: +7.50 (up 10/down 1)
+DONE

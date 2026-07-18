@@ -1,0 +1,13 @@
+both:base015 avg=36.25 dep=2.44 bad=0 wall=0 hold=7 (33.0s)
+both:tries1_015 avg=36.25 dep=2.44 bad=0 wall=0 hold=8 (32.9s)  Δ: +0.00 (up 1/down 2)
+both:v6_015 avg=36.25 dep=2.44 bad=0 wall=0 hold=7 (33.0s)  Δ: +0.00 (up 0/down 0)
+both:hailfit_015 avg=36.25 dep=2.44 bad=0 wall=0 hold=7 (32.8s)  Δ: +0.00 (up 0/down 0)
+both:w3_base avg=45.62 dep=2.94 bad=0 wall=0 hold=7 (32.1s)
+both:tries1_c30 avg=44.38 dep=2.88 bad=0 wall=0 hold=11 (31.8s)  Δ: -1.25 (up 3/down 4)
+both:v6_c30 avg=45.62 dep=2.94 bad=0 wall=0 hold=7 (32.1s)  Δ: +0.00 (up 0/down 0)
+both:hailfit_c30 avg=45.62 dep=2.94 bad=0 wall=0 hold=7 (32.1s)  Δ: +0.00 (up 0/down 0)
+bothcube:base015 avg=41.25 dep=2.06 bad=0 wall=0 hold=3 (41.5s)
+bothcube:hailfit_015 avg=41.25 dep=2.06 bad=0 wall=0 hold=3 (41.5s)  Δ: +0.00 (up 0/down 0)
+bothcube:w3_base avg=51.25 dep=2.62 bad=0 wall=0 hold=3 (37.9s)
+bothcube:hailfit_c30 avg=51.25 dep=2.62 bad=0 wall=0 hold=3 (37.9s)  Δ: +0.00 (up 0/down 0)
+DONE

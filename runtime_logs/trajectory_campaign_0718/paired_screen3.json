@@ -1,0 +1,1140 @@
+{
+ "both:w3_base": {
+  "rows": [
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 2,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "uc": 5,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 0,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "uc": 5,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 7,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "uc": 6,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 3,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 3,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 4,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 1,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 5,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 3,
+    "hold": 0
+   }
+  ],
+  "ref": null,
+  "avg": 45.62,
+  "dep": 2.94,
+  "bad": 0,
+  "wall": 0,
+  "uc": 44,
+  "hold": 7,
+  "secs": 32.3
+ },
+ "both:replan05": {
+  "rows": [
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 2,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "uc": 11,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 1,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 1,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 2,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "uc": 8,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 22,
+    "uc": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 5,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "uc": 3,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 72,
+    "uc": 2,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "uc": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 9,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 1,
+    "hold": 0
+   }
+  ],
+  "ref": "w3_base",
+  "avg": 43.75,
+  "dep": 2.75,
+  "bad": 0,
+  "wall": 94,
+  "uc": 45,
+  "hold": 6,
+  "secs": 40.0,
+  "delta_avg": -1.88,
+  "delta_up": 3,
+  "delta_down": 4
+ },
+ "both:margin06": {
+  "rows": [
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 1,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 4,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 1,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "uc": 2,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 1,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 6,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 3,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 2,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 5,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 3,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 8,
+    "uc": 4,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 5,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 0,
+    "hold": 1
+   }
+  ],
+  "ref": "w3_base",
+  "avg": 45.0,
+  "dep": 2.94,
+  "bad": 0,
+  "wall": 8,
+  "uc": 37,
+  "hold": 3,
+  "secs": 30.9,
+  "delta_avg": -0.62,
+  "delta_up": 3,
+  "delta_down": 5
+ },
+ "both:flyby10": {
+  "rows": [
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 3,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 5,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 2,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 1,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 6,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 2,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 3,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 6,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "uc": 5,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 4,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 1,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 10,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 2,
+    "hold": 0
+   }
+  ],
+  "ref": "w3_base",
+  "avg": 47.5,
+  "dep": 2.94,
+  "bad": 0,
+  "wall": 0,
+  "uc": 50,
+  "hold": 4,
+  "secs": 30.7,
+  "delta_avg": 1.88,
+  "delta_up": 4,
+  "delta_down": 2
+ },
+ "both:lip_fastdep": {
+  "rows": [
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 2,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 4,
+    "hold": 0
+   },
+   {
+    "points": 70.0,
+    "good": 5,
+    "bad": 0,
+    "wall": 1,
+    "uc": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 4,
+    "uc": 6,
+    "hold": 0
+   },
+   {
+    "points": 80.0,
+    "good": 5,
+    "bad": 0,
+    "wall": 0,
+    "uc": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "uc": 1,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 4,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "uc": 6,
+    "hold": 0
+   },
+   {
+    "points": 70.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 1,
+    "uc": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 6,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "uc": 5,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 8,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 1,
+    "uc": 3,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 2,
+    "uc": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 9,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 7,
+    "hold": 0
+   }
+  ],
+  "ref": "w3_base",
+  "avg": 50.62,
+  "dep": 3.44,
+  "bad": 0,
+  "wall": 9,
+  "uc": 61,
+  "hold": 2,
+  "secs": 33.4,
+  "delta_avg": 5.0,
+  "delta_up": 7,
+  "delta_down": 3
+ },
+ "both:stack": {
+  "rows": [
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 6,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 2,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 15,
+    "uc": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 1,
+    "hold": 0
+   },
+   {
+    "points": 70.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 1,
+    "uc": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "uc": 1,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 2,
+    "uc": 4,
+    "hold": 1
+   },
+   {
+    "points": 70.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "uc": 3,
+    "hold": 1
+   },
+   {
+    "points": 70.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "uc": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 5,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "uc": 1,
+    "hold": 0
+   },
+   {
+    "points": 0.0,
+    "good": 3,
+    "bad": 1,
+    "wall": 0,
+    "uc": 4,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "uc": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 2,
+    "uc": 4,
+    "hold": 0
+   },
+   {
+    "points": 70.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 2,
+    "uc": 0,
+    "hold": 0
+   }
+  ],
+  "ref": "w3_base",
+  "avg": 51.25,
+  "dep": 3.56,
+  "bad": 1,
+  "wall": 22,
+  "uc": 31,
+  "hold": 6,
+  "secs": 39.2,
+  "delta_avg": 5.62,
+  "delta_up": 11,
+  "delta_down": 2
+ },
+ "bothcube:w3_base": {
+  "rows": [
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 4,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 3,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 7,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 1,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 0,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "uc": 10,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 5,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "uc": 10,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 1,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "uc": 12,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 12,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 4,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "uc": 6,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 1,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 0,
+    "hold": 0
+   }
+  ],
+  "ref": null,
+  "avg": 51.25,
+  "dep": 2.62,
+  "bad": 0,
+  "wall": 0,
+  "uc": 76,
+  "hold": 3,
+  "secs": 37.6
+ },
+ "bothcube:stack": {
+  "rows": [
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 3,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 3,
+    "hold": 0
+   },
+   {
+    "points": 70.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "uc": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 3,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 1,
+    "hold": 0
+   },
+   {
+    "points": 70.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "uc": 4,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 2,
+    "uc": 4,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 4,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "uc": 7,
+    "hold": 0
+   },
+   {
+    "points": 70.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "uc": 1,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "uc": 15,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 4,
+    "hold": 1
+   },
+   {
+    "points": 70.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 1,
+    "uc": 2,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "uc": 6,
+    "hold": 1
+   },
+   {
+    "points": 70.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "uc": 1,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 2,
+    "uc": 0,
+    "hold": 0
+   }
+  ],
+  "ref": "w3_base",
+  "avg": 58.75,
+  "dep": 3.12,
+  "bad": 0,
+  "wall": 5,
+  "uc": 58,
+  "hold": 3,
+  "secs": 49.4,
+  "delta_avg": 7.5,
+  "delta_up": 10,
+  "delta_down": 1
+ }
+}

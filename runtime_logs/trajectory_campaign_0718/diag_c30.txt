@@ -1,0 +1,150 @@
+=== avg state_time (s):  0.15  vs  0.30-lane   delta
+  GOTO               58.9    53.1    -5.8
+  TRANSPORT          47.9    34.1   -13.8
+  DEPOSIT_PUSH       20.5    23.5    +3.0
+  CAPTURE            12.9    14.0    +1.1
+  DEPOSIT_RELEASE     9.8    11.1    +1.3
+  TOUR                9.7     5.6    -4.1
+  RETREAT             8.8    20.6   +11.8
+  APPROACH            8.5    11.8    +3.3
+  DEPOSIT_SHED        3.1     6.2    +3.1
+  DONE                0.1     0.1    +0.0
+
+=== event counts (16 matches): 0.15 vs 0.30-lane
+  LOADED                         47   53
+  DEPOSITED                      40   45
+  UNINTENDED_CAPTURE->DROP       20   61
+  BLACKLIST                       8   21
+  APPROACH_TIMEOUT               16   13
+  SHED_SPIN                       9   17
+  MICRO_ADJUST                    6   17
+  VETO_OTHER->REAPPROACH          2    4
+  VETO->RETREAT                   1    3
+  TIME_ABORT                      1    0
+
+=== per-seed: pts(dep) 0.15 -> 0.30 | c30 end_state holding last_dep t_of_last_LOADED
+  seed  0:  30.0(2) ->  40.0(3) | DONE     hold=False last_dep=176.9 loads=[15.2, 98.3, 149.9]
+  seed  1:  20.0(1) ->  30.0(2) | DONE     hold=False last_dep=168.0 loads=[13.6, 146.5]
+  seed  2:  50.0(3) ->  50.0(3) | DONE     hold=True last_dep=152.8 loads=[11.4, 72.0, 132.5, 170.0]  <-- no gain
+  seed  3:  40.0(3) ->  40.0(3) | DONE     hold=False last_dep=132.7 loads=[15.1, 60.3, 102.5]  <-- no gain
+  seed  4:  50.0(3) ->  60.0(3) | DONE     hold=True last_dep=160.0 loads=[18.3, 56.9, 109.2, 140.1, 172.3]  <-- no gain
+  seed  5:  30.0(2) ->  50.0(3) | DONE     hold=False last_dep=93.3 loads=[15.6, 75.4, 158.0]
+  seed  6:  10.0(1) ->  30.0(2) | DONE     hold=True last_dep=157.2 loads=[16.6, 124.2, 177.0]
+  seed  7:  50.0(3) ->  60.0(3) | DONE     hold=True last_dep=156.4 loads=[16.7, 71.9, 128.1, 169.1]  <-- no gain
+  seed  8:  50.0(3) ->  50.0(3) | DONE     hold=True last_dep=138.2 loads=[15.4, 60.1, 118.9, 172.7]  <-- no gain
+  seed  9:  30.0(2) ->  20.0(1) | DONE     hold=False last_dep=68.5 loads=[49.0]  <-- no gain
+  seed 10:  40.0(3) ->  40.0(3) | DONE     hold=False last_dep=159.7 loads=[10.7, 64.9, 142.4]  <-- no gain
+  seed 11:  30.0(2) ->  10.0(1) | DONE     hold=True last_dep=154.0 loads=[135.6, 167.8]  <-- no gain
+  seed 12:  50.0(3) ->  50.0(3) | DONE     hold=False last_dep=165.6 loads=[15.1, 55.6, 105.1, 143.9]  <-- no gain
+  seed 13:  40.0(3) ->  50.0(3) | DONE     hold=False last_dep=175.0 loads=[15.6, 54.3, 91.0, 145.1]  <-- no gain
+  seed 14:  30.0(3) ->  30.0(3) | DONE     hold=True last_dep=138.5 loads=[56.4, 86.3, 117.6, 169.5]  <-- no gain
+  seed 15:  30.0(2) ->  50.0(3) | DONE     hold=False last_dep=178.7 loads=[23.9, 70.2, 107.7, 155.0]
+
+=== forensics on no-gain seeds (c30 arm): events after last deposit
+--- seed 2 (last_dep=152.8, end=DONE, holding=True, state_time={'TOUR': 0.4, 'GOTO': 61.9, 'APPROACH': 13.5, 'CAPTURE': 18.3, 'TRANSPORT': 36.8, 'DEPOSIT_PUSH': 24.6, 'DEPOSIT_RELEASE': 11.7, 'RETREAT': 12.9, 'DONE': 0.1})
+     152.8 DEPOSITED(set1:dodeca)
+     152.8 DEPOSIT_RELEASE->TOUR
+     152.8 TOUR->GOTO
+     163.2 GOTO->APPROACH
+     165.4 APPROACH->CAPTURE
+     170.0 LOADED
+     170.0 CAPTURE->TRANSPORT
+     180.0 TRANSPORT->DONE
+--- seed 3 (last_dep=132.7, end=DONE, holding=False, state_time={'TOUR': 8.7, 'GOTO': 50.5, 'APPROACH': 11.9, 'CAPTURE': 12.7, 'TRANSPORT': 33.9, 'DEPOSIT_PUSH': 24.6, 'DEPOSIT_RELEASE': 11.7, 'RETREAT': 13.8, 'DEPOSIT_SHED': 12.4, 'DONE': 0.1})
+     132.7 DEPOSITED(set1:octa)
+     132.7 DEPOSIT_RELEASE->TOUR
+     132.8 TOUR->GOTO
+     141.5 GOTO->APPROACH
+     143.6 MICRO_ADJUST
+     143.6 APPROACH->RETREAT
+     145.2 RETREAT->GOTO
+     154.5 GOTO->APPROACH
+     156.6 MICRO_ADJUST
+     156.6 APPROACH->RETREAT
+     158.3 RETREAT->GOTO
+     161.4 UNINTENDED_CAPTURE->DROP
+     161.4 GOTO->RETREAT
+     165.1 RETREAT->TOUR
+     165.1 TOUR->GOTO
+     169.5 GOTO->APPROACH
+     171.5 BLACKLIST(unknown_persist)
+     171.5 APPROACH->RETREAT
+     174.7 RETREAT->TOUR
+     180.0 TOUR->DONE
+--- seed 4 (last_dep=160.0, end=DONE, holding=True, state_time={'TOUR': 0.4, 'GOTO': 39.6, 'APPROACH': 13.0, 'RETREAT': 3.1, 'CAPTURE': 21.4, 'TRANSPORT': 47.6, 'DEPOSIT_PUSH': 33.1, 'DEPOSIT_RELEASE': 15.6, 'DEPOSIT_SHED': 6.2, 'DONE': 0.1})
+     160.0 DEPOSITED(set1:icosa)
+     160.0 DEPOSIT_RELEASE->TOUR
+     160.1 TOUR->GOTO
+     165.4 GOTO->APPROACH
+     167.3 APPROACH->CAPTURE
+     172.3 LOADED
+     172.3 CAPTURE->TRANSPORT
+     180.0 TRANSPORT->DONE
+--- seed 7 (last_dep=156.4, end=DONE, holding=True, state_time={'TOUR': 4.6, 'GOTO': 32.6, 'APPROACH': 11.0, 'CAPTURE': 17.6, 'TRANSPORT': 50.5, 'DEPOSIT_SHED': 18.5, 'DEPOSIT_PUSH': 26.7, 'DEPOSIT_RELEASE': 11.7, 'RETREAT': 6.8, 'DONE': 0.1})
+     156.4 DEPOSITED(set2:banana)
+     156.4 DEPOSIT_RELEASE->TOUR
+     156.4 TOUR->GOTO
+     163.4 GOTO->APPROACH
+     164.8 APPROACH->CAPTURE
+     169.1 LOADED
+     169.1 CAPTURE->TRANSPORT
+     176.8 TRANSPORT->DEPOSIT_PUSH
+     180.0 DEPOSIT_PUSH->DONE
+--- seed 8 (last_dep=138.2, end=DONE, holding=True, state_time={'TOUR': 3.6, 'GOTO': 49.6, 'APPROACH': 7.3, 'CAPTURE': 17.9, 'TRANSPORT': 34.8, 'DEPOSIT_SHED': 6.2, 'DEPOSIT_PUSH': 23.5, 'DEPOSIT_RELEASE': 11.7, 'RETREAT': 25.4, 'DONE': 0.1})
+     138.2 DEPOSITED(set1:octa)
+     138.2 DEPOSIT_RELEASE->TOUR
+     138.3 TOUR->GOTO
+     143.9 UNINTENDED_CAPTURE->DROP
+     143.9 GOTO->RETREAT
+     147.6 RETREAT->TOUR
+     147.6 TOUR->GOTO
+     149.5 UNINTENDED_CAPTURE->DROP
+     149.5 GOTO->RETREAT
+     153.2 RETREAT->TOUR
+     153.2 TOUR->GOTO
+     155.1 UNINTENDED_CAPTURE->DROP
+     155.1 BLACKLIST(uc_loop)
+     155.1 GOTO->RETREAT
+     158.7 RETREAT->TOUR
+     158.8 TOUR->GOTO
+     166.3 GOTO->APPROACH
+     168.6 APPROACH->CAPTURE
+     172.7 LOADED
+     172.7 CAPTURE->TRANSPORT
+     180.0 TRANSPORT->DONE
+--- seed 9 (last_dep=68.5, end=DONE, holding=False, state_time={'TOUR': 7.4, 'GOTO': 74.9, 'RETREAT': 64.9, 'APPROACH': 9.2, 'CAPTURE': 3.9, 'TRANSPORT': 6.7, 'DEPOSIT_PUSH': 8.8, 'DEPOSIT_RELEASE': 3.9, 'DONE': 0.1})
+     119.2 GOTO->RETREAT
+     122.8 RETREAT->TOUR
+     122.8 TOUR->GOTO
+     129.1 GOTO->APPROACH
+     131.8 APPROACH_TIMEOUT
+     131.8 APPROACH->RETREAT
+     134.9 RETREAT->GOTO
+     135.0 GOTO->APPROACH
+     137.9 APPROACH_TIMEOUT
+     137.9 APPROACH->RETREAT
+     140.6 RETREAT->GOTO
+     140.6 GOTO->APPROACH
+     143.5 BLACKLIST(approach_timeout)
+     143.5 APPROACH_TIMEOUT
+     143.5 APPROACH->RETREAT
+     146.2 RETREAT->TOUR
+     146.2 TOUR->GOTO
+     154.7 GOTO->APPROACH
+     155.0 BLACKLIST(veto)
+     155.0 VETO->RETREAT
+     155.0 APPROACH->RETREAT
+     160.5 RETREAT->TOUR
+     160.6 TOUR->GOTO
+     164.1 UNINTENDED_CAPTURE->DROP
+     164.1 GOTO->RETREAT
+     167.7 RETREAT->TOUR
+     167.8 TOUR->GOTO
+     169.7 UNINTENDED_CAPTURE->DROP
+     169.7 GOTO->RETREAT
+     173.3 RETREAT->TOUR
+     173.4 TOUR->GOTO
+     175.3 UNINTENDED_CAPTURE->DROP
+     175.3 GOTO->RETREAT
+     178.9 RETREAT->TOUR
+     180.0 TOUR->DONE

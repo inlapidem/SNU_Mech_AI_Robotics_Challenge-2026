@@ -1,0 +1,1502 @@
+{
+ "both:base015": {
+  "rows": [
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 10.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   }
+  ],
+  "ref": null,
+  "avg": 36.25,
+  "dep": 2.44,
+  "bad": 0,
+  "wall": 0,
+  "hold": 7,
+  "secs": 33.0
+ },
+ "both:tries1_015": {
+  "rows": [
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   }
+  ],
+  "ref": "base015",
+  "avg": 36.25,
+  "dep": 2.44,
+  "bad": 0,
+  "wall": 0,
+  "hold": 8,
+  "secs": 32.9,
+  "delta_avg": 0.0,
+  "delta_up": 1,
+  "delta_down": 2
+ },
+ "both:v6_015": {
+  "rows": [
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 10.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   }
+  ],
+  "ref": "base015",
+  "avg": 36.25,
+  "dep": 2.44,
+  "bad": 0,
+  "wall": 0,
+  "hold": 7,
+  "secs": 33.0,
+  "delta_avg": 0.0,
+  "delta_up": 0,
+  "delta_down": 0
+ },
+ "both:hailfit_015": {
+  "rows": [
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 10.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   }
+  ],
+  "ref": "base015",
+  "avg": 36.25,
+  "dep": 2.44,
+  "bad": 0,
+  "wall": 0,
+  "hold": 7,
+  "secs": 32.8,
+  "delta_avg": 0.0,
+  "delta_up": 0,
+  "delta_down": 0
+ },
+ "both:w3_base": {
+  "rows": [
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   }
+  ],
+  "ref": null,
+  "avg": 45.62,
+  "dep": 2.94,
+  "bad": 0,
+  "wall": 0,
+  "hold": 7,
+  "secs": 32.1
+ },
+ "both:tries1_c30": {
+  "rows": [
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   }
+  ],
+  "ref": "w3_base",
+  "avg": 44.38,
+  "dep": 2.88,
+  "bad": 0,
+  "wall": 0,
+  "hold": 11,
+  "secs": 31.8,
+  "delta_avg": -1.25,
+  "delta_up": 3,
+  "delta_down": 4
+ },
+ "both:v6_c30": {
+  "rows": [
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   }
+  ],
+  "ref": "w3_base",
+  "avg": 45.62,
+  "dep": 2.94,
+  "bad": 0,
+  "wall": 0,
+  "hold": 7,
+  "secs": 32.1,
+  "delta_avg": 0.0,
+  "delta_up": 0,
+  "delta_down": 0
+ },
+ "both:hailfit_c30": {
+  "rows": [
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 4,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 30.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   }
+  ],
+  "ref": "w3_base",
+  "avg": 45.62,
+  "dep": 2.94,
+  "bad": 0,
+  "wall": 0,
+  "hold": 7,
+  "secs": 32.1,
+  "delta_avg": 0.0,
+  "delta_up": 0,
+  "delta_down": 0
+ },
+ "bothcube:base015": {
+  "rows": [
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   }
+  ],
+  "ref": null,
+  "avg": 41.25,
+  "dep": 2.06,
+  "bad": 0,
+  "wall": 0,
+  "hold": 3,
+  "secs": 41.5
+ },
+ "bothcube:hailfit_015": {
+  "rows": [
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   }
+  ],
+  "ref": "base015",
+  "avg": 41.25,
+  "dep": 2.06,
+  "bad": 0,
+  "wall": 0,
+  "hold": 3,
+  "secs": 41.5,
+  "delta_avg": 0.0,
+  "delta_up": 0,
+  "delta_down": 0
+ },
+ "bothcube:w3_base": {
+  "rows": [
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   }
+  ],
+  "ref": null,
+  "avg": 51.25,
+  "dep": 2.62,
+  "bad": 0,
+  "wall": 0,
+  "hold": 3,
+  "secs": 37.9
+ },
+ "bothcube:hailfit_c30": {
+  "rows": [
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 20.0,
+    "good": 1,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 1
+   },
+   {
+    "points": 30.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 50.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 40.0,
+    "good": 2,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   },
+   {
+    "points": 60.0,
+    "good": 3,
+    "bad": 0,
+    "wall": 0,
+    "hold": 0
+   }
+  ],
+  "ref": "w3_base",
+  "avg": 51.25,
+  "dep": 2.62,
+  "bad": 0,
+  "wall": 0,
+  "hold": 3,
+  "secs": 37.9,
+  "delta_avg": 0.0,
+  "delta_up": 0,
+  "delta_down": 0
+ }
+}
