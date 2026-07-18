@@ -102,6 +102,11 @@ DEFAULT_PARAMS = dict(
     # --- 속도/기하 (실측 후 조정) ---
     cruise_v=0.15, approach_v=0.10, push_v=0.06, reverse_v=0.10,
     robot_radius=0.22,          # 계획 팽창 반경 (robot.stl 외접 ~0.23)
+    # 최종 목표점 감속 시작 거리 [m] — nav_core.ControllerConfig.decel_dist 플럼빙.
+    # 페어드 48시드(2026-07-18, runtime_logs/trajectory_campaign_0718): 0.20 이
+    # both +1.0 / bothcube +2.5, 시나리오 스위트 9/9 PASS. ⚠ cruise 0.30 + cube
+    # 공지 조합에서만 −4.4 부호 반전 → 그 조합은 0.35 유지 (공지 후 설정).
+    decel_dist=0.35,
     # 경로 중간 통과점 룩어헤드 [m]: 이 거리 안에 들면 감속 없이 다음 통과점으로
     # 넘겨 코너를 곡선으로 돈다 (순항 지속시간↑). 최종 목표점만 정밀 감속·정지.
     # ⚠ 클수록 코너를 크게 잘라 매핑 물체를 스쿱에 걸 위험↑. 스윕(2026-07-16):
@@ -454,7 +459,8 @@ class MissionFSM:
             self.p.update(params)
         self.targets = targets or {}          # {"set1": "icosa", "set2": "apple"}
         self.geom = geom or ArenaGeometry()
-        ctrl_cfg = ControllerConfig(max_v=self.p["cruise_v"])
+        ctrl_cfg = ControllerConfig(max_v=self.p["cruise_v"],
+                                    decel_dist=self.p["decel_dist"])
         self.ctrl = DiffDriveController(ctrl_cfg)
         self.planner = GridPlanner(self.geom, robot_radius=self.p["robot_radius"])
         if self.p.get("plow"):

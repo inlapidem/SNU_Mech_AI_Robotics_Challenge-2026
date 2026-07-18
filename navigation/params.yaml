@@ -32,6 +32,10 @@
     mission.carry_v_max: 0.12       # 운반 속도 상한 (cruise 올리면 0.14 까지 상향 여지)
     mission.approach_v: 0.10        # 최종 접근은 느리게 유지 = 픽업 신뢰도 (sim 최적 0.08)
     mission.push_v: 0.06
+    mission.decel_dist: 0.20        # 도착 감속 램프 단축 (2026-07-18 페어드 48시드:
+                                    # both +1.0/bothcube +2.5, 스위트 9/9 PASS —
+                                    # runtime_logs/trajectory_campaign_0718/REPORT.md).
+                                    # ⚠ cruise 0.30 + cube 공지 경기만 0.35 로 되돌릴 것
     mission.robot_radius: 0.22
     mission.payload_offset: 0.07   # 3MF 실측(2026-07-16): 물체중심 축앞 ~70mm.
                                    # (구 0.26 은 임의값 — DEFAULT 를 덮어쓰는 사고 방지)
