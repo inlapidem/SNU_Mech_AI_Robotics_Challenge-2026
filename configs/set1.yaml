@@ -218,6 +218,13 @@ rig:
       exposure_range_ns: [5000000, 5000000]   # fixed exposure (ns); tune on the venue
       gain_range: [1.0, 4.0]
       isp_digital_gain_range: [1.0, 1.0]
+      # 색 보정 (2단계). IMX219 는 가장자리로 갈수록 붉어지는 '렌즈 색 셰이딩'이 있어
+      # (모서리 R/G 가 중앙의 ~1.4배) 전역 게인 하나론 부족 -> 2D 보정맵이 정답.
+      #  1) 임시(전역, 중앙 R/G≈1.19 기준 약보정): 초록 과보정 없이 중앙 빨강만 완화.
+      #  2) 완전 교정: `python3 deployment/calibrate_shading.py --sensor 0 --out shading_front_left.npy`
+      #     로 흰 면 촬영 -> 아래 lens_shading 주석 해제 + 그 경로 지정, wb_gains 는 [1,1,1] 로.
+      wb_gains: [0.718, 1.0, 1.063]   # 하얀 픽셀 기준 중립화(하양=하양, 나무는 따뜻하게 유지). 조명 바뀌면 재측정
+      # lens_shading: /home/teamtwo/AIrobot/SNU_Mech_AI_Robotics_Challenge-2026/deployment/shading_front_left.npy
       # Optional per-camera pixel-gate overrides (defaults below are Nuroum 1280x720
       # values from runtime:). IMX219 has a narrower HFOV (62 vs 90 deg) so an object
       # at the same distance is ~1.45x wider in pixels; raise gates accordingly.
@@ -239,6 +246,8 @@ rig:
       exposure_range_ns: [5000000, 5000000]
       gain_range: [1.0, 4.0]
       isp_digital_gain_range: [1.0, 1.0]
+      wb_gains: [0.706, 1.0, 1.101]   # 하얀 픽셀 기준 중립화. 조명 바뀌면 재측정
+      # lens_shading: /home/teamtwo/AIrobot/SNU_Mech_AI_Robotics_Challenge-2026/deployment/shading_front_right.npy
       gates:
         min_bbox_px: 58
         min_bbox_area_ratio: 0.008

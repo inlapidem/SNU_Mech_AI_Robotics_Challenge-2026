@@ -9,7 +9,7 @@ const uint8_t ENC_L_A = 2, ENC_L_B = 4;    // 왼쪽 엔코더 (A는 INT0)
 const uint8_t ENC_R_A = 3, ENC_R_B = 5;    // 오른쪽 엔코더 (A는 INT1)
 const uint8_t ENA = 9,  IN1 = 7,  IN2 = 8;    // 왼쪽 모터 (L298N) — 실배선 반영
 const uint8_t ENB = 10, IN3 = 11, IN4 = 12;   // 오른쪽 모터 — 실배선 반영
-const uint8_t IR_PIN = 6;                     // 빈 안쪽 IR 안착 센서 (디지털 출력형)
+const uint8_t IR_PIN = 13;                    // 빈 안쪽 IR (빔차단형, 실배선 D13 — 2026-07-18)
 
 volatile long ticksL = 0, ticksR = 0;
 
@@ -30,6 +30,7 @@ unsigned long lastReport = 0, lastCmd = 0;
 
 void setup() {
   Serial.begin(115200);
+  Serial.setTimeout(20);   // readStringUntil 1s 기본 블로킹 제거 (워치독 반응성)
   pinMode(ENC_L_A, INPUT_PULLUP); pinMode(ENC_L_B, INPUT_PULLUP);
   pinMode(ENC_R_A, INPUT_PULLUP); pinMode(ENC_R_B, INPUT_PULLUP);
   pinMode(ENA, OUTPUT); pinMode(IN1, OUTPUT); pinMode(IN2, OUTPUT);

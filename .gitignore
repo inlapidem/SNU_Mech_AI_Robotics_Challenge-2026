@@ -29,3 +29,4 @@ venv/
 # === OS/에디터 잡파일 ===
 .DS_Store
 Thumbs.db
+calib/captures_0718/

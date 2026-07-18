@@ -60,6 +60,11 @@ class NavigatorNode(Node):
         d('cam_names', ['search_left', 'search_right', 'front_left', 'front_right'])
         d('cam_yaws_deg', [90.0, -90.0, 3.0, -3.0])
         d('cam_hfovs_deg', [90.0, 90.0, 62.0, 62.0])
+        # 카메라 장착 위치 [x전방, y좌측] m (base_link=회전중심 기준, 실측 로봇좌표).
+        # search 캠 (±92,156)mm → ROS: search_left(0.156,+0.092)/search_right(0.156,-0.092).
+        d('cam_mounts_xy', [0.156, 0.092, 0.156, -0.092, 0.0, 0.0, 0.0, 0.0])
+        # 렌즈 모델: pinhole | fisheye(등거리). fisheye 면 cam_hfovs_deg 를 실제 어안 FOV 로!
+        d('cam_models', ['pinhole', 'pinhole', 'pinhole', 'pinhole'])
         # mission_fsm 파라미터 오버라이드 (키 이름 동일)
         for k, v in DEFAULT_PARAMS.items():
             if isinstance(v, (int, float)):
@@ -81,10 +86,15 @@ class NavigatorNode(Node):
         self.get_logger().info(f'미션 목표: {targets}')
 
         self.cams = {}
-        for name, yaw, fov in zip(g('cam_names'), g('cam_yaws_deg'),
-                                  g('cam_hfovs_deg')):
+        mounts = g('cam_mounts_xy')
+        models = g('cam_models')
+        for i, (name, yaw, fov) in enumerate(zip(g('cam_names'), g('cam_yaws_deg'),
+                                                  g('cam_hfovs_deg'))):
+            mx = mounts[2 * i] if 2 * i < len(mounts) else 0.0
+            my = mounts[2 * i + 1] if 2 * i + 1 < len(mounts) else 0.0
+            model = models[i] if i < len(models) else 'pinhole'
             # img 크기는 UDP 프레임에 실려오므로 CamSpec 은 지연 생성
-            self.cams[name] = (yaw, fov)
+            self.cams[name] = (yaw, fov, mx, my, model)
 
         # --- UDP ---
         self.ev_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -160,12 +170,17 @@ class NavigatorNode(Node):
         cam = latest.get('cam', '')
         role = latest.get('role', 'search')
         iw, ih = latest.get('img_w', 1280), latest.get('img_h', 720)
-        yaw_fov = self.cams.get(cam)
-        for r in latest.get('results', []):
+        caminfo = self.cams.get(cam)
+        stereo = latest.get('stereo') or []
+        paired = {s.get('own_idx') for s in stereo if s.get('own_idx') is not None}
+        for k, r in enumerate(latest.get('results', [])):
             bbox = r.get('bbox')
-            if bbox is None or yaw_fov is None:
+            if bbox is None or caminfo is None:
                 continue
-            spec = CamSpec(cam, yaw_fov[0], yaw_fov[1], iw, ih)
+            if k in paired:
+                continue          # 스테레오 쌍으로 더 정확하게 아래에서 실림
+            yaw, fov, mx, my, model = caminfo
+            spec = CamSpec(cam, yaw, fov, iw, ih, mx, my, model)
             bearing, rng = bearing_range_from_bbox(spec, bbox)
             if role == 'verify' and (verify_range is None or rng < verify_range):
                 verify_range = rng
@@ -174,7 +189,21 @@ class NavigatorNode(Node):
             # cube 의 set 은 라우팅용일 뿐 확정 아님). cls 만 신뢰.
             sightings.append(dict(cls=r.get('cls'),
                                   state=r.get('state', 'SEARCHING'),
-                                  bearing=bearing, range=rng))
+                                  bearing=bearing, range=rng,
+                                  cam_x=mx, cam_y=my))
+        # 전면 2캠 스테레오 (인지 측 삼각측량): mono 보다 정밀한 거리 —
+        # verify_range 는 카메라 기준(range_cam), sighting 은 로봇중심 기준(range/bearing).
+        for s in stereo:
+            rng_cam, brg = s.get('range_cam'), s.get('bearing')
+            if rng_cam is None or brg is None:
+                continue
+            if role == 'verify' and (verify_range is None or rng_cam < verify_range):
+                verify_range = rng_cam
+                verify_bearing = brg
+            sightings.append(dict(cls=s.get('cls'),
+                                  state=s.get('state') or 'SEARCHING',
+                                  bearing=brg, range=s['range'],
+                                  cam_x=0.0, cam_y=0.0))
         self.percep = PerceptionFrame(
             fsm_state=latest.get('fsm_state', 'SEARCHING'),
             request=latest.get('request'),

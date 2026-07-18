@@ -171,7 +171,7 @@ class NavigatorBridge:
         self.rx.bind((host, cmd_port))
         self.rx.setblocking(False)
 
-    def send_frame(self, cam, out, results, shape):
+    def send_frame(self, cam, out, results, shape, stereo=None):
         msg = dict(type="frame", cam=cam.name, role=cam.role,
                    img_h=int(shape[0]), img_w=int(shape[1]),
                    fsm_state=out["state"], request=out["request"],
@@ -181,6 +181,8 @@ class NavigatorBridge:
                                  state=r.get("state"), conf=r.get("conf"),
                                  bbox=[float(v) for v in r["bbox"]])
                             for r in results])
+        if stereo:
+            msg["stereo"] = stereo    # 전면 2캠 삼각측량 (deployment/stereo_range.py)
         try:
             self.tx.sendto(json.dumps(msg).encode(), self.addr)
         except OSError:
@@ -266,6 +268,18 @@ def run_rig(cfg, targets, args):
         print(f"[rig] UDP 브리지: 이벤트 -> {args.udp_host}:{args.udp_event_port}, "
               f"명령 수신 :{args.udp_cmd_port}")
 
+    # 전면 verify 2캠 스테레오 거리 (calib/front_{left,right}.json 필요; 없으면 자동 비활성)
+    stereo_ranger = None
+    verify_names = {c.name for c in cams.values() if c.role == "verify"}
+    if {"front_left", "front_right"} <= verify_names:
+        try:
+            from deployment.stereo_range import StereoRanger, pairs_payload
+            stereo_ranger = StereoRanger()
+            print("[rig] 스테레오 거리 활성 (front_left+front_right 삼각측량)")
+        except Exception as e:
+            print(f"[rig] 스테레오 거리 비활성: {e}")
+    last_verify = {}          # verify cam name -> (wall_time, results)
+
     groups = {"search": [c for c in cams.values() if c.role == "search"],
               "verify": [c for c in cams.values() if c.role == "verify"]}
     print(f"[rig] search={[c.name for c in groups['search']]} "
@@ -322,8 +336,19 @@ def run_rig(cfg, targets, args):
             for r in results:
                 r["fsm_state"] = out["state"]
                 r["steering"] = out["steering"]
+            stereo_list = None
+            if stereo_ranger is not None and cam.role == "verify":
+                last_verify[cam.name] = (time.time(), results)
+                other = "front_right" if cam.name == "front_left" else "front_left"
+                ot = last_verify.get(other)
+                if ot and time.time() - ot[0] <= 0.5:   # 반대쪽 관측이 신선할 때만
+                    if cam.name == "front_left":
+                        stereo_list = pairs_payload(stereo_ranger, results, ot[1], 0)
+                    else:
+                        stereo_list = pairs_payload(stereo_ranger, ot[1], results, 1)
             if bridge:
-                bridge.send_frame(cam, out, results, frame.shape[:2])
+                bridge.send_frame(cam, out, results, frame.shape[:2],
+                                  stereo=stereo_list)
 
             if out["state"] != prev_state:
                 print(f"[fsm] {prev_state} -> {out['state']}  "

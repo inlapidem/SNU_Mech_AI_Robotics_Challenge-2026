@@ -355,7 +355,8 @@ class ObjectMemory:
         for s in sightings:
             if s["range"] > self.max_range:   # 원거리 단안 거리는 오차가 크다
                 continue
-            x, y = project_to_map(pose, s["bearing"], s["range"])
+            x, y = project_to_map(pose, s["bearing"], s["range"],
+                                  s.get("cam_x", 0.0), s.get("cam_y", 0.0))
             if not geom.in_arena(x, y, 0.05):
                 continue
             if geom.sticker_zone.contains(x, y):   # 태극기 지오펜스

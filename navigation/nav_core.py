@@ -73,10 +73,19 @@ class CamSpec:
     hfov_deg: float         # 수평 화각
     img_w: int
     img_h: int
+    mount_x: float = 0.0    # base_link(회전중심) 기준 카메라 위치 전방 +x [m] (실측)
+    mount_y: float = 0.0    # base_link 기준 카메라 위치 좌측 +y [m] (실측)
+    model: str = "pinhole"  # "pinhole" | "fisheye"(등거리 equidistant 근사)
 
     @property
     def f_px(self):
+        """핀홀(직선 렌즈) 초점거리 [px]."""
         return (self.img_w / 2.0) / math.tan(math.radians(self.hfov_deg) / 2.0)
+
+    @property
+    def f_equi(self):
+        """등거리 어안 초점거리 [px]: r_px = f*theta (theta=광축각), 화면 끝=HFOV/2."""
+        return (self.img_w / 2.0) / (math.radians(self.hfov_deg) / 2.0)
 
 
 OBJ_HEIGHT_M = 0.08   # 룰: 모든 물체는 눕혔을 때 높이 8cm
@@ -92,16 +101,30 @@ def bearing_range_from_bbox(cam: CamSpec, bbox):
     x0, y0, x1, y1 = bbox
     h_px = max(1.0, y1 - y0)
     cx = (x0 + x1) / 2.0
-    rng = cam.f_px * OBJ_HEIGHT_M / h_px
-    bearing_cam = -math.atan2(cx - cam.img_w / 2.0, cam.f_px)  # 이미지 오른쪽 = 음(-) 방위
+    dx = cx - cam.img_w / 2.0
+    if cam.model == "fisheye":
+        f = cam.f_equi
+        bearing_cam = -(dx / f)                     # 등거리 어안: 방위각 ~ 픽셀 반경
+    else:
+        f = cam.f_px
+        bearing_cam = -math.atan2(dx, f)            # 핀홀: 이미지 오른쪽 = 음(-) 방위
+    rng = f * OBJ_HEIGHT_M / h_px
     return wrap_angle(math.radians(cam.yaw_deg) + bearing_cam), rng
 
 
-def project_to_map(pose, bearing, rng):
-    """로봇 자세 (x,y,yaw) + 로봇 기준 방위/거리 → map 좌표."""
+def project_to_map(pose, bearing, rng, cam_x=0.0, cam_y=0.0):
+    """로봇 자세 (x,y,yaw) + 로봇 기준 방위/거리 → map 좌표.
+
+    cam_x/cam_y = base_link 기준 카메라 장착 오프셋(전방+x/좌측+y). range 는
+    카메라~물체 거리이므로 카메라의 map 위치를 먼저 구해 투영한다. 0,0 이면
+    기존(카메라=회전중심 가정)과 동일 동작.
+    """
     x, y, yaw = pose
+    c, s = math.cos(yaw), math.sin(yaw)
+    ox = x + cam_x * c - cam_y * s
+    oy = y + cam_x * s + cam_y * c
     a = yaw + bearing
-    return x + rng * math.cos(a), y + rng * math.sin(a)
+    return ox + rng * math.cos(a), oy + rng * math.sin(a)
 
 
 # ------------------------------------------------------------- 차동구동 제어기

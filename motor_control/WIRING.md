@@ -56,7 +56,7 @@
 |---|---|
 | `VCC` | 5V |
 | `GND` | GND |
-| `OUT` (디지털) | **D6** |
+| `OUT` (디지털) | **D13** (실배선 2026-07-18; 구 문서 D6) |
 
 > - 대부분의 모듈은 **감지 시 LOW** 출력 → `motor_control/params.yaml` 의 `ir_active_low: true` (기본값) 그대로.
 >   반대인 모듈이면 `false` 로 변경.

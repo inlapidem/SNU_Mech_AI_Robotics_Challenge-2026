@@ -19,8 +19,19 @@
     percep_stale_s: 0.6
     # --- 카메라 장착 (bearing/단안거리 계산용, base_link 기준 실측) ---
     cam_names: [search_left, search_right, front_left, front_right]
-    cam_yaws_deg: [90.0, -90.0, 3.0, -3.0]
-    cam_hfovs_deg: [90.0, 90.0, 62.0, 62.0]   # nuroum 90, IMX219 62
+    cam_yaws_deg: [90.0, -90.0, 0.0, 0.0]   # 전면 캠 yaw 실측(0718 스테레오 역산):
+    #   평행(0°). 구 ±3° toe 는 스테레오 거리 +16cm 과대추정 원인이었음.
+    cam_hfovs_deg: [90.0, 90.0, 73.4, 75.7]   # search NUROUM 90(핀홀) / 전면 IMX219-160:
+    #   ⚠ 물리 매핑 실측(0718 시차 방향): front_left=sensor-id1(73.4°), front_right=sensor-id0(75.7°).
+    #   run_perception(rig.py)가 K,D로 undistort → 직선(pinhole) 프레임을 냄. 그 직선 HFOV:
+    #   front_left 75.7° / front_right 73.4° (calib/*.json, 주점 중앙정렬). ⚠ merged.yaml 의
+    #   전면 undistort 를 끄면 이 값들도 어안(93.3/88.0)+fisheye 로 되돌릴 것.
+    # 카메라 장착 위치 [x전방, y좌측] m — 실측 로봇좌표: 전면 IMX219 2개 (±92,156)mm.
+    # front_left(-92,156)->(0.156,+0.092), front_right(+92,156)->(0.156,-0.092). (+x=우측 가정)
+    # search(NUROUM) 캠 위치는 미측정 → 0,0.
+    cam_mounts_xy: [0.0, 0.0, 0.0, 0.0, 0.156, 0.092, 0.156, -0.092]
+    # 렌즈 모델: pinhole | fisheye(등거리). 전면 IMX219-160 = 어안(대각160°, 왜곡<14.3%).
+    cam_models: [pinhole, pinhole, pinhole, pinhole]   # 전면도 undistort 후라 pinhole
     # --- 미션 오버라이드 (전체 키는 mission_fsm.DEFAULT_PARAMS 참조) ---
     # ⭐ 파라미터 탐색(2026-07-15, 6계열×60시드): 최대 레버는 순항속도다.
     #   sim 에서 cruise_v 0.20→0.30 + eff_speed 교정만으로 both +8.5/bothcube +7.1
@@ -36,7 +47,8 @@
                                     # both +1.0/bothcube +2.5, 스위트 9/9 PASS —
                                     # runtime_logs/trajectory_campaign_0718/REPORT.md).
                                     # ⚠ cruise 0.30 + cube 공지 경기만 0.35 로 되돌릴 것
-    mission.robot_radius: 0.22
+    mission.robot_radius: 0.27     # 실측 외곽 (-191,-185)~(191,160)mm → 회전중심 기준
+                                   # 외접반경 266mm. (구 0.22는 STL 외접 추정치)
     mission.payload_offset: 0.07   # 3MF 실측(2026-07-16): 물체중심 축앞 ~70mm.
                                    # (구 0.26 은 임의값 — DEFAULT 를 덮어쓰는 사고 방지)
     mission.standoff_dist: 0.60    # ⚠ 0.50 단축 기각(2026-07-16): 평균 +2.3 뒤에

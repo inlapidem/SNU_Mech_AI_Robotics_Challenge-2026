@@ -111,11 +111,12 @@ rig:
     front_left:
       role: verify
       transport: csi
-      source: 0
+      source: 1                            # ⚠ 실측(2026-07-18): 물리 왼쪽 = sensor-id 1
+      undistort: calib/front_left.json    # 어안 K,D undistort -> 직선 프레임 (rig.py)
       width: 1280
       height: 720
       fps: 30
-      hfov_deg: 62.2
+      hfov_deg: 73.4                       # undistort 후 직선 HFOV (calib sid1)
       flip_method: 0
       wbmode: 0
       aelock: true
@@ -129,11 +130,12 @@ rig:
     front_right:
       role: verify
       transport: csi
-      source: 1
+      source: 0                            # ⚠ 실측(2026-07-18): 물리 오른쪽 = sensor-id 0
+      undistort: calib/front_right.json   # 어안 K,D undistort -> 직선 프레임 (rig.py)
       width: 1280
       height: 720
       fps: 30
-      hfov_deg: 62.2
+      hfov_deg: 75.7                       # undistort 후 직선 HFOV (calib sid0)
       flip_method: 0
       wbmode: 0
       aelock: true

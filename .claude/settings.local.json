@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python3 -c \"import trimesh; print\\('trimesh', trimesh.__version__\\)\")"
+      "Bash(python3 -c \"import trimesh; print\\('trimesh', trimesh.__version__\\)\")",
+      "Bash(git -C /home/teamtwo/AIrobot/SNU_Mech_AI_Robotics_Challenge-2026 log --oneline -15)",
+      "Bash(time python3 navigation/sim_mission.py --help)",
+      "Bash(time python3 navigation/sim_mission.py)",
+      "Bash(time python3 navigation/sim_speed_sweep.py --mode both --cruise 0.15 --seeds 16 --json)"
     ]
   }
 }

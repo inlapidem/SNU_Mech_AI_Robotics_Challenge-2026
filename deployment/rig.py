@@ -23,9 +23,24 @@ CLI override grammar (parse_source_spec):
   --role front_left=search        override a camera's role
 """
 
+import json
 import os
 
 import cv2
+import numpy as np
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def _load_undistort(path):
+    """calib json(K,D,newK,image_size) -> (remap 맵, (W,H)). 어안→직선 프레임 변환용."""
+    p = path if os.path.isabs(path) else os.path.join(ROOT, path)
+    d = json.load(open(p))
+    K = np.array(d["K"], float); D = np.array(d["D"], float).reshape(-1, 1)
+    newK = np.array(d["newK"], float)
+    W, H = int(d["image_size"][0]), int(d["image_size"][1])
+    m1, m2 = cv2.fisheye.initUndistortRectifyMap(K, D, np.eye(3), newK, (W, H), cv2.CV_16SC2)
+    return (m1, m2), (W, H)
 
 
 def gst_csi_pipeline(c):
@@ -82,6 +97,41 @@ class RigCamera:
         self.transport = transport
         self.source = source
         self.eof = False
+        self._umap = None; self._usize = None
+        if cfg.get("undistort"):
+            try:
+                self._umap, self._usize = _load_undistort(cfg["undistort"])
+                print(f"[rig] {name}: undistort ON ({os.path.basename(str(cfg['undistort']))})")
+            except Exception as e:
+                print(f"[rig] WARNING: {name} undistort 로드 실패 ({e}) -> 원본 사용")
+        # --- 고정 화이트밸런스 게인 (wbmode=0 raw 의 붉은 캐스트 교정) ---
+        # wb_gains = [R, G, B] 채널 승수. 하양 기준으로 색을 중립화한다. 오토WB(wbmode=1)와
+        # 달리 프레임마다 흔들리지 않아 도메인갭/재현성이 유지된다. calibrate_wb.py 로 측정.
+        # 256-엔트리 LUT 로 미리 구워 프레임당 비용을 최소화(cv2.LUT).
+        self._wb_lut = None
+        wb = cfg.get("wb_gains")
+        if wb and [round(float(x), 4) for x in wb] != [1.0, 1.0, 1.0]:
+            gR, gG, gB = float(wb[0]), float(wb[1]), float(wb[2])
+            idx = np.arange(256, dtype=np.float32)
+            self._wb_lut = np.stack([np.clip(idx * gB, 0, 255),   # ch0 = B
+                                     np.clip(idx * gG, 0, 255),   # ch1 = G
+                                     np.clip(idx * gR, 0, 255)],  # ch2 = R
+                                    axis=-1).reshape(1, 256, 3).astype(np.uint8)
+            print(f"[rig] {name}: 화이트밸런스 게인 ON  R×{gR:.3f} G×{gG:.3f} B×{gB:.3f}")
+        # --- 2D 렌즈 색 셰이딩 보정맵 (가장자리로 갈수록 붉어지는 현상 교정) ---
+        # 전역 게인(wb_gains)은 균일한 캐스트만 잡는다. IMX219 렌즈는 모서리 R/G 가 중앙의
+        # ~1.4배라 위치별 게인이 필요하다. lens_shading = HxWx3(BGR) float 게인맵(.npy),
+        # calibrate_shading.py 가 평평한 흰 면 촬영으로 생성. undistort 이전(센서 좌표계)에 적용.
+        self._shade = None
+        sh = cfg.get("lens_shading")
+        if sh:
+            try:
+                m = np.load(os.path.expanduser(str(sh))).astype(np.float32)
+                self._shade = m
+                print(f"[rig] {name}: 렌즈 셰이딩 보정맵 ON "
+                      f"({os.path.basename(str(sh))} {m.shape[1]}x{m.shape[0]})")
+            except Exception as e:
+                print(f"[rig] WARNING: {name} lens_shading 로드 실패 ({e})")
 
     @property
     def gates(self):
@@ -91,6 +141,15 @@ class RigCamera:
         ok, frame = self.cap.read()
         if not ok and self.transport == "file":
             self.eof = True
+        if ok and frame is not None and self._shade is not None \
+                and frame.shape[:2] == self._shade.shape[:2]:
+            frame = np.clip(frame.astype(np.float32) * self._shade,
+                            0, 255).astype(np.uint8)   # 2D 셰이딩 보정 (undistort 전)
+        if ok and frame is not None and self._umap is not None \
+                and tuple(frame.shape[1::-1]) == self._usize:
+            frame = cv2.remap(frame, self._umap[0], self._umap[1], cv2.INTER_LINEAR)
+        if ok and frame is not None and self._wb_lut is not None:
+            frame = cv2.LUT(frame, self._wb_lut)   # 고정 화이트밸런스 게인
         return ok, frame
 
     def release(self):
