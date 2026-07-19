@@ -25,6 +25,7 @@ CLI override grammar (parse_source_spec):
 
 import json
 import os
+import sys
 
 import cv2
 import numpy as np
@@ -158,7 +159,11 @@ class RigCamera:
 
 def _open_capture(name, c, transport, source):
     if transport == "usb":
-        cap = cv2.VideoCapture(int(source))
+        # 젯슨 OpenCV 빌드는 기본 백엔드가 GStreamer(v4l2src) 라 Nuroum V11 이
+        # "Internal data stream error" 로 열리지 않는다 (2026-07-19 실측) — V4L2 명시.
+        # V4L2 는 리눅스 전용이므로 Windows 벤치에서는 기본 백엔드 자동 선택.
+        backend = cv2.CAP_V4L2 if sys.platform.startswith("linux") else cv2.CAP_ANY
+        cap = cv2.VideoCapture(int(source), backend)
         cap.set(cv2.CAP_PROP_FOURCC,
                 cv2.VideoWriter_fourcc(*c.get("fourcc", "MJPG")))
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, int(c.get("width", 1280)))

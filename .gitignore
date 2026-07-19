@@ -30,3 +30,7 @@ venv/
 .DS_Store
 Thumbs.db
 calib/captures_0718/
+
+# === 탐사 런타임 산출물 (실행마다 새로 생기는 맵/로그) ===
+# 기존에 커밋된 eval_*/train0714/trajectory_campaign_0718 은 그대로 유지
+runtime_logs/explore_*/

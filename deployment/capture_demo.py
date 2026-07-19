@@ -13,18 +13,29 @@
   BLIND_PUSH  직진 푸시(엔코더 좌우차 보정). IR 차단 -> DONE.
               0.35m+ 재검출(빗맞음) -> APPROACH 복귀. push_timeout -> MISS.
 
-안전 설계 (adversarial review 반영, 2026-07-18):
+카메라 구성 (--cams front|all):
+  front  전면 IMX219 2대 (기본) — 검출/스테레오/분류/푸시 전부 전면.
+  all    + 사이드 Nuroum V11 2대 (usb, yaw ±90°/HFOV 90° — configs/merged.yaml rig 의
+         search 역할). 사이드 검출은 단안(8cm 룰) 방위/거리로 월드 기억에 통합되고,
+         전면에 후보가 없으면 잠금 목표가 되어 로봇이 회두한다 (전진 아크 대신 피벗).
+         분류·확정·푸시는 여전히 전면 캠 전용 (원설계의 search/verify 역할 분리).
+         장치 지정: --cam side_left=usb:4 --cam side_right=usb:2 (off=비활성)
+
+안전 설계 (adversarial review 반영, 2026-07-18; 4캠 확장 리뷰 반영 2026-07-19):
   * MotorKeeper 스레드(50ms)가 마지막 목표 PWM 을 재전송 — 비전 루프가 느려도
     펌웨어 300ms 워치독에 걸리지 않고, IR 차단은 ~100ms 내 즉시 정지(래치).
   * E 텔레메트리 0.6s 두절 시 자동 정지 (동결된 엔코더/IR 값으로 제어 금지).
-  * 카메라 연속 판독 실패 시 정지 후 종료. Ctrl-C/예외 종료 시 정지 보장.
+  * 비전 루프 두절(>1.5s, 예: 스톨된 카메라 read 블로킹) 시 자동 정지.
+  * 전면 카메라 연속 판독 실패 시 정지 후 종료 (사이드캠 실패는 해당 캠만
+    제외하고 계속). Ctrl-C/예외 종료 시 정지 보장.
   * IR 단선은 전기적으로 '미차단'과 구분 불가(풀업) — push_timeout 이 최종 방어선.
     실행 전 빔을 손으로 막아 raw 0 전이를 확인할 것 (--check-ir 가 대신 해줌).
 
 사용:
   python3 deployment/capture_demo.py --dry-run          # 모터 명령 출력만 (첫 확인)
   python3 deployment/capture_demo.py --check-ir         # 시작 전 IR 셀프테스트 요구
-  python3 deployment/capture_demo.py                    # 실주행
+  python3 deployment/capture_demo.py                    # 실주행 (전면 2캠)
+  python3 deployment/capture_demo.py --cams all         # 원설계 4캠 (+사이드 측방 탐색)
   python3 deployment/capture_demo.py --model set1 --conf 0.12   # 랩 도메인 보정
 """
 import argparse, math, os, sys, threading, time
@@ -33,7 +44,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 from deployment import rig as rig_mod
-from deployment.stereo_range import StereoRanger, match_detections
+from deployment.stereo_range import StereoRanger, match_detections, OBJ_HEIGHT_M
 
 try:
     import serial
@@ -104,14 +115,19 @@ class MotorKeeper:
     - 마지막 목표 PWM 재전송: 비전 루프가 300ms 를 넘어도 워치독 스톱-고 없음.
     - IR 차단(연속 2샘플=40ms 디바운스) -> ir_latched 래치 + 즉시 정지.
     - E 텔레메트리 stale(>stale_s) -> 정지 (시작 직후 첫 E 수신 전에도 정지 상태).
+    - 비전 루프 두절(set() 미호출 >set_stale_s) -> 정지. 스톨된 카메라 read 가
+      수 초씩 블로킹돼도 (V4L2 select timeout ~10s 실측) 마지막 PWM 으로
+      계속 달리지 않게 하는 상한 — 정상 사이클(<0.5s)의 3배 여유.
     """
 
-    def __init__(self, bot, ir_low=True, stale_s=0.6, period=0.05):
+    def __init__(self, bot, ir_low=True, stale_s=0.6, period=0.05, set_stale_s=1.5):
         self.bot = bot
         self.ir_low = ir_low
         self.stale_s = stale_s
+        self.set_stale_s = set_stale_s
         self.period = period
         self.target = (0.0, 0.0)
+        self.t_set = time.time()
         self.ir_latched = False
         self._streak = 0
         self._alive = True
@@ -119,6 +135,7 @@ class MotorKeeper:
 
     def set(self, pl, pr):
         self.target = (pl, pr)
+        self.t_set = time.time()
 
     @property
     def telemetry_ok(self):
@@ -133,7 +150,8 @@ class MotorKeeper:
                 if self._streak >= 2:
                     self.ir_latched = True
             try:
-                if self.ir_latched or not self.telemetry_ok:
+                if self.ir_latched or not self.telemetry_ok \
+                        or (time.time() - self.t_set) > self.set_stale_s:
                     self.bot.motors(0, 0)
                 else:
                     self.bot.motors(*self.target)
@@ -237,7 +255,8 @@ class CaptureController:
 
         if self.state == self.SEARCH:
             if est is not None:
-                self._set(self.APPROACH, f"detected {est['range_cam']:.2f}m")
+                verb = "memory goto" if est.get("from_memory") else "detected"
+                self._set(self.APPROACH, f"{verb} {est['range_cam']:.2f}m")
                 self.hint_until = None
             else:
                 hint_active = self.hint_until is not None and t < self.hint_until
@@ -363,6 +382,75 @@ def open_front_cams(locked_isp):
     return cams
 
 
+# 사이드캠 장착 (navigation/params.yaml cam_yaws_deg [±90] / hfov 90 / 위치 미측정=0,0)
+SIDE_MOUNTS = {"side_left":  dict(x=0.0, y=0.0, yaw_deg=+90.0),
+               "side_right": dict(x=0.0, y=0.0, yaw_deg=-90.0)}
+# ⚠ 이 젯슨의 V4L2 실측(2026-07-19): /dev/video0/1 = CSI(IMX219)라 merged.yaml 의
+# usb 0/1 을 그대로 열면 CSI 노드를 잡는다. Nuroum V11 은 video2(+3)/video4(+5),
+# 짝수 노드가 캡처. 좌/우 물리 매핑은 미검증 — 뒤바뀌면 --cam 으로 스왑할 것.
+SIDE_SOURCES = {"side_left": 2, "side_right": 4}
+
+
+def open_side_cams(cam_overrides=None):
+    """사이드 Nuroum V11 (USB, MJPG 1280x720 — configs/merged.yaml rig 와 동일값).
+    열기 실패는 경고 후 건너뜀 (전면만으로 계속 — rig.py 벤치테스트 철학)."""
+    import cv2
+    cams = {}
+    for name, default_src in SIDE_SOURCES.items():
+        c = dict(role="search", width=1280, height=720, fourcc="MJPG",
+                 buffersize=1, hfov_deg=90.0)
+        transport, source = "usb", default_src
+        if cam_overrides and name in cam_overrides:
+            try:
+                transport, source = rig_mod.parse_source_spec(cam_overrides[name], "usb")
+            except ValueError:
+                raise SystemExit(f"--cam {name}={cam_overrides[name]}: 잘못된 SPEC — "
+                                 f"usb:N|file:PATH|off (N=정수)")
+            if transport is None:
+                print(f"[demo] {name}: --cam {name}=off 로 비활성")
+                continue
+        try:
+            cap = rig_mod._open_capture(name, c, transport, source)
+        except Exception as e:
+            cap = None
+            print(f"[demo] WARNING: {name} ({transport}:{source}) 열기 실패: {e}")
+        if cap is None or not cap.isOpened():
+            print(f"[demo] WARNING: {name} ({transport}:{source}) 사용 불가 — 계속 진행")
+            continue
+        cams[name] = rig_mod.RigCamera(name, c, cap, transport, source)
+        print(f"[demo] {name}: {transport}:{source} "
+              f"{int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))}x"
+              f"{int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))}")
+    return cams
+
+
+class SideMono:
+    """사이드캠 단안 방위/거리 (핀홀 + 8cm 높이 룰, stereo_range._mono 와 동일 규약).
+
+    사이드 프레임은 undistort 없이 쓴다 — Nuroum V11 은 일반(비어안) 렌즈라
+    핀홀 근사로 충분하고, 여기서 얻는 거리(±30%)는 기억/회두 시드일 뿐
+    실제 접근·푸시 판정은 전면 스테레오가 다시 한다."""
+
+    def __init__(self, name, width=1280, hfov_deg=90.0):
+        m = SIDE_MOUNTS[name]
+        self.name = name
+        self.f = (width / 2.0) / math.tan(math.radians(hfov_deg) / 2.0)
+        self.cx = width / 2.0
+        self.mx, self.my = m["x"], m["y"]
+        self.yaw = math.radians(m["yaw_deg"])
+
+    def estimate(self, bbox, conf):
+        h_px = max(1.0, bbox[3] - bbox[1])
+        rng_cam = self.f * OBJ_HEIGHT_M / h_px
+        u = (bbox[0] + bbox[2]) / 2.0
+        a = self.yaw - math.atan2(u - self.cx, self.f)   # stereo_range._ray 와 동일 부호
+        x = self.mx + rng_cam * math.cos(a)
+        y = self.my + rng_cam * math.sin(a)
+        return dict(x=x, y=y, range=math.hypot(x, y), bearing=math.atan2(y, x),
+                    range_cam=rng_cam, mode="side:" + self.name, quality="side",
+                    conf=conf, bottom_touch=False)
+
+
 def detect(model, frame, conf, imgsz):
     r = model.predict(frame, conf=conf, imgsz=imgsz, verbose=False)[0]
     return [dict(cls="object", conf=float(b.conf[0]),
@@ -422,7 +510,8 @@ class FarGate:
 
     def update(self, est):
         """est(quality=mono_weak) -> est(통과) | None(아직 지속성 부족)."""
-        if self.bearing is not None and abs(est["bearing"] - self.bearing) <= self.tol:
+        if self.bearing is not None \
+                and abs(wrap_pi(est["bearing"] - self.bearing)) <= self.tol:
             self.hits += 1
         else:
             self.hits = 1
@@ -505,12 +594,16 @@ class ObjectMemoryLite:
         self.objs = {}                # id -> dict(x, y, t_seen, hits)
         self._next = 0
 
-    def integrate(self, t, pose, est, conf=1.0):
+    def integrate(self, t, pose, est, conf=1.0, freeze_pos_id=None):
         """관측 1건 병합. -> 항목 id.
 
         병합 규칙 2가지: (a) 유클리드 0.28m, (b) 같은 시선방향(±8°)이고 거리차
         0.5m 이내 — 단안 거리오차(±30%)로 같은 물체가 2개 항목으로 갈라져
-        '타깃의 유령'이 경로상 가짜 장애물이 되는 것을 방지."""
+        '타깃의 유령'이 경로상 가짜 장애물이 되는 것을 방지.
+
+        freeze_pos_id: 이 항목에 병합될 땐 위치 EMA 를 건너뛴다 (신선도/횟수만
+        갱신) — 전면이 정밀 추적 중인 잠금 타깃을 사이드 단안(±30%)이 끌고
+        가서 주행 목표가 흔들리는 것을 방지."""
         wx, wy = world_pos(pose, est)
         b2 = math.atan2(wy - pose[1], wx - pose[0])
         r2 = math.hypot(wx - pose[0], wy - pose[1])
@@ -519,11 +612,17 @@ class ObjectMemoryLite:
             if not same:
                 b1 = math.atan2(o["y"] - pose[1], o["x"] - pose[0])
                 r1 = math.hypot(o["x"] - pose[0], o["y"] - pose[1])
-                same = abs(wrap_pi(b1 - b2)) < math.radians(8) and abs(r1 - r2) < 0.5
+                # 거리 허용오차는 단안 오차(±30%)에 비례 — 원거리 사이드/FAR 관측이
+                # 전면 스테레오 재관측과 병합되지 않아 유령이 남는 것을 방지.
+                # 상한 0.9m: 같은 시선상의 서로 다른 두 물체가 한 항목으로 합쳐져
+                # EMA 가 둘 사이를 떠도는 오병합 방지
+                tol = max(0.5, min(0.9, 0.35 * min(r1, r2)))
+                same = abs(wrap_pi(b1 - b2)) < math.radians(8) and abs(r1 - r2) < tol
             if same:
-                a = 0.3               # EMA — 단안 거리 노이즈 완화
-                o["x"] = (1 - a) * o["x"] + a * wx
-                o["y"] = (1 - a) * o["y"] + a * wy
+                if oid != freeze_pos_id:
+                    a = 0.3           # EMA — 단안 거리 노이즈 완화
+                    o["x"] = (1 - a) * o["x"] + a * wx
+                    o["y"] = (1 - a) * o["y"] + a * wy
                 o["t_seen"] = t
                 o["hits"] += 1
                 o["conf"] = max(o["conf"], conf)
@@ -791,12 +890,18 @@ def wait_bin_clear(bot, keeper, ir_low):
 
 
 def run_mission(args, model, sr, clf, cams, bot, keeper, odom,
-                target_cls, face_num, conf_far):
-    """한 목표를 포획할 때까지의 미션 루프. -> 종료 상태 문자열."""
+                target_cls, face_num, conf_far, side_rs=None):
+    """한 목표를 포획할 때까지의 미션 루프. -> 종료 상태 문자열.
+
+    side_rs: {name: SideMono} — --cams all 일 때 사이드캠 방위/거리 추정기."""
     ctrl = CaptureController(pwm_base=args.pwm_base, pwm_push=args.pwm_push,
                              blind_enter=args.blind_enter,
                              push_timeout=args.push_timeout, scan=args.scan)
     fargate = FarGate(hits_needed=args.far_hits)
+    side_rs = side_rs or {}
+    side_gates = {name: FarGate(hits_needed=args.far_hits) for name in side_rs}
+    side_strong = args.side_conf if args.side_conf is not None else args.conf
+    side_every = max(1, args.side_every)
     voter = ShapeVoter(target_cls) if target_cls else None
     blacklist = []                 # 거부/포기 물체 월드좌표 (미션마다 초기화 —
     pursued_bearing = None         #  직전 미션의 비타깃이 이번 타깃일 수 있음)
@@ -807,27 +912,74 @@ def run_mission(args, model, sr, clf, cams, bot, keeper, odom,
     t0 = time.time()
     n = 0
     cam_fail = 0
+    side_fail = {}                 # 사이드캠 연속 판독 실패 수 (2회 -> 세션에서 제외)
+    side_resume = True             # 사이드 read 스킵/미션경계 후 묵은 버퍼 프레임 폐기
+                                   # (직전 미션 말미 BLIND_PUSH 동안 스킵된 프레임이
+                                   #  새 미션 첫 사이클에 현재 자세로 오적분되는 것 방지)
+    side_locked = False            # 현재 잠금이 사이드캠 발견에서 왔나 (게이트 기준 —
+                                   #  센서 존재가 아니라 잠금 출처로 판단해야 사이드캠이
+                                   #  중도 탈락해도 회두/FAR 보호가 유지된다)
+    driving_on_memory = False      # 직전 사이클이 기억 주행이었나 (FAR 게이트 확장용)
+    front_miss = 0                 # 전면 후보 연속 부재 사이클 수 — 기억 주행은
+                                   # 2사이클 미스부터 개입 (한 프레임 깜빡임마다
+                                   # 직접관측↔기억으로 조향이 튀는 채터 방지;
+                                   # 단기 미스는 컨트롤러의 감쇠 조향이 담당)
     try:
         while time.time() - t0 < args.max_secs:
             frames = {}
-            for name, cam in cams.items():
-                ok, f = cam.read()
+            # 사이드캠은 쓰이는 상태에서만 read — BLIND_PUSH 제어 루프와 HOLD
+            # (정지 분류 투표 수집, 6s 제한) 에 블로킹 read/추론 지연을 얹지 않기 위해
+            side_active = bool(side_rs) and ctrl.t_hold is None \
+                and ctrl.state in (ctrl.SEARCH, ctrl.APPROACH)
+            for name, cam in list(cams.items()):
+                is_side = name in side_rs
+                if is_side and not side_active:
+                    side_resume = True
+                    continue
+                if is_side and side_resume and not cam.read()[0]:
+                    ok, f = False, None   # 묵은 프레임 폐기 read 실패 — 즉시 집계
+                                          # (스톨 캠이 폐기 read 로 ~10s 더 끄는 것 방지)
+                else:
+                    ok, f = cam.read()
                 if ok and f is not None:
                     frames[name] = f
-            if not frames:
+                    if is_side:
+                        side_fail[name] = 0
+                elif is_side:
+                    side_fail[name] = side_fail.get(name, 0) + 1
+                    if side_fail[name] >= 2:
+                        # 스톨된 V4L2 read 는 회당 ~10s 블로킹 (실측) — 즉시 제외.
+                        # 그동안 모터는 MotorKeeper set_stale_s 가 정지시킨다.
+                        print(f"[demo] WARNING: {name} 연속 판독 실패 — "
+                              f"사이드캠 제외, 전면으로 계속")
+                        try:
+                            cam.release()
+                        except Exception:
+                            pass
+                        cams.pop(name, None)
+                        side_rs.pop(name, None)
+                        side_gates.pop(name, None)
+            if side_active:
+                side_resume = False
+            # 전면(verify) 캠 기준 워치독 — 사이드가 살아 있어도 전면이 죽으면
+            # 시각 재확인이 불가능하므로 정지해야 한다 (front 모드와 동일 의미)
+            if "front_left" not in frames and "front_right" not in frames:
                 cam_fail += 1
                 if cam_fail >= 10:
-                    print("[demo] 카메라 연속 판독 실패 — 정지/종료")
+                    print("[demo] 전면 카메라 연속 판독 실패 — 정지/종료")
                     break
                 continue
             cam_fail = 0
+            # 자세는 프레임 캡처 직후·추론 전에 샘플 — 회두 중 관측을 추론 지연
+            # (~0.2-0.4s)만큼 더 돌아간 yaw 로 투영하면 기억 위치가 접선 방향으로
+            # 끌려간다 (1m·15° 지연 ≈ 26cm). 프레임과 같은 시점의 자세로 통합.
+            if bot is not None:
+                odom.update(bot.enc_l, bot.enc_r)
+            pose = odom.pose
             dets_l = detect(model, frames["front_left"], conf_far, args.imgsz) \
                 if "front_left" in frames else []
             dets_r = detect(model, frames["front_right"], conf_far, args.imgsz) \
                 if "front_right" in frames else []
-            if bot is not None:
-                odom.update(bot.enc_l, bot.enc_r)
-            pose = odom.pose
 
             cands = build_candidates(sr, dets_l, dets_r, args.conf)
             if clf is not None and voter is not None:
@@ -842,26 +994,101 @@ def run_mission(args, model, sr, clf, cams, bot, keeper, odom,
             cand = select_candidate(cands, target_cls, blacklist, pose,
                                     pursued_bearing)
             est = cand["est"] if cand else None
-            # FAR 채널: 약한 단안은 SEARCH 에서만 지속성 게이트
+            # FAR 채널: 약한 단안은 SEARCH 에서만 지속성 게이트.
+            # 사이드 잠금으로 기억 주행 중일 때도 게이트 — 시각 미확인 상태의
+            # APPROACH 라서, 한 프레임짜리 전면 오탐이 잠금을 탈취해 유령
+            # 위치로 끌고 가는 것을 막는다 (스테레오/강한 단안은 즉시 통과)
             if est is not None and est.get("quality") == "mono_weak" \
-                    and ctrl.state == ctrl.SEARCH:
+                    and (ctrl.state == ctrl.SEARCH
+                         or (side_locked and driving_on_memory)):
                 est = fargate.update(est)
                 if est is None:
                     cand = None
             elif est is not None:
                 fargate.reset()
+            front_miss = front_miss + 1 if cand is None else 0
+
+            # ---- 사이드캠(search 역할): 검출 -> 월드 기억 통합 (--cams all) ----
+            # 접근·푸시 판정에는 절대 직접 쓰지 않는다 — 기억을 거쳐 memory_est 로만
+            # 주행하므로 from_memory 안전규칙(푸시 금지, 시각 재확인)이 그대로 적용됨.
+            side_hits = []
+            if side_rs and ctrl.state in (ctrl.SEARCH, ctrl.APPROACH) \
+                    and n % side_every == 0:
+                for sname, sranger in side_rs.items():
+                    fr = frames.get(sname)
+                    if fr is None:
+                        continue
+                    best = None
+                    for d in detect(model, fr, conf_far, args.imgsz):
+                        e = sranger.estimate(d["bbox"], d["conf"])
+                        # 전면 소유 잠금의 위치는 사이드 관측이 못 건드린다
+                        # (사이드 잠금일 땐 사이드가 위치를 계속 정밀화)
+                        mid = mem.integrate(now, pose, e, conf=d["conf"],
+                                            freeze_pos_id=(None if side_locked
+                                                           else lock_id))
+                        if best is None or d["conf"] > best[0]["conf"]:
+                            best = (e, mid)
+                    if best is None:
+                        side_gates[sname].reset()
+                        continue
+                    e, mid = best
+                    if e["conf"] >= side_strong:
+                        side_gates[sname].reset()
+                        side_hits.append((e, mid))
+                    # 지속성 비교는 월드 방위로 — 로봇기준 방위는 --scan 회전 중
+                    # 사이클당 ±6° 넘게 쓸려가 약검출이 게이트를 영구히 못 넘는다
+                    # (월드 방위는 ±π 경계를 넘을 수 있어 FarGate 가 wrap 비교)
+                    elif side_gates[sname].update(
+                            dict(e, bearing=wrap_pi(pose[2] + e["bearing"]))
+                            ) is not None:
+                        side_hits.append((e, mid))    # 약검출 지속성 통과 (FAR 채널)
+            if cand is None and est is None and lock_id is not None:
+                # 기억 소멸/실효(30s+) 시 잠금 해제 — 죽은 잠금이 사이드 재잠금과
+                # 힌트 탐색을 영구히 막지 않게 (주행 블록의 신선도 검사와 동일 조건)
+                _obj = mem.get(lock_id)
+                if _obj is None or now - _obj["t_seen"] > 30.0:
+                    lock_id = None
+                    side_locked = False
+                    mem_arrive_t = None
+            if cand is None and est is None and lock_id is None and side_hits:
+                # 전면에 아무 후보도 없을 때만 사이드 검출을 잠금 -> 회두 시작
+                pick = None
+                for e, mid in side_hits:
+                    wx, wy = world_pos(pose, e)
+                    # 반경을 거리에 비례시켜 사이드 단안 ±30% 위치오차를 커버 —
+                    # 방금 블랙리스트한 원거리 비타깃을 되잠그는 루프 방지.
+                    # 상한 0.7m: 비타깃 근처에 서 있는 진짜 타깃까지 거부하지 않게
+                    rej = max(0.35, min(0.7, 0.35 * e["range_cam"]))
+                    if any(math.hypot(wx - bx, wy - by) < rej
+                           for bx, by in blacklist):
+                        continue
+                    key = (e["conf"], -e["range_cam"])
+                    if pick is None or key > pick[0]:
+                        pick = (key, e, mid)
+                if pick is not None:
+                    _, e, mid = pick
+                    lock_id = mid
+                    side_locked = True
+                    mem_arrive_t = None
+                    print(f"[side] {e['mode'].split(':', 1)[1]} 검출 "
+                          f"brg={math.degrees(e['bearing']):+.0f}° "
+                          f"r≈{e['range_cam']:.2f}m c{e['conf']:.2f} -> 회두 접근")
 
             if cand is not None:
                 lock_id = id_of[id(cand)]     # 시각 관측 기준으로 잠금 갱신
+                side_locked = False           # 전면이 봤으므로 이제 전면 소유 잠금
                 mem_arrive_t = None
-            elif est is None and lock_id is not None \
+            elif est is None and lock_id is not None and front_miss >= 2 \
                     and ctrl.state in (ctrl.SEARCH, ctrl.APPROACH):
                 # 시야 상실 — 기억 위치로 주행 (회피 기동 중 이탈 대응).
                 # from_memory est 는 푸시를 트리거하지 못한다 (시각 재확인 필수).
                 obj = mem.get(lock_id)
                 if obj is not None and now - obj["t_seen"] <= 30.0:
                     est = memory_est(pose, obj)
-                    if est["range"] < 0.45:   # 도착했는데 안 보임
+                    # '도착했는데 안 보임' 판정은 기억 위치를 전면 시야로 향하고
+                    # 있을 때만 — 사이드 잠금 직후처럼 아직 90° 돌아선 상태에서
+                    # 회두가 끝나기도 전에 2.5s 타이머가 기억을 폐기하면 안 된다
+                    if est["range"] < 0.45 and abs(est["bearing"]) < math.radians(30):
                         if mem_arrive_t is None:
                             mem_arrive_t = now
                         if now - mem_arrive_t > 2.5:
@@ -869,6 +1096,7 @@ def run_mission(args, model, sr, clf, cams, bot, keeper, odom,
                                   "힌트 방향 탐색")
                             mem.remove(lock_id)
                             lock_id = None
+                            side_locked = False
                             est = None
                             ctrl.reset_pursuit(keep_hint=True, t=now)
                             pursued_bearing = None
@@ -883,6 +1111,12 @@ def run_mission(args, model, sr, clf, cams, bot, keeper, odom,
                 sb, scale, avoid_why = avoid_steering(pose, est, obs)
                 est["steer_bearing"] = sb
                 est["speed_scale"] = scale
+                if side_locked and est.get("from_memory") \
+                        and abs(est["bearing"]) > math.radians(35):
+                    est["speed_scale"] = 0.0  # 측방 기억 목표(사이드캠 발견 직후)
+                                              # — 전진 아크 대신 제자리 회두 먼저.
+                                              # side_locked 게이트: 전면 발견에서 온
+                                              # 기억 주행(기존 동작)은 그대로 보존
                 if avoid_why and now - last_avoid_print > 1.0:
                     last_avoid_print = now
                     print(f"[avoid] 장애물(d={avoid_why[0]:.2f}m, {avoid_why[1]:+.0f}°) "
@@ -909,6 +1143,7 @@ def run_mission(args, model, sr, clf, cams, bot, keeper, odom,
                     ctrl.reset_pursuit()
                     pursued_bearing = None
                     lock_id = None
+                    side_locked = False
                     est = cand = None
                 elif est is not None:
                     est["push_ok"] = (status == "confirmed")
@@ -919,6 +1154,7 @@ def run_mission(args, model, sr, clf, cams, bot, keeper, odom,
             ir_blocked = keeper.ir_latched if keeper else False
             enc = (bot.enc_l, bot.enc_r) if bot is not None else (0, 0)
             pl, pr = ctrl.step(time.time(), est, ir_blocked, enc)
+            driving_on_memory = bool(est is not None and est.get("from_memory"))
             if ctrl.request_abandon:
                 if ctrl.last_est is not None:
                     bp = world_pos(pose, ctrl.last_est)
@@ -930,6 +1166,7 @@ def run_mission(args, model, sr, clf, cams, bot, keeper, odom,
                 ctrl.reset_pursuit()
                 pursued_bearing = None
                 lock_id = None
+                side_locked = False
 
             if keeper is not None:
                 keeper.set(pl, pr)
@@ -987,6 +1224,17 @@ def main():
                     help="이 거리[m] 이내면 블라인드 푸시 진입")
     ap.add_argument("--push-timeout", type=float, default=6.0)
     ap.add_argument("--scan", action="store_true", help="SEARCH 때 제자리 저속 회전")
+    ap.add_argument("--cams", default="front", choices=["front", "all"],
+                    help="front=전면 IMX219 2대(기본) / all=+사이드 nuroum 2대 "
+                         "(원설계 4캠 — 측방 탐색·기억·회두)")
+    ap.add_argument("--cam", action="append", default=[], metavar="NAME=SPEC",
+                    help="사이드캠 소스 오버라이드 (usb:N|file:PATH|off). "
+                         "예: --cam side_left=usb:4 --cam side_right=usb:2")
+    ap.add_argument("--side-conf", type=float, default=None,
+                    help="사이드캠 즉시 수락 임계 (기본 --conf 와 동일). "
+                         "미만 약검출은 --far-hits 지속성 게이트를 거침")
+    ap.add_argument("--side-every", type=int, default=2,
+                    help="사이드캠 추론 주기 (N 사이클마다 1회 — 지연 절약)")
     ap.add_argument("--locked-isp", action="store_true",
                     help="대회 운영 ISP(고정 WB/노출) — 기본은 랩용 자동")
     ap.add_argument("--ir-active-low", dest="ir_low", action="store_true", default=True)
@@ -1017,7 +1265,28 @@ def main():
     clf = CropClassifier(os.path.join(ROOT, "models", "merged", "classifier"))
     print(f"[demo] classifier: merged 9-class ({clf.backend})")
     cams = open_front_cams(args.locked_isp)
-    print(f"[demo] cams: {list(cams)} (undistort ON)")
+    side_rs = {}
+    if args.cams == "all":
+        import cv2
+        side_overrides = {}
+        for spec in args.cam:
+            name, _, src = spec.partition("=")
+            if name not in SIDE_MOUNTS or not src:
+                raise SystemExit(f"--cam 은 side_left|side_right=SPEC 형식: '{spec}'")
+            side_overrides[name] = src
+        side_cams = open_side_cams(side_overrides)
+        for name, cam in side_cams.items():
+            w = int(cam.cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 1280
+            side_rs[name] = SideMono(name, width=w)
+        cams.update(side_cams)
+        if side_rs:
+            print(f"[demo] side cams: {list(side_rs)} "
+                  f"(추론 {max(1, args.side_every)}사이클당 1회)")
+        else:
+            print("[demo] WARNING: 사이드캠을 하나도 못 열음 — 전면 2대로 계속")
+    elif args.cam:
+        print("[demo] --cam 오버라이드는 --cams all 에서만 의미 있음 (무시)")
+    print(f"[demo] cams: {list(cams)} (front undistort ON)")
     print("[demo] 추론 워밍업 ...")
     detect(model, np.zeros((IMG_H, 1280, 3), np.uint8), 0.5, args.imgsz)
 
@@ -1065,7 +1334,7 @@ def main():
                   + (f"{FACE_LABEL[face_num]} ({target_cls})" if target_cls
                      else "아무 물체나") + " ──")
             state = run_mission(args, model, sr, clf, cams, bot, keeper, odom,
-                                target_cls, face_num, conf_far)
+                                target_cls, face_num, conf_far, side_rs)
             if state == CaptureController.DONE and keeper is not None:
                 wait_bin_clear(bot, keeper, args.ir_low)
     finally:
