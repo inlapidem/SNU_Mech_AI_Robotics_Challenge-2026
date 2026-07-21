@@ -112,6 +112,17 @@ class SimPerception:
     SEARCH_R, SEARCH_FOV = 2.6, math.radians(90)
     CLS_R = 1.5                       # 이 안쪽이어야 search 캠이 분류 가능
     VERIFY_R, VERIFY_FOV = 1.3, math.radians(62)
+    # --- 물체 간 가림 (2026-07-20 추가) ---
+    # ⚠ 이 값이 False 면 물체가 **투명**하다 — 뒤에 가려진 물체도 다 보인다.
+    # 원래 모델이 그랬고, 그 탓에 '탐색은 시간의 6%' 라는 낙관적 결론이 나왔다.
+    # 기존 검증 기준선(sim_mission 시나리오 A~H)을 깨지 않도록 기본은 끈 채 두고,
+    # 평가할 때 켠다: SimPerception.OCCLUSION = True
+    OCCLUSION = False
+    OCC_HALF = 0.04                   # 물체 반폭 [m] (8cm 급 기준.
+                                      # octahedron 은 13.6cm 라 실제로는 더 가린다)
+    OCC_PARTIAL = True                # True: 부분 겹침도 관측 실패로 본다
+                                      # (bbox 가 잘리면 분류가 안 되므로 현실적).
+                                      # False: 중심 가림만 — 낙관적인 예전 모델.
     VERIFY_BLIND = 0.28
 
     def __init__(self, objs, targets, rng):
@@ -154,13 +165,14 @@ class SimPerception:
     def frame(self, pose, rng):
         x, y, yaw = pose
         sightings = []
+        geo = self._geo(pose)          # 가림 판정용 기하 (프레임당 1회)
         # --- 측면 search 캠 2대 (±90°) ---
         for cam_yaw in (math.pi / 2, -math.pi / 2):
             for o in self.objs:
                 if o["done"] or o["payload"]:
                     continue
                 b, r, ang = self._see(pose, o, cam_yaw,
-                                      self.SEARCH_FOV, self.SEARCH_R)
+                                      self.SEARCH_FOV, self.SEARCH_R, geo)
                 if b is None:
                     continue
                 self.hits[o["id"]] = self.hits.get(o["id"], 0) + 1
@@ -207,7 +219,7 @@ class SimPerception:
                 if o["done"] or o["payload"]:
                     continue
                 b, r, ang = self._see(pose, o, 0.0, self.VERIFY_FOV,
-                                      self.VERIFY_R)
+                                      self.VERIFY_R, geo)
                 if b is None:
                     continue
                 if best is None or r < best[1]:
@@ -272,7 +284,50 @@ class SimPerception:
         self.request = None
         return f
 
-    def _see(self, pose, o, cam_yaw, fov, max_r):
+    def _geo(self, pose):
+        """이번 프레임의 (id, 거리, 월드방위) — 가림 판정용. 프레임당 1회만 계산."""
+        out = []
+        for o in self.objs:
+            if o["done"] or o["payload"]:
+                continue
+            dx, dy = o["x"] - pose[0], o["y"] - pose[1]
+            r = math.hypot(dx, dy)
+            if r < 0.05:
+                continue
+            out.append((o["id"], r, math.atan2(dy, dx)))
+        return out
+
+    def _occluded(self, oid, r, world, geo):
+        """더 가까운 물체가 시선을 막는가.
+
+        왜 필요한가: 규정상 배치 간격이 50cm 로 촘촘해(42지점에 28개) 목표물이
+        다른 물체 뒤에 숨는 경우가 많다. 이 모델이 없으면 '탐색은 시간의 6% 밖에
+        안 쓴다'는 잘못된 결론이 나온다 — 실제로는 가림 때문에 재관측이 필요하고,
+        분류에 근거리 5회 관측(CLS_R 1.5m, hits>=5)을 요구하므로 가림이 그 누적을
+        계속 끊는다.
+
+        모델: 물체를 반폭 OCC_HALF 의 원기둥으로 보고, 더 가까운 물체가 시선
+        방향에서 그 각폭 안에 있으면 가림. 실제로는 부분 가림이면 bbox 가 잘려
+        분류가 어려워지므로, 완전 가림만 세는 이 모델은 **낙관적인 쪽**이다.
+        """
+        if not self.OCCLUSION:
+            return False
+        half_t = math.atan2(self.OCC_HALF, r)      # 대상의 각반폭
+        for pid, pr, pang in geo:
+            if pid == oid or pr >= r:
+                continue
+            # 두 각반폭의 합보다 가까우면 '조금이라도 겹친다'.
+            # 중심만 가리는 조건(가림자 각반폭만 사용)은 지나치게 낙관적이다 —
+            # 실제로는 bbox 가 잘리면 분류가 실패하므로 부분 겹침도 관측 실패로
+            # 본다. OCC_PARTIAL=False 로 두면 예전(중심 가림) 모델이 된다.
+            lim = math.atan2(self.OCC_HALF, pr)
+            if self.OCC_PARTIAL:
+                lim += half_t
+            if abs(wrap_angle(pang - world)) < lim:
+                return True
+        return False
+
+    def _see(self, pose, o, cam_yaw, fov, max_r, geo=None):
         dx, dy = o["x"] - pose[0], o["y"] - pose[1]
         r = math.hypot(dx, dy)
         if r < 0.05 or r > max_r:
@@ -280,6 +335,8 @@ class SimPerception:
         world = math.atan2(dy, dx)
         b = wrap_angle(world - pose[2])                # 로봇 기준 방위
         if abs(wrap_angle(b - cam_yaw)) > fov / 2:
+            return None, None, None
+        if geo is not None and self._occluded(o["id"], r, world, geo):
             return None, None, None
         return b, r, wrap_angle(world + math.pi)      # 물체가 로봇을 보는 각
 
@@ -297,6 +354,18 @@ class World:
     # 밀침에서 제외(개구부로 진입 → 포획 대상). 채널 반폭 ~0.06, 전방 도달 ~0.24.
     SCOOP_HALF = 0.06
     SCOOP_REACH = 0.24
+    # 실기 예비관측 (2026-07-21, capture_demo 소수 시행 — 통계 아님, 경향):
+    #   * 규정 50cm -> 대체로 정확, 우발포획 드묾
+    #   * 극단 10~15cm(거의 가림) -> 우발포획 절반 정도
+    #   * 너무 멀면 못 잡음 (스테레오 0.2~1.5m 한계와 부합)
+    #   우발포획은 가림(비전)보다 **스쿱 기하**로 설명된다: 포획폭이
+    #   SCOOP_HALF(6cm)+물체반폭(4cm)=10cm 라 이웃이 그 통로에 들면 같이 담긴다.
+    #   50cm 는 이웃 40cm 밖(잘 안 걸림), 10cm 는 거의 항상 — 관측 방향과 맞는다.
+    #   ⚠ 다만 이 시뮬은 경기당 물체를 평균 51회(최대 155) 밀어 뭉침을 만들고
+    #   우발포획 2.75/경기를 내는데, 실기 소수 시행 인상(50cm 드묾)과 어긋나 보인다.
+    #   둘 다 표본이 약하다(실기=소수, 시뮬=미검증 모델). 성급히 '시뮬이 과보수'로
+    #   단정하지 말 것 — 반복 실기(다양한 배치 10회+)로 우발포획 빈도를 재기 전까지는
+    #   시뮬을 시간예산·전략용으로 쓰되 포획단계 수치는 '보수적 상한'으로 참고.
     # --- 적재구역 혼잡 모델 ---
     STORE_X = 0.45        # 이 x 안쪽에서 물체를 놓으면 '하역'으로 간주 (경기장 유실과 구분)
     STORE_Y = 0.55
