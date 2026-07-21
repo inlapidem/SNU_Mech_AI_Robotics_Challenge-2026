@@ -34,3 +34,9 @@ calib/captures_0718/
 # === 탐사 런타임 산출물 (실행마다 새로 생기는 맵/로그) ===
 # 기존에 커밋된 eval_*/train0714/trajectory_campaign_0718 은 그대로 유지
 runtime_logs/explore_*/
+# 루트 직속 실행 로그·JSON (field/mission/sweep/motor_dynamics 등, 실행마다 새로 생김).
+# '/' 를 넘지 않으므로 하위 train0714/trajectory_campaign_0718 추적 파일은 무관.
+# eval_distance_*.json 은 이미 커밋된 벤치 자료라 계속 추적.
+runtime_logs/*.log
+runtime_logs/*.json
+!runtime_logs/eval_distance_*.json
