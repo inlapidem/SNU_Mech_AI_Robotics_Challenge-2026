@@ -13,7 +13,15 @@
     laser_x: 0.0               # 전방 +x [m] — 실측(로봇 좌표): 라이다=회전중심(0,0)과 동일
     laser_y: 0.0               # 좌측 +y [m] — 실측: 라이다가 회전중심에 정확히 위치
     laser_z: 0.21             # 높이 [m] (바퀴 중앙 기준, 바퀴 r = 0.033, 벽 290mm보다 반드시 낮게)
-    laser_yaw_deg: 0.0        # 라이다 0° 방향이 로봇 전방과 이루는 각 [deg]
+    laser_yaw_deg: 180.0      # ★ 2026-07-20 수정 (이전값 0.0 — stale 이었음).
+                              # 이 로봇의 RPLIDAR C1 은 로봇 정면과 **반대 방향**으로
+                              # 장착돼 있다. deployment/check_start.py --where 로 손을
+                              # 로봇 정면/왼쪽에 대고 측정해 확정했다.
+                              # 0.0 으로 두면 위치추정이 앞뒤가 뒤집힌 채로 돈다.
+                              # 같은 보정이 ~/lidar_ws/map_launch.py 의 TF
+                              # (--yaw 3.14159) 에도 들어가 있다 — 그쪽은 slam_toolbox
+                              # 계열용이고 이 값은 wall_localizer 전용이라 별개다.
+                              # 라이다를 재장착하면 check_start.py --where 로 재측정할 것.
     laser_upside_down: false  # 뒤집어 장착했으면 true
     laser_frame: laser        # 라이다 드라이버의 frame_id와 일치시킬 것
 

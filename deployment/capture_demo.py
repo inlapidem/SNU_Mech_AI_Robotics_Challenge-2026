@@ -541,9 +541,12 @@ def strong_call(cls, conf, margin):
 
 class Odom:
     """엔코더 데드레코닝 (블랙리스트 좌표용 — cm급 정밀 불필요).
-    motor_control/params.yaml 실측값과 동일 파라미터."""
+    motor_control/params.yaml 실측값과 동일 파라미터.
+    ★ 2026-07-20 실측 반영: ticks_per_rev 1441->1317 (줄자 교차검증),
+      wheel_base 0.36->0.382 (제자리 360도 회전 시 실제 340도, 과대 1.06배).
+      params.yaml 과 값이 갈리지 않도록 여기도 함께 갱신할 것."""
 
-    def __init__(self, wheel_radius=0.033, wheel_base=0.36, ticks_per_rev=1441.0):
+    def __init__(self, wheel_radius=0.033, wheel_base=0.382, ticks_per_rev=1317.0):
         self.m_per_tick = 2 * math.pi * wheel_radius / ticks_per_rev
         self.base = wheel_base
         self.x = self.y = self.yaw = 0.0
