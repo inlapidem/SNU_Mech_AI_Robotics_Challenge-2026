@@ -364,6 +364,17 @@ def run_rig(cfg, targets, args):
                 print(f"[steer] {cam.name} combined={s['combined_offset_px']} "
                       f"allowed={s['allowed_offset_px']} (x{s['margin_factor']}) "
                       f"pair={s['pair']} aligned={s['aligned']} per_cam={s['per_cam']}")
+            # [verify?] 진단(2026-07-22 APPROACH_TIMEOUT 규명): VERIFY 중 전면캠이 무엇을
+            # 보고 왜 확정을 못 하는지 노출. 이 줄이 아예 안 뜨면 perception 이 VERIFY 로
+            # 전환되지 않은 것(set_phase 미수신). 뜨면 cls/margin/streak/aligned 로 원인 판별.
+            if (fsm.phase != PHASE_SEARCH and cam.role == "verify"
+                    and out.get("verify") and tick % 3 == 0):
+                v = out["verify"]; s = out.get("steering") or {}
+                print(f"[verify?] {cam.name} cls={v['cls']} conf={v['conf']} "
+                      f"margin={v['margin']} tgt_streak={v['target_streak']} "
+                      f"win={v.get('target_win')}/{v.get('window')} "
+                      f"veto={v['veto_streak']} unk={v['unknown_streak']} "
+                      f"aligned={s.get('aligned')}")
             for r in results:
                 if cam.role == "search" and r.get("request_reobserve"):
                     print(f"RE-OBSERVE: track {r['track']} on {cam.name} stays unknown "

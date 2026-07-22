@@ -43,6 +43,7 @@ observation vetoes, and ambiguity never leads to a capture.
 """
 
 import time
+from collections import deque
 
 from configs.merged_classes import set_of
 
@@ -95,7 +96,7 @@ def object_width_m(cfg, cls):
 class _VerifyCam:
     """Per-front-camera streaks + last selection (internal)."""
 
-    def __init__(self):
+    def __init__(self, window):
         self.target_streak = 0
         self.veto_streak = 0
         self.veto_cls = None
@@ -105,10 +106,19 @@ class _VerifyCam:
         self.obj_width_m = None           # physical width of this cam's last selection
         self.last_seen_vu = -10**9        # verify-update counter at last selection
         self.last_strong_other_vu = -10**9
+        # Windowed target-confirmation evidence: one tag per in-gate verify frame --
+        # 't' strong_target / 'o' strong_other / 'n' neither. Promotion needs
+        # >= verify_k 't' within this window AND zero 'o' (mirrors the real-validated
+        # capture_demo ShapeVoter's "need in window, no strong conflict" rule). This
+        # tolerates conf flicker around the 0.90 gate where a consecutive streak would
+        # reset to 0 on every sub-gate frame. window == verify_k reproduces the old
+        # "K consecutive" behaviour exactly (all K of the last K must be 't').
+        self.target_window = deque(maxlen=window)
 
     def reset_streaks(self):
         self.target_streak = self.veto_streak = self.unknown_streak = 0
         self.veto_cls = None
+        self.target_window.clear()
 
 
 class CaptureFSM:
@@ -149,6 +159,12 @@ class CaptureFSM:
 
         self.bin_width_m = float(vbase["bin_width_m"])
         self.verify_k = int(vbase["verify_k"])
+        # Windowed confirmation: promotion needs verify_k strong-target frames within
+        # the last `verify_window` in-gate frames (default == verify_k, i.e. exactly
+        # the old "K consecutive" rule). A larger window tolerates conf flicker around
+        # the gate WITHOUT lowering the conf>=0.90 / margin / veto / alignment bars.
+        self.verify_window = max(int(vbase.get("verify_window", self.verify_k)),
+                                 self.verify_k)
         self.veto_m = int(vbase["veto_m"])
         self.margin_factor = float(vbase["margin_factor"])
         self.unknown_patience = int(vbase.get("verify_unknown_patience",
@@ -338,7 +354,7 @@ class CaptureFSM:
 
     def _cam(self, camera):
         if camera not in self._cams:
-            self._cams[camera] = _VerifyCam()
+            self._cams[camera] = _VerifyCam(self.verify_window)
         return self._cams[camera]
 
     def _steering(self, camera, frame_size):
@@ -388,6 +404,7 @@ class CaptureFSM:
         if sel is None:
             cam.target_streak = cam.veto_streak = 0
             cam.offset_px = None
+            win_tag = "n"             # no verifiable selection -> a gap in the window
             if results:               # something is there but nothing verifiable
                 cam.unknown_streak += 1
         else:
@@ -422,6 +439,7 @@ class CaptureFSM:
                 cam.last_strong_other_vu = self._vu
             cam.unknown_streak = 0 if (strong_target or strong_other) \
                 else cam.unknown_streak + 1
+            win_tag = "t" if strong_target else "o" if strong_other else "n"
             out["verify"] = {"selected_track": sel.get("track"),
                              "cls": cls, "conf": round(conf, 3),
                              "margin": round(margin, 3),
@@ -431,6 +449,17 @@ class CaptureFSM:
 
         if not in_gate:
             return
+
+        # Record this in-gate frame's tag, then take the windowed counts used by the
+        # promotion rule below (see _VerifyCam.target_window).
+        cam.target_window.append(win_tag)
+        tgt_in_win = sum(1 for x in cam.target_window if x == "t")
+        other_in_win = "o" in cam.target_window
+        # sel 이 없던 프레임(in_gate 여도 선택 물체 0)은 out["verify"] 가 None 이다 —
+        # 키 존재가 아니라 값이 dict 인지로 가드해야 한다(2026-07-22 crash 수정).
+        if out.get("verify") is not None:
+            out["verify"]["target_win"] = tgt_in_win
+            out["verify"]["window"] = len(cam.target_window)
 
         steering = self._steering(camera, frame_size)
         out["steering"] = steering
@@ -452,11 +481,14 @@ class CaptureFSM:
                     and cam.unknown_streak % self.unknown_patience == 0:
                 out["request"] = REQ_MICRO_ADJUST
                 events.append("UNKNOWN_PERSISTS")
-            # ---- promotion: K consecutive high-margin target frames on THIS cam,
-            # no recent confident non-target on ANY OTHER front cam, and aligned.
+            # ---- promotion: verify_k strong-target frames within the last
+            # verify_window in-gate frames on THIS cam, ZERO strong non-target in that
+            # window, no recent confident non-target on ANY OTHER front cam, and
+            # aligned. The windowed count tolerates conf flicker around the gate where
+            # a consecutive streak would reset; window == verify_k == old behaviour.
             others_clean = all(self._vu - c.last_strong_other_vu > self.verify_k
                                for n, c in self._cams.items() if n != camera)
-            if (cam.target_streak >= self.verify_k and others_clean
+            if (tgt_in_win >= self.verify_k and not other_in_win and others_clean
                     and steering["aligned"]):
                 self.state = CAPTURE_READY
                 events.append("CAPTURE_READY")

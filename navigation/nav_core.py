@@ -91,12 +91,17 @@ class CamSpec:
 OBJ_HEIGHT_M = 0.08   # 룰: 모든 물체는 눕혔을 때 높이 8cm
 
 
-def bearing_range_from_bbox(cam: CamSpec, bbox):
+def bearing_range_from_bbox(cam: CamSpec, bbox, obj_height_m: float = OBJ_HEIGHT_M):
     """bbox=(x0,y0,x1,y1) 픽셀 → (로봇 기준 방위각 rad, 거리 m).
 
-    거리는 '모든 물체 높이 8cm' 룰을 이용한 단안 추정: range = f * H / h_px.
-    원거리(작은 bbox)에서 ±20% 수준 — 경로계획/우선순위용이지 정밀 접근용이 아니다.
-    정밀 접근은 verify 캠 조향(steering)이 담당한다.
+    거리는 물체 실루엣 높이를 이용한 단안 추정: range = f * H / h_px.
+    obj_height_m 은 물체 실측 높이 [m]; 기본은 '모든 물체 8cm' 룰(OBJ_HEIGHT_M).
+    ⚠ 2026-07-22 실기 벤치: dodecahedron 은 1.00m 에서 h_px≈63(=실제 9.9cm)로
+    이미징돼 평평한 0.08 가정이 거리를 −19% 과소평가 → 표준오프가 물체 앞(로봇쪽)에
+    심겨 APPROACH 가 실물에 못 닿음. 분류된 물체는 configs/merged.yaml objects.real_size_m
+    를 넘겨 보정한다(capture_fsm 정렬창이 이미 쓰는 값과 동일 계약). cls 미상(원거리
+    blob)이면 기본 0.08. 원거리(작은 bbox)에서 여전히 ±수준 오차 — 정밀 접근은 verify
+    캠 조향(steering)이 담당한다.
     """
     x0, y0, x1, y1 = bbox
     h_px = max(1.0, y1 - y0)
@@ -108,7 +113,7 @@ def bearing_range_from_bbox(cam: CamSpec, bbox):
     else:
         f = cam.f_px
         bearing_cam = -math.atan2(dx, f)            # 핀홀: 이미지 오른쪽 = 음(-) 방위
-    rng = f * OBJ_HEIGHT_M / h_px
+    rng = f * obj_height_m / h_px
     return wrap_angle(math.radians(cam.yaw_deg) + bearing_cam), rng
 
 
@@ -164,6 +169,22 @@ class DiffDriveController:
         self.w += dw
         return self.v, self.w
 
+    def _turn_w(self, err):
+        """제자리/회전 각속도 목표: P 이득 + 감속 프로파일(오버슛 방지) + 정지마찰 바닥.
+        순수 P + ang_accel 제한만 있으면 max_w 에서 목표 heading 을 ~½·ω²/α(≈9°@1.0rad/s)
+        지나쳐 되돌아오는 진동을 냈다(2026-07-22 실기: '필요 각도 이상 회전 후 재정렬' →
+        정렬 미완 → APPROACH 중단·blind push 빗나감). 남은 오차(|err|−yaw_tol) 안에서 정지
+        가능한 각속도 √(2·α·d) 로 상한해 오버슛을 제거한다(_limit 이 같은 ang_accel 로 감속)."""
+        c = self.cfg
+        w_des = c.kp_ang * err
+        brake = math.sqrt(2.0 * c.ang_accel *
+                          max(0.0, abs(err) - math.radians(c.yaw_tol_deg)))
+        cap = min(c.max_w, brake)
+        w_des = max(-cap, min(cap, w_des))
+        if abs(w_des) < c.min_w and cap >= c.min_w:   # 정지마찰 바닥(제동구간 제외)
+            w_des = math.copysign(c.min_w, w_des)
+        return w_des
+
     def rotate_to(self, pose, target_yaw, dt):
         """제자리 회전. returns (v, w, done)"""
         c = self.cfg
@@ -171,9 +192,7 @@ class DiffDriveController:
         if abs(err) < math.radians(c.yaw_tol_deg):
             v, w = self._limit(0.0, 0.0, dt)
             return v, w, abs(self.w) < 0.05
-        w_des = max(-c.max_w, min(c.max_w, c.kp_ang * err))
-        if abs(w_des) < c.min_w:
-            w_des = math.copysign(c.min_w, w_des)
+        w_des = self._turn_w(err)
         v, w = self._limit(0.0, w_des, dt)
         return v, w, False
 
@@ -201,9 +220,7 @@ class DiffDriveController:
         herr = wrap_angle(heading - yaw)
         tip = math.radians(90.0 if flyby else c.turn_in_place_deg)
         if abs(herr) > tip:
-            w_des = max(-c.max_w, min(c.max_w, c.kp_ang * herr))
-            if abs(w_des) < c.min_w:
-                w_des = math.copysign(c.min_w, w_des)
+            w_des = self._turn_w(herr)          # 감속 프로파일(오버슛 방지)
             v, w = self._limit(0.0, w_des, dt)
             return v, w, False
 
@@ -394,10 +411,12 @@ class StallDetector:
     장애물 등록으로 대응한다.
     """
 
-    def __init__(self, window_s=0.8, ratio=0.25, min_cmd_v=0.03):
+    def __init__(self, window_s=0.8, ratio=0.25, min_cmd_v=0.03, wheel_base=0.382):
         self.window_s = window_s
         self.ratio = ratio
         self.min_cmd_v = min_cmd_v
+        # 제자리회전 판정용 반폭 (motor_control/params.yaml wheel_base=0.382 실측)
+        self.half_base = wheel_base / 2.0
         self.reset()
 
     def reset(self):
@@ -406,12 +425,20 @@ class StallDetector:
         self._acc_move = 0.0
         self._last_xy = None
 
-    def update(self, dt, cmd_v, pose):
+    def update(self, dt, cmd_v, pose, cmd_w=0.0):
         xy = (pose[0], pose[1])
         moved = 0.0
         if self._last_xy is not None:
             moved = math.hypot(xy[0] - self._last_xy[0], xy[1] - self._last_xy[1])
         self._last_xy = xy
+
+        # 제자리회전 구간 제외 (2026-07-22 열린공간 급회전 오탐 수정): 회전 성분이
+        # 전진보다 커서 좌우 바퀴가 반대로 도는(중심 이동이 원래 거의 없는) 의도된
+        # 급회전은 '걸림'이 아니다. 누적을 비우고 스탈로 보지 않는다. 직진 성분이
+        # 우세한 통상 주행(벽충돌의 주 경로)은 게이트에 안 걸려 감지가 유지된다.
+        if abs(cmd_w) * self.half_base >= abs(cmd_v):
+            self._acc_t = self._acc_cmd = self._acc_move = 0.0
+            return False
 
         if abs(cmd_v) < self.min_cmd_v:
             self._acc_t = self._acc_cmd = self._acc_move = 0.0

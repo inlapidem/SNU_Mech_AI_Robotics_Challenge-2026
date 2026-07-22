@@ -61,6 +61,11 @@ NAV_NODE = os.path.join(ROOT, "navigation", "navigator_node.py")
 
 SET1 = {"cube", "octahedron", "dodecahedron", "icosahedron"}
 SET2 = {"apple", "orange", "banana", "pineapple"}
+# --set1 을 면 개수(6/8/12/20)로도 받는다 — dodeca/icosa 영어 이름 혼동 방지
+# (2026-07-22). 물체의 면만 세면 됨. STL 명명(12C1/20C1)의 접두 숫자와도 일치.
+FACE_TO_SHAPE = {6: "cube", 8: "octahedron", 12: "dodecahedron", 20: "icosahedron"}
+FACE_HINT = {"cube": "6면(정사각형)", "octahedron": "8면(삼각형)",
+             "dodecahedron": "12면(오각형)", "icosahedron": "20면(삼각형)"}
 
 
 # ------------------------------------------------------------------ 프로세스 관리
@@ -274,7 +279,8 @@ def probe_localization(node, secs):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--set1", required=True,
-                    help="공지된 목표 형상: " + " | ".join(sorted(SET1)))
+                    help="공지된 목표 형상: 이름(" + " | ".join(sorted(SET1)) +
+                         ") 또는 면개수(6=cube 8=octa 12=dodeca 20=icosa)")
     ap.add_argument("--set2", required=True,
                     help="공지된 목표 과일: " + " | ".join(sorted(SET2)))
     ap.add_argument("--lidar-serial", default=None,
@@ -292,15 +298,23 @@ def main():
                     help="X1 통과 시 자동으로 mission_start (기본=수동 'START' 입력)")
     a = ap.parse_args()
 
+    # --set1 이 숫자면 면 개수(6/8/12/20)로 해석 → 형상명 (이름 혼동 방지)
+    if a.set1.isdigit():
+        n = int(a.set1)
+        if n not in FACE_TO_SHAPE:
+            sys.exit(f"--set1 면개수는 {sorted(FACE_TO_SHAPE)} 중 하나 "
+                     f"(6=cube 8=octahedron 12=dodecahedron 20=icosahedron)")
+        a.set1 = FACE_TO_SHAPE[n]
     if a.set1 not in SET1:
-        sys.exit(f"--set1 은 {sorted(SET1)} 중 하나 (공지된 형상)")
+        sys.exit(f"--set1 은 이름 {sorted(SET1)} 또는 "
+                 f"면개수 {sorted(FACE_TO_SHAPE)} 중 하나 (공지된 형상)")
     if a.set2 not in SET2:
         sys.exit(f"--set2 는 {sorted(SET2)} 중 하나 (공지된 과일)")
 
     print("=" * 66)
     print("  미션 스택 5프로세스 오케스트레이터")
     print("=" * 66)
-    print(f"  목표: set1={a.set1}  set2={a.set2}")
+    print(f"  목표: set1={a.set1} [{FACE_HINT.get(a.set1, '')}]  set2={a.set2}")
     if a.dry_run_motors:
         print("  ⚠ --dry-run-motors: 모터는 실제로 안 움직입니다 (배관 검증용)")
     else:
@@ -379,7 +393,9 @@ def main():
         else:
             print("\n[기동 2/2] 인지·내비 계층 (perception + navigator)")
             # perception 은 UDP 노드라 토픽이 없다 — 로그 마커로 확인. 엔진로드+4캠으로 느림.
-            percep_cmd = [sys.executable, PERCEP, "--target", a.set1, a.set2, "--udp"]
+            # -u: 무버퍼 stdout — 없으면 print() 가 블록버퍼링돼 SIGKILL 시 [fsm]/set_phase/
+            # [verify?] 로그가 통째로 유실된다(2026-07-22 perception 관측불가 원인).
+            percep_cmd = [sys.executable, "-u", PERCEP, "--target", a.set1, a.set2, "--udp"]
             if not stack.start("perception", percep_cmd,
                                wait_marker="[rig]", timeout=90):
                 print("    ⚠ perception [rig] 안 나옴 — 카메라/GPU(TensorRT EP) 확인 "
@@ -413,16 +429,32 @@ def main():
                 if not x1_ok:
                     print("  ⚠ X1 미통과 상태입니다. 그래도 시작하려면 "
                           "위험을 감수하고 진행.")
-                try:
-                    ans = input("  시작하려면 'START' 입력 (그 외 = 시작 안함, "
-                                "모니터만): ").strip()
-                except (EOFError, KeyboardInterrupt):
-                    ans = ""
-                if ans == "START":
-                    node.publish_start()
-                    print("  /mission_start 발행. 경기 시작.")
-                else:
-                    print("  시작 안 함 — 모니터만 진행(모터 정지).")
+                # ★ START 게이트 — 정확히 'START' 를 입력할 때까지 계속 대기한다.
+                #   (이전엔 1회성 input 이라 START 아닌 입력·EOF 한 번이면 영영 못 켜고
+                #    2분 브링업을 재실행해야 했다.) 'START' 즉시 /mission_start 발행 →
+                #   navigator.on_start 가 그 자리에서 mission.start() → 다음 제어틱에
+                #   바로 출발. 취소는 'q' 또는 Ctrl-C.
+                print("  대기 중 — 준비되면 'START' 입력 시 즉시 출발합니다.")
+                while True:
+                    try:
+                        ans = input("  시작하려면 'START' 입력 "
+                                    "(취소=q / Ctrl-C): ").strip()
+                    except EOFError:
+                        # 비대화 실행(stdin 없음): 무한 EOF 루프 방지 위해 시작 안 하고 빠짐.
+                        # 자동시작이 필요하면 --auto-start 로 실행할 것.
+                        print("  stdin 없음(비대화 실행) — 시작 안 함, 모니터만 진행"
+                              "(모터 정지). 자동시작은 --auto-start.")
+                        break
+                    if ans == "START":
+                        node.publish_start()
+                        print("  /mission_start 발행. 경기 시작!")
+                        started = True
+                        break
+                    if ans.lower() in ("q", "quit", "exit"):
+                        print("  시작 취소 — 모니터만 진행(모터 정지).")
+                        break
+                    print(f"  ('{ans}' 은 START 아님 — 계속 대기. 출발하려면 "
+                          "정확히 'START' 입력)")
 
         # ---- 모니터 루프 ----
         print("\n[모니터] Ctrl-C 로 종료. state / health / cmd_vel 표시\n")

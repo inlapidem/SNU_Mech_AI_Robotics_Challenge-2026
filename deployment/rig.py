@@ -3,7 +3,7 @@
 Opens the cameras declared in the config's `rig.cameras` section (name + role +
 transport + source) and returns live RigCamera objects. Three transports:
 
-  usb   Nuroum V11 side cams: cv2.VideoCapture(index), MJPG + width x height forced
+  usb   Nuroum V11 side cams: cv2.VideoCapture(index or /dev by-path), MJPG + w x h forced
         (webcams default to 640x480, which breaks the pixel gates), BUFFERSIZE=1.
   csi   IMX219 front cams: nvarguscamerasrc GStreamer pipeline (Jetson only) with the
         white balance and exposure LOCKED from the config -- the front-cam image
@@ -16,6 +16,7 @@ prints a warning and is skipped; the run continues with whatever subset opened.
 
 CLI override grammar (parse_source_spec):
   --cam front_left=usb:3          front_left now reads USB index 3
+  --cam side_right=usb:/dev/v4l/by-path/...-video-index0   안정 by-path 로 지정(권장)
   --cam front_left=file:a.mp4     ... a video file (bare non-digit means file too)
   --cam front_left=csi:1          ... CSI sensor-id 1
   --cam front_left=7              bare digit: keep the configured transport, source=7
@@ -81,7 +82,11 @@ def parse_source_spec(spec, default_transport):
         return None, None
     if ":" in spec and spec.split(":", 1)[0] in ("usb", "csi", "file"):
         t, s = spec.split(":", 1)
-        return t, (int(s) if t in ("usb", "csi") else s)
+        if t == "csi":
+            return t, int(s)                          # sensor-id
+        if t == "usb":
+            return t, (int(s) if s.isdigit() else s)  # usb:3 -> 인덱스, usb:/dev/... -> 경로
+        return t, s                                   # file
     if spec.isdigit():
         return default_transport, int(spec)
     return "file", spec
@@ -163,7 +168,11 @@ def _open_capture(name, c, transport, source):
         # "Internal data stream error" 로 열리지 않는다 (2026-07-19 실측) — V4L2 명시.
         # V4L2 는 리눅스 전용이므로 Windows 벤치에서는 기본 백엔드 자동 선택.
         backend = cv2.CAP_V4L2 if sys.platform.startswith("linux") else cv2.CAP_ANY
-        cap = cv2.VideoCapture(int(source), backend)
+        # source 가 /dev 경로 문자열(안정 by-path/by-id 심링크)이면 그대로 열고, 숫자면
+        # /dev/videoN 인덱스로 연다. 동일 모델 USB 캠 2대는 전원 사이클마다 인덱스가
+        # 뒤바뀔 수 있어(부팅 열거 경쟁) 경기용 config 는 by-path 를 쓴다. 둘 다 V4L2 OK.
+        src = source if (isinstance(source, str) and not source.isdigit()) else int(source)
+        cap = cv2.VideoCapture(src, backend)
         cap.set(cv2.CAP_PROP_FOURCC,
                 cv2.VideoWriter_fourcc(*c.get("fourcc", "MJPG")))
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, int(c.get("width", 1280)))

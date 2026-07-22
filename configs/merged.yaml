@@ -93,17 +93,17 @@ rig:
     side_left:
       role: search
       transport: usb
-      source: 0
-      width: 1280
-      height: 720
+      source: "/dev/v4l/by-path/platform-3610000.usb-usb-0:2.2:1.0-video-index0"  # side_left(yaw+90)=물리 왼쪽=밑포트 2.2 (시리얼 002875). by-path 고정: 전원사이클/재부팅에도 안 바뀜 (2026-07-22)
+      width: 1280                          #   (구 0 은 CSI IMX219 노드라 V4L2 select timeout
+      height: 720                          #    +front nvargus 와 센서 충돌 → EndOfFile 유발)
       hfov_deg: 90.0
       fourcc: MJPG
       buffersize: 1
     side_right:
       role: search
       transport: usb
-      source: 1
-      width: 1280
+      source: "/dev/v4l/by-path/platform-3610000.usb-usb-0:2.1:1.0-video-index0"  # side_right(yaw-90)=물리 오른쪽=위포트 2.1 (시리얼 002773). by-path 고정: 전원사이클/재부팅에도 안 바뀜 (2026-07-22)
+      width: 1280                          #   L/R 배정은 현장서 한쪽 가려 확인할 것(front 처럼)
       height: 720
       hfov_deg: 90.0
       fourcc: MJPG
@@ -158,6 +158,11 @@ rig:
 verify:
   bin_width_m: 0.14
   verify_k: 5
+  # 창방식 확정(2026-07-21): 최근 verify_window 프레임 중 verify_k표(강한 타깃)면 확정.
+  # 5'연속'이 실물 apple 의 0.90 경계 conf 깜빡임마다 리셋돼 미확정된 것(실검증 스택 B
+  # capture_demo 는 9프레임 창 3표로 과일 포획 성공)을 해소. conf≥0.90·margin·veto·정렬은
+  # 불변이라 −40 위험 무변. verify_window == verify_k 이면 기존 '5연속'과 동일(하위호환).
+  verify_window: 9
   veto_m: 3
   margin_factor: 0.7
   verify_unknown_patience: 4

@@ -29,7 +29,7 @@ import socket
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from nav_core import CamSpec, bearing_range_from_bbox
+from nav_core import CamSpec, bearing_range_from_bbox, OBJ_HEIGHT_M
 from mission_fsm import DEFAULT_PARAMS, MissionFSM, PerceptionFrame
 
 import rclpy
@@ -57,7 +57,7 @@ class NavigatorNode(Node):
         d('udp_cmd_port', 5602)
         d('percep_stale_s', 0.6)        # 인지 프레임이 이보다 오래되면 무시
         # 카메라 장착 (bearing/range 계산용 — 실측 후 조정)
-        d('cam_names', ['search_left', 'search_right', 'front_left', 'front_right'])
+        d('cam_names', ['side_left', 'side_right', 'front_left', 'front_right'])   # rig 정본명(side_*)과 일치시킬 것 — 불일치 시 측방 검출 전량 폐기
         d('cam_yaws_deg', [90.0, -90.0, 3.0, -3.0])
         d('cam_hfovs_deg', [90.0, 90.0, 62.0, 62.0])
         # 카메라 장착 위치 [x전방, y좌측] m (base_link=회전중심 기준, 실측 로봇좌표).
@@ -95,6 +95,24 @@ class NavigatorNode(Node):
             model = models[i] if i < len(models) else 'pinhole'
             # img 크기는 UDP 프레임에 실려오므로 CamSpec 은 지연 생성
             self.cams[name] = (yaw, fov, mx, my, model)
+
+        # 물체별 실측 높이표 (단안 거리모델 per-class 보정 — 2026-07-22 실기 벤치:
+        # dodecahedron 은 1.0m 에서 h_px≈63=실제 9.9cm 로 이미징돼 평평한 8cm 가정이
+        # 거리를 −19% 과소평가 → 표준오프가 물체 앞에 심겨 APPROACH 실패. capture_fsm
+        # 정렬창이 이미 쓰는 configs/merged.yaml objects.real_size_m 을 거리모델에도
+        # 물린다). cls=None(원거리 미분류 blob)이면 bearing_range_from_bbox 가 0.08 폴백.
+        self._obj_h = {}
+        try:
+            import yaml
+            _mp = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                               '..', 'configs', 'merged.yaml')
+            _rs = ((yaml.safe_load(open(_mp, encoding='utf-8')) or {})
+                   .get('objects', {}).get('real_size_m', {}))
+            self._obj_h = {str(k): float(v) for k, v in _rs.items()}
+            self.get_logger().info(f'물체 높이표(per-class 거리보정): {self._obj_h}')
+        except Exception as e:
+            self.get_logger().warn(
+                f'real_size_m 로드 실패 → 단안거리 평평한 {OBJ_HEIGHT_M}m 사용: {e}')
 
         # --- UDP ---
         self.ev_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -171,6 +189,13 @@ class NavigatorNode(Node):
         role = latest.get('role', 'search')
         iw, ih = latest.get('img_w', 1280), latest.get('img_h', 720)
         caminfo = self.cams.get(cam)
+        if caminfo is None and cam:
+            # 인지 UDP 의 cam 이름이 cam_names 에 없으면 이 프레임 검출이 아래에서 전량
+            # 폐기된다(2026-07-21 side_* vs search_* 불일치로 측방 검출 전멸→TOUR 무한정체
+            # 사고). 조용히 버리지 말고 조기에 경고해 재발을 즉시 드러낸다.
+            self.get_logger().warn(
+                f"UDP 카메라 '{cam}' 미등록 → 이 캠 검출 폐기. 등록={list(self.cams)} "
+                f"(cam_names 와 rig 캠명 불일치 의심)", throttle_duration_sec=5.0)
         stereo = latest.get('stereo') or []
         paired = {s.get('own_idx') for s in stereo if s.get('own_idx') is not None}
         for k, r in enumerate(latest.get('results', [])):
@@ -181,7 +206,8 @@ class NavigatorNode(Node):
                 continue          # 스테레오 쌍으로 더 정확하게 아래에서 실림
             yaw, fov, mx, my, model = caminfo
             spec = CamSpec(cam, yaw, fov, iw, ih, mx, my, model)
-            bearing, rng = bearing_range_from_bbox(spec, bbox)
+            h_m = self._obj_h.get(r.get('cls'), OBJ_HEIGHT_M)
+            bearing, rng = bearing_range_from_bbox(spec, bbox, h_m)
             if role == 'verify' and (verify_range is None or rng < verify_range):
                 verify_range = rng
                 verify_bearing = bearing

@@ -63,12 +63,22 @@ class CropClassifier:
         self.std = np.array(meta["std"], np.float32)
 
         pt, onnx = os.path.join(model_dir, "best.pt"), os.path.join(model_dir, "best.onnx")
-        if os.path.isfile(onnx):
+        # 백엔드 선택: torch+CUDA 우선 (2026-07-21). 이 Jetson 의 onnxruntime 는
+        # TensorRT/CUDA EP 가 없어 onnx 경로가 CPU 로 떨어졌다(분류기 verify 지연 → 실기
+        # 포획 verify 미확정의 유력 원인). torch 2.10 은 Orin CUDA 로 정상 동작하므로
+        # best.pt 를 GPU 로 돌린다. onnx 는 폴백(torch/cuda 불가 시에만).
+        try:
+            import torch
+            _cuda = torch.cuda.is_available()
+        except Exception:
+            _cuda = False
+        if os.path.isfile(onnx) and not (os.path.isfile(pt) and _cuda):
             import onnxruntime as ort
             self.backend = "onnx"
             self.sess = ort.InferenceSession(onnx, providers=[
                 "TensorrtExecutionProvider", "CUDAExecutionProvider", "CPUExecutionProvider"])
             self.inp = self.sess.get_inputs()[0].name
+            print(f"[merged] classifier backend: onnx ({self.sess.get_providers()[0]})")
         else:
             import torch
             self.backend = "torch"
@@ -76,6 +86,7 @@ class CropClassifier:
             self.device = "cuda" if torch.cuda.is_available() else "cpu"
             self.model = build_classifier_torch(len(self.classes)).to(self.device).eval()
             self.model.load_state_dict(torch.load(pt, map_location=self.device))
+            print(f"[merged] classifier backend: torch ({self.device})")
 
     def _pre(self, crop_rgb):
         import cv2

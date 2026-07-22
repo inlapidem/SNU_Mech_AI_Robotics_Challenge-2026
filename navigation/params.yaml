@@ -18,7 +18,7 @@
     udp_cmd_port: 5602
     percep_stale_s: 0.6
     # --- 카메라 장착 (bearing/단안거리 계산용, base_link 기준 실측) ---
-    cam_names: [search_left, search_right, front_left, front_right]
+    cam_names: [side_left, side_right, front_left, front_right]   # rig 정본명(configs/merged.yaml)과 일치 — search_* 로 두면 인지 UDP(side_*) 매칭 실패해 측방 검출 전량 폐기(2026-07-21 TOUR 정체 사고)
     cam_yaws_deg: [90.0, -90.0, 0.0, 0.0]   # 전면 캠 yaw 실측(0718 스테레오 역산):
     #   평행(0°). 구 ±3° toe 는 스테레오 거리 +16cm 과대추정 원인이었음.
     cam_hfovs_deg: [90.0, 90.0, 73.4, 75.7]   # search NUROUM 90(핀홀) / 전면 IMX219-160:

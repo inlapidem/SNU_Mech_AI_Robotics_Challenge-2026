@@ -666,7 +666,7 @@ class MissionFSM:
         # 스탈 감지 → 임시 장애물 등록. 적재 중엔 후진 금지(빈이 앞이 열려 있어
         # 후진하면 적재물이 빠진다) — 제자리 회전 재계획으로 우회한다.
         if self.state in (TOUR, GOTO, TRANSPORT) and \
-                self.stall.update(dt, v, pose):
+                self.stall.update(dt, v, pose, w):
             nose = (pose[0] + 0.3 * math.cos(pose[2]),
                     pose[1] + 0.3 * math.sin(pose[2]))
             self.memory.add_virtual(*nose)
@@ -770,6 +770,12 @@ class MissionFSM:
             self._route_t0 = t
         elif (p["replan_period_s"] > 0 and self._goto_goal is not None
               and t - self._route_t0 > p["replan_period_s"]
+              # 제자리 회전(v≈0) 중에는 재계획 금지 — 회전 도중 경로가 갈아끼워지면
+              # self._route[0](다음 웨이포인트) 방향이 바뀌어 herr 부호가 프레임마다
+              # 뒤집혀 w 가 ±max 로 진동(2026-07-22 실기: 남벽서 접근 전 큰 좌우
+              # 흔들림/헛회전). 재계획의 취지는 '이동 중 나중-매핑 물체 회피'라 정지
+              # 회전 중엔 불필요하고, 이동을 재개하면 그때 재계획된다.
+              and self._prev_v > 0.05
               and math.hypot(self._goto_goal[0] - pose[0],
                              self._goto_goal[1] - pose[1])
               > p["standoff_dist"] * 0.5):
@@ -944,9 +950,15 @@ class MissionFSM:
         herr = wrap_angle(math.atan2(tgt["y"] - pose[1], tgt["x"] - pose[0])
                           - pose[2])
         w_des = 2.0 * herr
-        if percep.steering and percep.steering.get("allowed_offset_px"):
-            off = (percep.steering["combined_offset_px"] /
-                   max(1.0, percep.steering["allowed_offset_px"]))
+        # 비주얼 서보는 2캠(pair) 신선할 때만 쓴다. 단일캠 offset 은 '그 캠 중심' 기준이라
+        # 스쿱중앙과 다르고, 라운드로빈으로 좌/우캠이 번갈아 신선하면 두 캠 offset 부호가
+        # 반대(스테레오)여서 프레임마다 w 가 ±0.8 로 뒤집혀 진동 → 정착 실패(2026-07-22 실기:
+        # '많이 헤맴', APPROACH↔RETREAT). pair 아닐 때는 map 기반 herr(물체 지도위치로 기수 =
+        # 스쿱을 물체에 겨냥)로 안정 접근하고, 2캠 평균 offset(스쿱중앙=0)일 때만 정밀 보정.
+        st = percep.steering
+        if (st and st.get("pair") and st.get("combined_offset_px") is not None
+                and st.get("allowed_offset_px")):
+            off = st["combined_offset_px"] / max(1.0, st["allowed_offset_px"])
             off = max(-1.5, min(1.5, off))
             w_des = p["steering_sign"] * p["steering_gain"] * off
 
@@ -1052,6 +1064,10 @@ class MissionFSM:
             self._begin_retreat(pose, p["retreat_dist"] + pushed, then=nxt)
             return self.ctrl._limit(0.0, 0.0, dt)
 
+        # blind push 는 조준 후 직진 관통 — 접촉 순간 조향(호)하면 물체를 스쿱
+        # 입구에서 옆으로 밀어 안착 실패(2026-07-22 실기: funnel 도입 시 4/4 미스,
+        # '입구만 조금 들어가다 타임아웃'). 정렬은 APPROACH 에서 끝내고 여기선 진입
+        # heading 을 고정 유지한다.
         herr = wrap_angle(self._push["yaw_lock"] - pose[2])
         return self.ctrl.straight(p["push_v"], dt, hold_yaw_err=herr)
 

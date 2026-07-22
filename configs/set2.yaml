@@ -237,8 +237,8 @@ rig:
     side_left:
       role: search
       transport: usb
-      source: 0
-      width: 1280
+      source: "/dev/v4l/by-path/platform-3610000.usb-usb-0:2.2:1.0-video-index0"  # side_left(yaw+90)=물리 왼쪽=밑포트 2.2 (시리얼 002875). by-path 고정: 전원사이클/재부팅에도 안 바뀜 (2026-07-22)
+      width: 1280                          #   (구 0 은 CSI 노드라 timeout+front Argus 충돌)
       height: 720
       hfov_deg: 90.0
       fourcc: MJPG
@@ -246,7 +246,7 @@ rig:
     side_right:
       role: search
       transport: usb
-      source: 1
+      source: "/dev/v4l/by-path/platform-3610000.usb-usb-0:2.1:1.0-video-index0"  # side_right(yaw-90)=물리 오른쪽=위포트 2.1 (시리얼 002773). by-path 고정: 전원사이클/재부팅에도 안 바뀜 (2026-07-22)
       width: 1280
       height: 720
       hfov_deg: 90.0
